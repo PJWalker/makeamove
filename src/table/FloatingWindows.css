@@ -14,15 +14,16 @@
     pointer-events: auto;
   }
   .window {
-    background: var(--window-sheen), var(--surface);
-    border: 1px solid var(--hairline);
+    background: var(--grain), var(--vignette), var(--window-sheen), var(--surface);
+    border: 1px solid var(--gilt-lo);
+    border-image: var(--frame);
     background-clip: padding-box;
-    box-shadow: var(--window-shadow), var(--window-rim);
+    box-shadow: var(--window-shadow), var(--window-rim), var(--vignette-edge);
     transition: box-shadow 220ms var(--ease);
   }
   /* Picked up by its title bar: it rises off the table while carried, and settles when dropped. */
   .window[data-lifted="true"] {
-    box-shadow: var(--window-shadow-lifted), var(--window-rim);
+    box-shadow: var(--window-shadow-lifted), var(--window-rim), var(--vignette-edge);
   }
   .floating-window {
     position: absolute;
@@ -187,6 +188,32 @@
     }
     40% {
       opacity: 0.6;
+    }
+  }
+  /*
+   * On a phone, windows (pulled-out panels and docked windows such as
+   * character sheets) fill the screen below the toolbar, stacked like sheets,
+   * overriding the geometry they keep for larger screens.
+   */
+  @media (max-width: 600px) {
+    :is(.floating-window, .dialog.window[data-window-id]) {
+      inset: var(--dock-top-height, 48px) 0 0 !important;
+      width: auto !important;
+      height: auto !important;
+      min-width: 0;
+      max-width: none;
+      max-height: none;
+      & :is(.win-resize, .resize-grip) {
+        display: none;
+      }
+      & .window-header {
+        cursor: default;
+      }
+    }
+    :is(.floating-window, .dialog.window[data-window-id])[data-rolled="true"] {
+      bottom: auto !important;
+      width: auto !important;
+      max-width: none;
     }
   }
   @media (prefers-reduced-motion: reduce) {

@@ -5,42 +5,43 @@ import type { ItemInstance } from "../features/characters/types";
 import { checkOf } from "../features/characters/moves";
 import { useQuery } from "../ui/useQuery";
 import { entryByKey, librariesFor, useLibrariesFor } from "../features/library";
-import { IconOpenWindow } from "../ui/icons";
-import { IconPost, IconRoll, IconTarget } from "../ui/icons";
+import { IconOpenWindow , IconPost, IconRoll, IconTarget } from "../ui/icons";
 import { Button } from "../ui/Button";
-import { usePopupDialog } from "./usePopupDialog";
-import { Dialog } from "./Dialog";
-import { entryKeyOf, type EntityWindowRecord } from "./entityWindowState";
-import { parseEntryKey, type EntryRef } from "./entryKeys";
-import { EntryActionButtons } from "./EntryActionButtons";
-import { useLibraryActions } from "./libraryActions";
 import type { MenuItem } from "../ui/ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
 import { ContextMenu } from "../ui/ContextMenu";
 import { withTransition } from "../ui/transition";
+import { usePopupDialog } from "./usePopupDialog";
+import { Dialog } from "./Dialog";
+import { entryKeyOf  } from "./entityWindowState";
+import type {EntityWindowRecord} from "./entityWindowState";
+import { parseEntryKey  } from "./entryKeys";
+import type {EntryRef as EntryReference} from "./entryKeys";
+import { EntryActionButtons } from "./EntryActionButtons";
+import { useLibraryActions } from "./libraryActions";
 import { useCampaign } from "./campaignContext";
 import { setLearned, startMove, updateItem } from "./commands/characters";
 
 export function EntityWindowHost({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   useLayoutEffect(() => {
     const ids = [
-      ...ctx.panels.layout.value.left.panels,
-      ...ctx.panels.layout.value.right.panels,
-      ...ctx.panels.layout.value.floating.map((win) => win.id),
+      ...context.panels.layout.value.left.panels,
+      ...context.panels.layout.value.right.panels,
+      ...context.panels.layout.value.floating.map((win) => win.id),
     ];
     for (const id of ids) {
       const key = entryKeyOf(id);
-      const ref = key === undefined ? undefined : parseEntryKey(key);
-      if (ref && !entryExists(campaign, ref)) ctx.windows.close(id);
+      const reference = key === undefined ? undefined : parseEntryKey(key);
+      if (reference && !entryExists(campaign, reference)) context.windows.close(id);
     }
-  }, [ctx, campaign]);
-  const records = useQuery(ctx.windows.records);
-  const shown = useQuery(ctx.panels.layout);
+  }, [context, campaign]);
+  const records = useQuery(context.windows.records);
+  const shown = useQuery(context.panels.layout);
   return (
     <>
       {Object.values(records).flatMap((record) =>
-        ctx.panels.isFloating(record.id, shown)
+        context.panels.isFloating(record.id, shown)
           ? [<EntityPopup key={record.id} campaign={campaign} record={record} />]
           : [],
       )}
@@ -48,22 +49,22 @@ export function EntityWindowHost({ campaign }: { campaign: Campaign }) {
   );
 }
 function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityWindowRecord }) {
-  const ctx = useCampaign();
-  const ref = usePopupDialog();
+  const context = useCampaign();
+  const reference = usePopupDialog();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const trigger = menuTrigger((x, y) => setMenu({ x, y }));
+  const trigger = menuTrigger((x, y) => { setMenu({ x, y }); });
   const close = () => {
     record.close?.();
-    ctx.windows.close(record.id);
+    context.windows.close(record.id);
   };
   const items: MenuItem[] = [
     {
       label: "Dock to Left Sidebar",
-      onSelect: () => void withTransition(() => ctx.panels.dockPanel(record.id, "left")),
+      onSelect: () => void withTransition(() => { context.panels.dockPanel(record.id, "left"); }),
     },
     {
       label: "Dock to Right Sidebar",
-      onSelect: () => void withTransition(() => ctx.panels.dockPanel(record.id, "right")),
+      onSelect: () => void withTransition(() => { context.panels.dockPanel(record.id, "right"); }),
     },
     "divider",
     { label: "Close", onSelect: close },
@@ -72,7 +73,7 @@ function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityW
   return (
     <>
       <Dialog
-        dialogRef={ref}
+        dialogRef={reference}
         title={record.title}
         onClose={close}
         {...(record.proxy ? { proxy: record.proxy } : {})}
@@ -88,7 +89,7 @@ function EntityPopup({ campaign, record }: { campaign: Campaign; record: EntityW
           <p className="muted item-tags">{record.tags.join(", ")}</p>
         )}
       </Dialog>
-      {menu && <ContextMenu {...menu} items={items} onClose={() => setMenu(null)} />}
+      {menu && <ContextMenu {...menu} items={items} onClose={() => { setMenu(null); }} />}
     </>
   );
 }
@@ -102,26 +103,26 @@ export function EntityWindowContent({
 }) {
   if (record.content) return record.content;
   const key = entryKeyOf(record.id);
-  const ref = key === undefined ? undefined : parseEntryKey(key);
+  const reference = key === undefined ? undefined : parseEntryKey(key);
   const text = (
     <p className="move-text move-window-text">{record.text ?? "This window is not available."}</p>
   );
   return (
     <>
       {text}
-      {ref?.kind === "inventory" && <InventoryActions campaign={campaign} entry={ref} />}
-      {ref?.kind === "lib" && <LibraryActions campaign={campaign} entry={ref} />}
-      {ref?.kind === "move" && <MoveActions campaign={campaign} entry={ref} />}
+      {reference?.kind === "inventory" && <InventoryActions campaign={campaign} entry={reference} />}
+      {reference?.kind === "lib" && <LibraryActions campaign={campaign} entry={reference} />}
+      {reference?.kind === "move" && <MoveActions campaign={campaign} entry={reference} />}
     </>
   );
 }
 
 /** Whether what an entry window shows still exists. */
-function entryExists(campaign: Campaign, ref: EntryRef) {
-  if (ref.kind === "inventory")
-    return !!getCharacter(campaign, ref.characterId)?.inventory.some((i) => i.id === ref.itemId);
-  if (ref.kind === "move") return systemOf(campaign).actions.some((m) => m.id === ref.moveId);
-  const found = entryByKey(librariesFor(systemOf(campaign)), ref.key);
+function entryExists(campaign: Campaign, reference: EntryReference) {
+  if (reference.kind === "inventory")
+    return !!getCharacter(campaign, reference.characterId)?.inventory.some((index) => index.id === reference.itemId);
+  if (reference.kind === "move") return systemOf(campaign).actions.some((m) => m.id === reference.moveId);
+  const found = entryByKey(librariesFor(systemOf(campaign)), reference.key);
   return !found || !!found.entry;
 }
 
@@ -130,15 +131,15 @@ function InventoryActions({
   entry: { characterId, itemId },
 }: {
   campaign: Campaign;
-  entry: Extract<EntryRef, { kind: "inventory" }>;
+  entry: Extract<EntryReference, { kind: "inventory" }>;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const character = useQuery(campaign.characters, () => getCharacter(campaign, characterId));
   const item = character?.inventory.find((candidate) => candidate.id === itemId);
   if (!character || !item) return null;
   const editable = canEdit(campaign, character);
   const patch = (changes: Partial<ItemInstance>) =>
-    ctx.execute(updateItem, { characterId, itemId, patch: changes });
+    context.execute(updateItem, { characterId, itemId, patch: changes });
   return (
     <>
       {item.equippable && (
@@ -164,14 +165,14 @@ function InventoryActions({
 
 function LibraryActions({
   campaign,
-  entry: ref,
+  entry: reference,
 }: {
   campaign: Campaign;
-  entry: Extract<EntryRef, { kind: "lib" }>;
+  entry: Extract<EntryReference, { kind: "lib" }>;
 }) {
   const libraries = useLibrariesFor(baseSystemOf(campaign));
   const { actionsFor } = useLibraryActions(campaign);
-  const entry = entryByKey(libraries, ref.key)?.entry;
+  const entry = entryByKey(libraries, reference.key)?.entry;
   return entry ? <EntryActionButtons actions={actionsFor(entry)} /> : null;
 }
 
@@ -180,9 +181,9 @@ function MoveActions({
   entry: { ownerId, moveId },
 }: {
   campaign: Campaign;
-  entry: Extract<EntryRef, { kind: "move" }>;
+  entry: Extract<EntryReference, { kind: "move" }>;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const system = useQuery(campaign.homebrew, () => systemOf(campaign));
   const character = useQuery(campaign.characters, () => getCharacter(campaign, ownerId));
   const move = system.actions.find((candidate) => candidate.id === moveId);
@@ -194,7 +195,7 @@ function MoveActions({
         <Button
           variant="ghost"
           onClick={() =>
-            ctx.execute(setLearned, { id: character.id, action: move.id, known: false })
+            context.execute(setLearned, { id: character.id, action: move.id, known: false })
           }
         >
           Forget
@@ -215,18 +216,18 @@ function MoveAction({
   character: ReturnType<typeof getCharacter>;
   enabled: boolean;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const { label, Icon } = move.target
     ? { label: "Target", Icon: IconTarget }
-    : checkOf(move)
+    : (checkOf(move)
       ? { label: "Roll", Icon: IconRoll }
-      : { label: "Post", Icon: IconPost };
+      : { label: "Post", Icon: IconPost });
   return (
     <Button
       variant="primary"
       disabled={!character || !enabled}
       onClick={() =>
-        character && ctx.execute(startMove, { characterId: character.id, move: move.id })
+        character && context.execute(startMove, { characterId: character.id, move: move.id })
       }
     >
       <Icon size={22} /> {label}

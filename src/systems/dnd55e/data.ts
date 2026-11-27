@@ -10,7 +10,7 @@ import type { AreaSpec, ConditionDef, ItemDef, TagDef, TargetSpec } from "../typ
  * The formulas that read these tables are in index.ts.
  */
 
-export type Ability = "str" | "dex" | "con" | "int" | "wis" | "cha";
+export type Ability = "cha" | "con" | "dex" | "int" | "str" | "wis";
 
 export const ABILITIES: { id: Ability; name: string; abbr: string }[] = [
   { id: "str", name: "Strength", abbr: "STR" },
@@ -213,8 +213,8 @@ export const FULL_CASTER_SLOTS: number[][] = [
 
 /** Experience points needed for each level (index 0 is level 1). */
 export const XP_FOR_LEVEL = [
-  0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000,
-  195000, 225000, 265000, 305000, 355000,
+  0, 300, 900, 2700, 6500, 14_000, 23_000, 34_000, 48_000, 64_000, 85_000, 100_000, 120_000, 140_000, 165_000,
+  195_000, 225_000, 265_000, 305_000, 355_000,
 ];
 
 /* Actions anyone can take in combat (Rules Glossary). */
@@ -1205,7 +1205,7 @@ const armour = (
 ): ItemDef => ({
   id,
   name,
-  description: `AC ${base}${dexCap === null ? " + Dexterity modifier" : dexCap > 0 ? ` + Dexterity modifier (max ${dexCap})` : ""}, while worn.`,
+  description: `AC ${base}${dexCap === null ? " + Dexterity modifier" : (dexCap > 0 ? ` + Dexterity modifier (max ${dexCap})` : "")}, while worn.`,
   weight,
   tags,
   equippable: true,

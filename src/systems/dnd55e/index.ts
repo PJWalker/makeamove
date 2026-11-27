@@ -1,9 +1,11 @@
 import { md } from "../../macros/markdown.macro" with { type: "macro" };
-import { plainText, richTextFromPlain, type RichText } from "../../data/richText";
+import { plainText, richTextFromPlain  } from "../../data/richText";
+import type {RichText} from "../../data/richText";
 import type { CharacterView } from "../../features/characters/types";
 import { commaListOf, formatCommaList } from "../../lib/list";
 
-import { resolveEffects, type EffectSource } from "../effects";
+import { resolveEffects  } from "../effects";
+import type {EffectSource} from "../effects";
 import type {
   ActionDef,
   AreaSpec,
@@ -17,6 +19,7 @@ import type {
   SaveStep,
   TargetSpec,
 } from "../types";
+import { hpTokenStat } from "../tokenStats";
 import {
   ABILITIES,
   ACTIONS,
@@ -29,11 +32,12 @@ import {
   SKILLS,
   SPELLS,
   TAGS,
-  XP_FOR_LEVEL,
-  type Ability,
-  type DndClass,
-  type Spell,
+  XP_FOR_LEVEL
+  
+  
+  
 } from "./data";
+import type {Ability, DndClass, Spell} from "./data";
 import {
   BACKGROUNDS,
   FEATS,
@@ -47,7 +51,6 @@ import { SRD_SPELLS } from "./srdSpells";
 import { SRD_MONSTERS } from "./srdMonsters";
 import { SRD_MAGIC_ITEMS } from "./srdMagicItems";
 import { SRD_CLASS_FEATURES } from "./srdClasses";
-import { hpTokenStat } from "../tokenStats";
 
 /*
  * D&D 5th edition, 2024 rules ("5.5e"), from the SRD 5.2: the formulas, and
@@ -63,11 +66,41 @@ export const proficiencyAt = (level: number) => 2 + Math.floor((Math.max(1, leve
 
 /** Cantrip dice by character level: one more at 5, 11 and 17. */
 const cantripDice = (level: number) =>
-  1 + (level >= 5 ? 1 : 0) + (level >= 11 ? 1 : 0) + (level >= 17 ? 1 : 0);
+  stepped(level, [
+    [1, 1],
+    [5, 2],
+    [11, 3],
+    [17, 4],
+  ]);
 
 /** By level, from a table of (from-level, value) steps: `stepped(7, [[1, 2], [3, 3], [6, 4]])` is 4. */
-const stepped = (level: number, steps: [number, number][]) =>
-  steps.reduce((v, [from, n]) => (level >= from ? n : v), 0);
+function stepped(level: number, steps: [number, number][]): number {
+  return steps.reduce((v, [from, n]) => (level >= from ? n : v), 0);
+}
+
+/** How many cantrips a class knows at a level: one more at 4 and 10. */
+function cantripsKnown(classId: string, level: number): number {
+  let base: number;
+  switch (classId) {
+    case "paladin":
+    case "ranger": {
+      return 0;
+    }
+    case "cleric":
+    case "wizard": {
+      base = 3;
+      break;
+    }
+    case "sorcerer": {
+      base = 4;
+      break;
+    }
+    default: {
+      base = 2;
+    }
+  }
+  return base + (level >= 4 ? 1 : 0) + (level >= 10 ? 1 : 0);
+}
 
 const classOf = (c: CharacterView): DndClass =>
   CLASSES.find((k) => k.id === c.data["classId"]) ?? CLASSES[0]!;
@@ -100,8 +133,9 @@ const levelOf = (c: CharacterView) => clampLevel(Number(c.data["level"] ?? 1));
 
 /** Spell slots by spell level (1–9) for a class at a level; Pact Magic is apart. */
 export function spellSlots(cls: DndClass, level: number): number[] {
-  const casterLevel =
-    cls.caster === "full" ? level : cls.caster === "half" ? Math.ceil(level / 2) : 0;
+  let casterLevel = 0;
+  if (cls.caster === "full") casterLevel = level;
+  else if (cls.caster === "half") casterLevel = Math.ceil(level / 2);
   return casterLevel ? (FULL_CASTER_SLOTS[clampLevel(casterLevel) - 1] ?? []) : [];
 }
 
@@ -145,14 +179,16 @@ const spellOptions = SPELLS_ALL.map((spell) => ({
 const selectedIds = (character: CharacterView, field: string, max = Infinity) =>
   commaListOf(character.data[field]).slice(0, max);
 
-const criticalThreshold = (context?: RollContext) =>
-  context?.action.category === "attack" &&
-  context.character?.data["subclass"] === "champion" &&
-  levelOf(context.character) >= 3
-    ? levelOf(context.character) >= 15
-      ? 18
-      : 19
-    : 20;
+/** The lowest d20 that crits: a Champion's attacks crit on 19 from level 3, and 18 from 15. */
+function criticalThreshold(context?: RollContext): number {
+  const character = context?.character;
+  if (context?.action.category !== "attack" || character?.data["subclass"] !== "champion")
+    return 20;
+  const level = levelOf(character);
+  if (level >= 15) return 18;
+  if (level >= 3) return 19;
+  return 20;
+}
 
 function startingSpells(classId: string) {
   const recommendations: Record<string, string[]> = {
@@ -180,16 +216,7 @@ function startingSpells(classId: string) {
         : "",
     knownCantrips: formatCommaList(
       SPELLS_ALL.filter((spell) => spell.classes.includes(classId) && !spell.level)
-        .slice(
-          0,
-          ["cleric", "wizard"].includes(classId)
-            ? 3
-            : classId === "sorcerer"
-              ? 4
-              : ["paladin", "ranger"].includes(classId)
-                ? 0
-                : 2,
-        )
+        .slice(0, cantripsKnown(classId, 1))
         .map((spell) => spell.id),
     ),
   };
@@ -430,13 +457,13 @@ const spellRoll = (s: Spell, crit: boolean): FollowUpDef => {
     id: `spell-${s.id}${crit ? "-crit" : ""}`,
     kind: "roll",
     damage: r.label === "healing" ? "healing" : (r.type ?? "damage"),
-    label: crit ? "Roll critical damage" : r.label === "healing" ? "Roll healing" : "Roll damage",
+    label: crit ? "Roll critical damage" : (r.label === "healing" ? "Roll healing" : "Roll damage"),
     comment: s.name,
     formula: (c, d) => {
       const extraLevels = Math.max(0, (d.values["spellSlot"] ?? s.level) - s.level);
       const extraDice =
         s.upcastDice ??
-        Number(plainText(s.text).match(/\+(\d+)d\d+ per slot level above/i)?.[1] ?? 0);
+        Number((/\+(\d+)d\d+ per slot level above/i.exec(plainText(s.text)))?.[1] ?? 0);
       const n =
         (r.count * (r.scales ? cantripDice(levelOf(c)) : 1) + extraLevels * extraDice) *
         (crit ? 2 : 1);
@@ -445,9 +472,11 @@ const spellRoll = (s: Spell, crit: boolean): FollowUpDef => {
   };
 };
 
-const SPELL_ROLLS: FollowUpDef[] = SPELLS_ALL.flatMap((s) =>
-  !s.roll ? [] : s.attack ? [spellRoll(s, false), spellRoll(s, true)] : [spellRoll(s, false)],
-);
+/** Each spell's dice, and a spell attack's critical dice too. */
+const SPELL_ROLLS: FollowUpDef[] = SPELLS_ALL.flatMap((s) => {
+  if (!s.roll) return [];
+  return s.attack ? [spellRoll(s, false), spellRoll(s, true)] : [spellRoll(s, false)];
+});
 
 /** Spells with a save and no single target hit everyone in an area. */
 const inArea = (area?: AreaSpec): TargetSpec => ({
@@ -508,7 +537,7 @@ const SPELL_ACTIONS: ActionDef[] = SPELLS_ALL.map((s) => ({
       }
     : {}),
   tags: [s.level ? `level ${s.level}` : "cantrip"],
-  ...(s.target ? { target: s.target } : s.save || s.area ? { target: inArea(s.area) } : {}),
+  ...(s.target ? { target: s.target } : (s.save || s.area ? { target: inArea(s.area) } : {})),
   ...(s.trigger.includes("Concentration") ? { concentration: true } : {}),
   steps: s.attack
     ? [
@@ -523,9 +552,9 @@ const SPELL_ACTIONS: ActionDef[] = SPELLS_ALL.map((s) => ({
           ATTACK_OUTCOMES,
         ),
       ]
-    : s.save
+    : (s.save
       ? [saveStep(s)]
-      : [],
+      : []),
   ...(!s.attack && s.roll ? { followUps: [`spell-${s.id}`] } : {}),
 }));
 
@@ -706,9 +735,9 @@ export const dnd55e: GameSystem = {
   result: (_total, natural, _roll, context) =>
     (natural[0] ?? 0) >= criticalThreshold(context)
       ? "crit"
-      : natural[0] === 1
+      : (natural[0] === 1
         ? "fumble"
-        : "rolled",
+        : "rolled"),
   // A natural 20 always hits and a natural 1 always misses.
   hits: (total, natural, ac, _roll, context) =>
     (natural[0] ?? 0) >= criticalThreshold(context) || (natural[0] !== 1 && total >= ac),
@@ -904,22 +933,22 @@ export const dnd55e: GameSystem = {
     const r = resolved.values;
     const mods: Record<string, number> = {};
     for (const a of ABILITIES) mods[a.id] = modifierOf(r[a.id] ?? 10);
-    const mod = (id: string) => mods[id] ?? 0;
+    const module_ = (id: string) => mods[id] ?? 0;
     const value = (id: string) => r[id] ?? 0;
     const prof = npc ? 0 : proficiencyAt(level);
 
     // Armour Class: worn armour, or a class's Unarmored Defense, or 10 + Dexterity.
     let ac: number;
-    if (npc) ac = Number(c.fields["ac"]) || 10 + mod("dex");
-    else if (value("armorWorn")) ac = value("armorBase") + Math.min(mod("dex"), value("dexCap"));
-    else if (cls.id === "barbarian") ac = 10 + mod("dex") + mod("con");
-    else if (cls.id === "monk" && !value("shieldWorn")) ac = 10 + mod("dex") + mod("wis");
-    else ac = 10 + mod("dex");
+    if (npc) ac = Number(c.fields["ac"]) || 10 + module_("dex");
+    else if (value("armorWorn")) ac = value("armorBase") + Math.min(module_("dex"), value("dexCap"));
+    else if (cls.id === "barbarian") ac = 10 + module_("dex") + module_("con");
+    else if (cls.id === "monk" && !value("shieldWorn")) ac = 10 + module_("dex") + module_("wis");
+    else ac = 10 + module_("dex");
     ac += value("acBonus");
 
     // Hit points: the full Hit Die at level 1, then its average (rounded up) per level, plus Constitution each level.
     // Some species, feats and subclasses add to it per level (Dwarven Toughness, Tough, Draconic Resilience).
-    const perLevel = cls.hitDie / 2 + 1 + mod("con");
+    const perLevel = cls.hitDie / 2 + 1 + module_("con");
     const species = SPECIES.find((x) => x.id === c.data["species"]);
     const feats = npc ? [] : featsOf(c);
     const extraPerLevel =
@@ -931,7 +960,7 @@ export const dnd55e: GameSystem = {
       : Math.max(
           1,
           cls.hitDie +
-            mod("con") +
+            module_("con") +
             (level - 1) * perLevel +
             extraPerLevel * level +
             Number(c.data["hpBonus"] ?? 0),
@@ -950,7 +979,7 @@ export const dnd55e: GameSystem = {
     const saves: Record<string, number> = {};
     for (const a of ABILITIES) saves[`save:${a.id}`] = !npc && cls.saves.includes(a.id) ? prof : 0;
 
-    const castingMod = cls.casting ? mod(cls.casting) : 0;
+    const castingModule = cls.casting ? module_(cls.casting) : 0;
     const slots = npc ? [] : spellSlots(cls, level);
     const pact = !npc && cls.caster === "pact" ? pactMagic(level) : { slots: 0, level: 0 };
     const is = (id: string, from = 1) => !npc && cls.id === id && level >= from;
@@ -969,23 +998,18 @@ export const dnd55e: GameSystem = {
         reactionMax: 1,
         speed: Math.max(0, value("speed")),
         initiativeBonus: value("initiativeBonus") + jack + alert,
-        initiative: mod("dex") + value("initiativeBonus") + jack + alert,
-        speciesDc: 8 + mod("con") + prof,
-        passivePerception: 10 + mod("wis") + (skills["skill:perception"] ?? 0),
+        initiative: module_("dex") + value("initiativeBonus") + jack + alert,
+        speciesDc: 8 + module_("con") + prof,
+        passivePerception: 10 + module_("wis") + (skills["skill:perception"] ?? 0),
         ...skills,
         ...saves,
-        castingMod,
-        spellAttack: cls.casting && !npc ? prof + castingMod : 0,
-        spellDc: cls.casting && !npc ? 8 + prof + castingMod : 0,
+        castingMod: castingModule,
+        spellAttack: cls.casting && !npc ? prof + castingModule : 0,
+        spellDc: cls.casting && !npc ? 8 + prof + castingModule : 0,
         preparedMax: npc ? 0 : (PREPARATION_COUNTS[cls.id]?.[level - 1] ?? 0),
         actionSurgeMax: is("fighter", 2) ? (level >= 17 ? 2 : 1) : 0,
         innateSorceryMax: is("sorcerer") ? 2 : 0,
-        cantripsMax:
-          !npc && cls.casting && !["paladin", "ranger"].includes(cls.id)
-            ? (["cleric", "wizard"].includes(cls.id) ? 3 : cls.id === "sorcerer" ? 4 : 2) +
-              (level >= 4 ? 1 : 0) +
-              (level >= 10 ? 1 : 0)
-            : 0,
+        cantripsMax: !npc && cls.casting ? cantripsKnown(cls.id, level) : 0,
         ...Object.fromEntries(SLOT_LEVELS.map((n) => [`slots${n}`, slots[n - 1] ?? 0])),
         pactSlots: pact.slots,
         pactLevel: pact.level,
@@ -1016,12 +1040,12 @@ export const dnd55e: GameSystem = {
               [6, 3],
               [18, 4],
             ])
-          : is("paladin", 3)
+          : (is("paladin", 3)
             ? stepped(level, [
                 [3, 2],
                 [11, 3],
               ])
-            : 0,
+            : 0),
         wildShapeMax: is("druid", 2)
           ? stepped(level, [
               [2, 2],
@@ -1047,7 +1071,7 @@ export const dnd55e: GameSystem = {
         sorceryMax: is("sorcerer", 2) ? level : 0,
         /** Carrying capacity, in pounds. */
         maxLoad: value("str") * 15,
-        load: c.inventory.reduce((n, i) => n + i.weight, 0),
+        load: c.inventory.reduce((n, index) => n + index.weight, 0),
         exhaustion,
         xpNext: XP_FOR_LEVEL[Math.min(19, level)] ?? 0,
       },
@@ -1088,14 +1112,22 @@ export const dnd55e: GameSystem = {
     const traits = new Set(
       SPECIES_ACTIONS.flatMap((a) => (a.species === c.data["species"] ? [a.id] : [])),
     );
-    const has = (a: ActionDef) =>
-      a.category === "class"
-        ? features.has(a.id)
-        : a.category === "spell"
-          ? spells.has(a.id)
-          : a.category === "species"
-            ? traits.has(a.id)
-            : true;
+    const has = (a: ActionDef) => {
+      switch (a.category) {
+        case "class": {
+          return features.has(a.id);
+        }
+        case "spell": {
+          return spells.has(a.id);
+        }
+        case "species": {
+          return traits.has(a.id);
+        }
+        default: {
+          return true;
+        }
+      }
+    };
     return ACTIONS_ALL.filter((a) => has(a) || granted.has(a.id));
   },
   tokenStats: (c, d) => [hpTokenStat(c, valueOf(d.values, "maxHp"))],

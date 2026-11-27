@@ -7,10 +7,12 @@ import { snapWallPoint } from "./wall";
 export function polygonFrame(corners: Point[]): PolygonFrame {
   const xs = corners.map((p) => p.x);
   const ys = corners.map((p) => p.y);
-  const x = (Math.min(...xs) + Math.max(...xs)) / 2;
-  const y = (Math.min(...ys) + Math.max(...ys)) / 2;
-  const w = Math.max(1, Math.max(...xs) - Math.min(...xs));
-  const h = Math.max(1, Math.max(...ys) - Math.min(...ys));
+  const [x0, x1] = [Math.min(...xs), Math.max(...xs)];
+  const [y0, y1] = [Math.min(...ys), Math.max(...ys)];
+  const x = (x0 + x1) / 2;
+  const y = (y0 + y1) / 2;
+  const w = Math.max(1, x1 - x0);
+  const h = Math.max(1, y1 - y0);
   return {
     x,
     y,
@@ -50,7 +52,7 @@ export class PolygonDraft {
       this.finish();
       return;
     }
-    const last = pts[pts.length - 1];
+    const last = pts.at(-1);
     if (!last || last.x !== p.x || last.y !== p.y) pts.push(p);
     this.preview(world, e);
   }
@@ -80,7 +82,7 @@ export class PolygonDraft {
 
   /** Put down the polygon being placed, if it has at least three corners. */
   finish() {
-    const draft = this.draft;
+    const {draft} = this;
     this.draft = null;
     this.c.renderer.draft = null;
     this.c.renderer.invalidate("overlay");

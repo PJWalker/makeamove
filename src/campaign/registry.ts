@@ -1,8 +1,8 @@
-import { store } from "../lib/store";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
+import { store } from "../lib/store";
 import { dataName } from "../platform/dataEpoch";
-import { isObject } from "../data/guards";
+import { isObject } from "../lib/guards";
 import { collection, lww, rootOf } from "../data/schema";
 
 /**
@@ -20,11 +20,11 @@ export interface CampaignSummary {
   lastOpenedAt: number;
 }
 
-const doc = new Y.Doc();
-const { campaigns: list } = rootOf(doc, {
+const document = new Y.Doc();
+const { campaigns: list } = rootOf(document, {
   campaigns: collection(lww(isObject<CampaignSummary>), "campaign entry"),
 });
-const persistence = new IndexeddbPersistence(dataName("registry"), doc);
+const persistence = new IndexeddbPersistence(dataName("registry"), document);
 
 export const campaigns = store<CampaignSummary[]>([]);
 export const registryReady = store(false);

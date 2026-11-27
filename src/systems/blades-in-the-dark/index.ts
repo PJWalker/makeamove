@@ -3,8 +3,9 @@ import { parse } from "../../features/dice/notation";
 import { commaListOf } from "../../lib/list";
 import { resolveEffects } from "../effects";
 import type { ActionDef, CheckStep, GameSystem } from "../types";
+import { plainText, richTextFromPlain  } from "../../data/richText";
+import type {RichText} from "../../data/richText";
 import { abilityRules, CREW_ABILITIES as CREW_RULES } from "./content";
-import { plainText, richTextFromPlain, type RichText } from "../../data/richText";
 
 const ACTIONS = [
   ["hunt", "Hunt", "Track a target or attack at range."],
@@ -50,13 +51,34 @@ const RESULTS = [
   { id: "miss-desperate", label: "1-3: desperate", tone: "bad" as const },
 ];
 
-const outcomes = (critical: RichText, strong: RichText, weak: RichText, miss: RichText) =>
-  Object.fromEntries<RichText>(
-    RESULTS.map(({ id }) => [
-      id,
-      id === "critical" ? critical : id === "strong" ? strong : id.startsWith("weak") ? weak : miss,
-    ]),
-  );
+/** What a dice pool is called on the roll: the kind of roll the action makes, else the formula's own label. */
+function rollLabel(formula: string, action: ActionDef | undefined): string {
+  if (action?.category === "resistance") return "Resistance";
+  if (action?.id === "indulge-vice") return "Vice";
+  if (action && FORTUNE_ROLLS.has(action.id)) return "Fortune";
+  return parse(formula)[0]?.label ?? "Pool";
+}
+
+/** How well a roll went, by its highest die: 6, 4/5, or 1-3. */
+function bandOf(highest: number): "miss" | "strong" | "weak" {
+  if (highest === 6) return "strong";
+  if (highest >= 4) return "weak";
+  return "miss";
+}
+
+/** Actions rolled as a fortune roll. */
+const FORTUNE_ROLLS = new Set(["fortune", "recover", "acquire-asset"]);
+
+/** The same outcome for every position of each band: a result's id is its band, then any position. */
+function outcomes(
+  critical: RichText,
+  strong: RichText,
+  weak: RichText,
+  miss: RichText,
+): Record<string, RichText> {
+  const byBand: Record<string, RichText> = { critical, strong, weak, miss };
+  return Object.fromEntries(RESULTS.map(({ id }) => [id, byBand[id.split("-")[0]!]!]));
+}
 
 const actionOutcomes: Record<string, RichText> = {
   ...outcomes(
@@ -484,7 +506,7 @@ const ABILITIES_BY_PLAYBOOK: Record<string, { name: string; text: string }[]> = 
 
 const PLAYBOOK_ABILITIES = PLAYBOOKS.flatMap((playbook) =>
   (ABILITIES_BY_PLAYBOOK[playbook.id] ?? []).map((ability) => ({
-    id: `ability-${playbook.id}-${ability.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    id: `ability-${playbook.id}-${ability.name.toLowerCase().replaceAll(/[^\da-z]+/g, "-")}`,
     playbook: playbook.id,
     ...ability,
     text: abilityRules(ability.name) ?? richTextFromPlain(ability.text),
@@ -523,9 +545,9 @@ const ITEMS = (
     ["papers", "Documents", 0],
   ] as const
 ).map(([id, name, weight]) => ({
-  id: String(id),
-  name: String(name),
-  weight: Number(weight),
+  id,
+  name,
+  weight,
   description: "Declare use during the score; count its load when selected.",
   tags: [],
   equippable: true,
@@ -696,16 +718,7 @@ export const bladesInTheDark: GameSystem = {
   checkRoll(formula, _stat, _character, selected) {
     let count = sumFlats(formula);
     if (selected?.id === "engagement") count += 1;
-    const label =
-      selected?.category === "resistance"
-        ? "Resistance"
-        : selected?.id === "indulge-vice"
-          ? "Vice"
-          : selected?.id === "fortune" ||
-              selected?.id === "recover" ||
-              selected?.id === "acquire-asset"
-            ? "Fortune"
-            : (parse(formula)[0]?.label ?? "Pool");
+    const label = rollLabel(formula, selected);
     const dice = count > 0 ? `${count}d6kh1` : "2d6kl1";
     return `${dice}[${label}]`;
   },
@@ -715,10 +728,10 @@ export const bladesInTheDark: GameSystem = {
     const dice = first?.kind === "dice" ? first.dice.filter((die) => !die.disabled) : [];
     const specification = rolled ? parse(rolled.formula)[0] : undefined;
     const zeroDice = specification?.kind === "dice" && specification.keep?.which === "low";
-    const values = dice.length ? dice.map((die) => die.value) : natural;
+    const values = dice.length > 0 ? dice.map((die) => die.value) : natural;
     if (!zeroDice && values.filter((value) => value === 6).length > 1) return "critical";
-    const highest = zeroDice ? total : values.length ? Math.max(...values) : total;
-    const band = highest === 6 ? "strong" : highest >= 4 ? "weak" : "miss";
+    const highest = zeroDice || values.length === 0 ? total : Math.max(...values);
+    const band = bandOf(highest);
     const position = first?.label?.toLowerCase();
     return band !== "strong" && (position === "controlled" || position === "desperate")
       ? `${band}-${position}`

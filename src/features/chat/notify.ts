@@ -4,7 +4,8 @@ import type { Campaign } from "../../campaign/campaign";
 import type { LinkKind } from "../notes/links";
 import { linkLabel } from "../notes/targets";
 import { messageText } from "./content";
-import { visibilityOf, type ChatMessage } from "./types";
+import { visibilityOf  } from "./types";
+import type {ChatMessage} from "./types";
 
 /*
  * Chat that arrives while the Chat panel isn't showing pops up over the
@@ -32,22 +33,27 @@ export function describe(
         body: m.emote ? `${m.name} ${text}` : text,
       };
     }
-    case "roll":
+    case "roll": {
       return {
         title: m.name,
         body: `${m.comment ? `${m.comment}: ` : ""}${m.roll.formula} = ${m.roll.total}`,
       };
-    case "move":
+    }
+    case "move": {
       return {
         title: m.characterName,
         body: `${m.moveName}${m.roll ? ` (${m.roll.total})` : ""}`,
       };
-    case "timer":
+    }
+    case "timer": {
       return { title: m.name, body: `Timer: ${m.label || "started"}` };
-    case "counter":
+    }
+    case "counter": {
       return { title: m.name, body: `Counter: ${m.label || "started"}` };
-    case "system":
+    }
+    case "system": {
       return null;
+    }
   }
 }
 
@@ -76,23 +82,23 @@ const MAX_POPUPS = 3;
 
 async function show(title: string, body: string, tag: string) {
   const options: NotificationOptions = { body, tag, icon: "/icon-192.png" };
-  const reg = await navigator.serviceWorker?.getRegistration().catch(() => undefined);
+  const reg = await navigator.serviceWorker?.getRegistration().catch(() => {});
   if (reg) {
     await reg.showNotification(title, options);
     return;
   }
   const n = new Notification(title, options);
-  n.onclick = () => {
+  n.addEventListener('click', () => {
     window.focus();
     n.close();
-  };
+  });
 }
 
 /** Asks once, on the first interaction (browsers only allow it then). */
 function askPermission() {
-  if (typeof Notification === "undefined" || Notification.permission !== "default") return;
+  if (Notification?.permission !== "default") return;
   const ask = () => void Notification.requestPermission();
-  window.addEventListener("pointerdown", ask, { once: true });
+  globalThis.addEventListener("pointerdown", ask, { once: true });
 }
 
 /** Pops up and notifies the chat messages of one open campaign that arrive while no one's reading. */

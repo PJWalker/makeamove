@@ -1,8 +1,9 @@
-import type { Homebrew, HomebrewEntry } from "./schema";
-export type { HomebrewEntry } from "./schema";
 import { asRichText } from "../../data/richText";
 import { newId } from "../../lib/ids";
 import type { ActionDef, GameSystem, ItemDef } from "../../systems/types";
+import type { Homebrew, HomebrewEntry } from "./schema";
+
+export type { HomebrewEntry } from "./schema";
 
 /*
  * A campaign's homebrew: gear and moves made at the table, kept in the
@@ -62,7 +63,7 @@ export function deleteHomebrew(map: Homebrew, id: string) {
 
 /** A system with the campaign's homebrew added: its gear after the system's, its moves too. */
 export function withHomebrew(system: GameSystem, entries: HomebrewEntry[]): GameSystem {
-  if (!entries.length) return system;
+  if (entries.length === 0) return system;
   const items = entries.flatMap((e) => (e.kind === "gear" ? [e.item] : []));
   const actions = entries.flatMap((e) => (e.kind === "move" ? [e.move] : []));
   return {

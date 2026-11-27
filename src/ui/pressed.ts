@@ -9,13 +9,13 @@ const TTL_MS = 1000;
 
 let last: { el: Element; at: number } | null = null;
 
-export function notePressed(el: Element | null | undefined) {
-  last = el ? { el, at: performance.now() } : null;
+export function notePressed(element: Element | null | undefined) {
+  last = element ? { el: element, at: performance.now() } : null;
 }
 
 addEventListener(
   "pointerdown",
-  (e) => notePressed((e.target as Element | null)?.closest?.('button, [role="button"], a')),
+  (e) => { notePressed((e.target as Element | null)?.closest?.('button, [role="button"], a')); },
   true,
 );
 

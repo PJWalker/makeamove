@@ -9,7 +9,7 @@ export interface SdfTextOptions {
   fill: ColorSource;
   /** Drawn behind the text; `width` is the stroke's full width, in px at `size`. */
   outline?: { color: ColorSource; width: number };
-  align?: "left" | "center" | "right";
+  align?: "center" | "left" | "right";
   /** Wrap lines wider than this, in px at `size`. */
   wrapWidth?: number;
 }
@@ -46,7 +46,7 @@ export class SdfText extends Container {
   private readonly body: BitmapText;
   private readonly halo: BitmapText | null;
 
-  constructor(o: SdfTextOptions & { text?: string; anchor?: number | PointData }) {
+  constructor(o: SdfTextOptions & { text?: string; anchor?: PointData | number }) {
     super();
     const text = o.text ?? "";
     const anchor = o.anchor ?? 0;

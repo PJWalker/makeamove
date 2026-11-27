@@ -1,6 +1,7 @@
-import { Graphics, ImageSource, Texture } from "pixi.js";
-import { entryIconSvg } from "../../ui/entryIcons";
-import { forgetBitmaps, loadBitmap, type PeerBlobs } from "../../media/images";
+import { ImageSource, Texture } from "pixi.js";
+import { tokenIconUrl } from "../../ui/entryIcons";
+import { forgetBitmaps, loadBitmap  } from "../../media/images";
+import type {PeerBlobs} from "../../media/images";
 
 const textures = new Map<string, Promise<Texture | null>>();
 
@@ -32,22 +33,24 @@ export function textureFor(hash: string, peers: PeerBlobs | null): Promise<Textu
   return p;
 }
 
-/** A token's icon, scaled to fit its 100 px body and centred. */
-export function iconGraphicFor(name: string): Graphics | null {
-  const graphic = new Graphics();
-  try {
-    graphic.svg(entryIconSvg(name));
-  } catch (error) {
-    console.warn(`Couldn't draw token icon ${name}`, error);
-    return null;
+/** A library icon's texture for a token, loaded once and shared; null if it can't load. */
+export function iconTextureFor(name: string): Promise<Texture | null> {
+  const url = tokenIconUrl(name);
+  let p = textures.get(url);
+  if (!p) {
+    const image = new Image();
+    image.src = url;
+    p = image.decode().then(
+      () =>
+        new Texture({
+          source: new ImageSource({ resource: image, autoGenerateMipmaps: true }),
+        }),
+      (error: unknown) => {
+        console.error(`Couldn't load token icon ${name}`, error);
+        return null;
+      },
+    );
+    textures.set(url, p);
   }
-  const bounds = graphic.bounds;
-  if (!bounds.width || !bounds.height) return null;
-  const scale = 56 / Math.max(bounds.width, bounds.height);
-  graphic.scale.set(scale);
-  graphic.position.set(
-    -(bounds.x + bounds.width / 2) * scale,
-    -(bounds.y + bounds.height / 2) * scale,
-  );
-  return graphic;
+  return p;
 }

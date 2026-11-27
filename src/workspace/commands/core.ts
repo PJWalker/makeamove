@@ -1,4 +1,4 @@
-import { isNothing, objectOf, oneOf } from "../../data/guards";
+import { isNothing, objectOf, oneOf } from "../../lib/guards";
 import type { ToolId } from "../../scene/tools";
 import {
   IconFit,
@@ -14,8 +14,10 @@ import { goToCampaign } from "../../navigation/router";
 import { autohide, setAutohide } from "../autohide";
 import { PANEL_ORDER, PANELS } from "../panelLayout";
 import type { PanelId } from "../layoutModel";
+import type { CampaignContext } from "../campaignContext";
 import { TOOLS } from "../tools";
-import { command, type TableCommand } from "./types";
+import { command  } from "./types";
+import type {TableCommand} from "./types";
 
 /* What every campaign has: tools, undo, the view, dialogs and panels. */
 
@@ -26,45 +28,40 @@ export const selectTool = command<{ tool: ToolId }>({
   params: objectOf({ tool: isTool }),
   kind: "tool",
   title: (_, { tool }) => TOOLS.find((t) => t.id === tool)?.label ?? "Tool",
-  permission: (ctx, { tool }) =>
-    !TOOLS.find((t) => t.id === tool)?.gmOnly || ctx.isGm() || "GM only",
+  permission: (context, { tool }) =>
+    !TOOLS.find((t) => t.id === tool)?.gmOnly || context.isGm() || "GM only",
   transact: false,
   offers: () => TOOLS.map((t) => ({ params: { tool: t.id }, icon: t.Icon, keys: [t.key] })),
-  run: (ctx, { tool }) => ctx.tools.activeTool.set(tool),
+  run: (context, { tool }) => { context.tools.activeTool.set(tool); },
 });
 
-export const undo = command({
-  id: "history.undo",
-  params: isNothing,
-  title: "Undo",
-  keys: ["Mod+Z"],
-  icon: IconUndo,
-  transact: false,
-  available: (ctx) => ctx.history.canUndo.value || "Nothing to undo",
-  offers: () => [{ params: undefined }],
-  section: "arrange",
-  menu: { canvas: () => [{ params: undefined }] },
-  run: (ctx) => {
-    ctx.canvas.canvasCommands.value?.controller.cancelGesture();
-    ctx.history.undo();
-  },
-});
+/** Undo or Redo: a gesture under way is dropped first, so it doesn't land on the restored state. */
+const historyCommand = (
+  step: "redo" | "undo",
+  look: Pick<TableCommand, "icon" | "keys" | "title">,
+) =>
+  command({
+    id: `history.${step}`,
+    params: isNothing,
+    ...look,
+    transact: false,
+    available: (context) =>
+      (step === "undo" ? context.history.canUndo.value : context.history.canRedo.value) ||
+      `Nothing to ${step}`,
+    offers: () => [{ params: undefined }],
+    section: "arrange",
+    menu: { canvas: () => [{ params: undefined }] },
+    run: (context) => {
+      context.canvas.canvasCommands.value?.controller.cancelGesture();
+      context.history[step]();
+    },
+  });
 
-export const redo = command({
-  id: "history.redo",
-  params: isNothing,
+export const undo = historyCommand("undo", { title: "Undo", keys: ["Mod+Z"], icon: IconUndo });
+export const redo = historyCommand("redo", {
   title: "Redo",
   keys: ["Shift+Mod+Z", "Mod+Y"],
   icon: IconRedo,
-  transact: false,
-  available: (ctx) => ctx.history.canRedo.value || "Nothing to redo",
-  offers: () => [{ params: undefined }],
-  section: "arrange",
-  menu: { canvas: () => [{ params: undefined }] },
-  run: (ctx) => {
-    ctx.canvas.canvasCommands.value?.controller.cancelGesture();
-    ctx.history.redo();
-  },
 });
 
 export const fitToScene = command({
@@ -75,11 +72,11 @@ export const fitToScene = command({
   keys: ["Shift+1"],
   icon: IconFit,
   transact: false,
-  available: (ctx) => !!ctx.canvas.canvasCommands.value || "Open a scene first",
+  available: (context) => !!context.canvas.canvasCommands.value || "Open a scene first",
   offers: () => [{ params: undefined }],
   section: "arrange",
   menu: { canvas: () => [{ params: undefined }] },
-  run: (ctx) => ctx.canvas.canvasCommands.value?.controller.fit(),
+  run: (context) => context.canvas.canvasCommands.value?.controller.fit(),
 });
 
 export const toggleAutohide = command({
@@ -92,12 +89,12 @@ export const toggleAutohide = command({
   transact: false,
   checked: () => autohide.value,
   offers: () => [{ params: undefined }],
-  run: () => setAutohide(!autohide.value),
+  run: () => { setAutohide(!autohide.value); },
 });
 
 const dialog = (
-  which: "settings" | "help" | "relationships",
-  look: Pick<TableCommand, "title" | "icon" | "aliases" | "kind">,
+  which: "help" | "relationships" | "settings",
+  look: Pick<TableCommand, "aliases" | "icon" | "kind" | "title">,
 ) =>
   command({
     id: `dialog.${which}`,
@@ -107,7 +104,7 @@ const dialog = (
     ...look,
     offers: () => [{ params: undefined }],
     menu: { campaign: () => [{ params: undefined }] },
-    run: (ctx) => ctx.canvas.dialogRequest.set(which),
+    run: (context) => { context.canvas.dialogRequest.set(which); },
   });
 
 export const openSettings = dialog("settings", {
@@ -128,27 +125,24 @@ export const openHelp = dialog("help", {
 });
 
 const isPanel = oneOf(...PANEL_ORDER);
+/** The panels this campaign has, in order. */
+const campaignPanels = (context: CampaignContext) =>
+  PANEL_ORDER.filter((id) => !context.panels.unavailablePanels.value.includes(id));
 
 export const showPanel = command<{ panel: PanelId }>({
   id: "panel.show",
   params: objectOf({ panel: isPanel }),
   title: (_, { panel }) => `Show ${PANELS[panel].label}`,
   transact: false,
-  available: (ctx, { panel }) =>
-    !ctx.panels.unavailablePanels.value.includes(panel) || "Not in this campaign",
-  offers: (ctx) =>
-    PANEL_ORDER.flatMap((id) =>
-      ctx.panels.unavailablePanels.value.includes(id)
-        ? []
-        : [
-            {
-              params: { panel: id },
-              aliases: [PANELS[id].label],
-              icon: PANELS[id].Icon,
-            },
-          ],
-    ),
-  run: (ctx, { panel }) => ctx.panels.showPanel(panel),
+  available: (context, { panel }) =>
+    !context.panels.unavailablePanels.value.includes(panel) || "Not in this campaign",
+  offers: (context) =>
+    campaignPanels(context).map((id) => ({
+      params: { panel: id },
+      aliases: [PANELS[id].label],
+      icon: PANELS[id].Icon,
+    })),
+  run: (context, { panel }) => { context.panels.showPanel(panel); },
 });
 
 /** Whether the table has a panel at all: ticked ones are in a sidebar or a window. */
@@ -158,17 +152,12 @@ export const togglePanel = command<{ panel: PanelId }>({
   title: (_, { panel }) => PANELS[panel].label,
   transact: false,
   section: "arrange",
-  checked: (ctx, { panel }) => !ctx.panels.layout.value.closed.includes(panel),
+  checked: (context, { panel }) => !context.panels.layout.value.closed.includes(panel),
   menu: {
-    campaign: (ctx) =>
-      PANEL_ORDER.flatMap((id) =>
-        ctx.panels.unavailablePanels.value.includes(id)
-          ? []
-          : [{ params: { panel: id }, icon: PANELS[id].Icon }],
-      ),
+    campaign: (context) =>
+      campaignPanels(context).map((id) => ({ params: { panel: id }, icon: PANELS[id].Icon })),
   },
-  run: (ctx, { panel }) =>
-    ctx.panels.setPanelClosed(panel, !ctx.panels.layout.value.closed.includes(panel)),
+  run: (context, { panel }) => { context.panels.setPanelClosed(panel, !context.panels.layout.value.closed.includes(panel)); },
 });
 
 export const leaveCampaign = command({
@@ -179,7 +168,7 @@ export const leaveCampaign = command({
   transact: false,
   section: "delete",
   menu: { campaign: () => [{ params: undefined }] },
-  run: () => goToCampaign(null),
+  run: () => { goToCampaign(null); },
 });
 
 export const togglePalette = command({
@@ -188,7 +177,7 @@ export const togglePalette = command({
   title: "Command Palette",
   keys: ["Mod+K"],
   transact: false,
-  run: (ctx) => ctx.table.togglePalette(),
+  run: (context) => { context.table.togglePalette(); },
 });
 
 export const coreCommands = [

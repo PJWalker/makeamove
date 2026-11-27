@@ -1,10 +1,11 @@
 import { store } from "../lib/store";
-import { parseInvite, type Invite } from "../sync/invite";
+import { parseInvite  } from "../sync/invite";
+import type {Invite} from "../sync/invite";
 import { until, withTransition } from "../ui/transition";
 
 /** Hash routes: `#/` is the lobby, `#/c/<campaignId>` is a campaign. */
 function campaignIdFromHash(): string | null {
-  const m = location.hash.match(/^#\/c\/([0-9a-z]+)/);
+  const m = /^#\/c\/([\da-z]+)/.exec(location.hash);
   return m?.[1] ?? null;
 }
 
@@ -18,24 +19,23 @@ function readHash() {
   const invite = parseInvite(location.hash);
   if (invite) {
     pendingInvite.value = invite;
-    history.replaceState(null, "", location.pathname + location.search + "#/");
+    history.replaceState(null, "", `${location.pathname + location.search}#/`);
   }
   routeCampaignId.value = campaignIdFromHash();
 }
 
 readHash();
-window.addEventListener("hashchange", readHash);
+globalThis.addEventListener("hashchange", readHash);
 
 /** The campaign's row in the lobby list, if it's on the page. */
 const rowOf = (id: string) =>
   document.querySelector<HTMLElement>(`[data-campaign-id="${CSS.escape(id)}"]`);
 
 /** Centre of a rect, for the lobby's zoom to scale around. */
-const setZoomOrigin = (r: DOMRect) =>
-  document.documentElement.style.setProperty(
+const setZoomOrigin = (r: DOMRect) => { document.documentElement.style.setProperty(
     "--zoom-origin",
     `${r.left + r.width / 2}px ${r.top + r.height / 2}px`,
-  );
+  ); };
 
 /**
  * Switch between the lobby and a campaign. Opening a campaign zooms the table

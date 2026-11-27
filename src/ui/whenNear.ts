@@ -2,7 +2,7 @@
 const MARGIN = "800px 0px";
 
 /** One observer per scroller (the document when there's none), shared by everything waiting in it. */
-const observers = new WeakMap<Element | Document, IntersectionObserver>();
+const observers = new WeakMap<Document | Element, IntersectionObserver>();
 const waiting = new WeakMap<Element, () => void>();
 
 /** The nearest ancestor that scrolls vertically, or null for the page itself. */

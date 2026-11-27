@@ -94,37 +94,43 @@ export function layoutWeb(
     return value;
   };
   const r = Math.min(width, height) * 0.35;
-  ids.forEach((id, i) => {
-    const a = (i / Math.max(1, ids.length)) * Math.PI * 2;
+  for (const [index, id] of ids.entries()) {
+    const a = (index / Math.max(1, ids.length)) * Math.PI * 2;
     pos[id] = fixed[id]
       ? { ...fixed[id] }
       : { x: width / 2 + r * Math.cos(a), y: height / 2 + r * Math.sin(a) };
-  });
+  }
   const ideal = Math.max(90, Math.sqrt((width * height) / Math.max(1, ids.length)) * 0.8);
   for (let step = 0; step < steps; step++) {
     const heat = 1 - step / steps;
     const force: Record<string, NodePosition> = Object.fromEntries(
       ids.map((id) => [id, { x: 0, y: 0 }]),
     );
-    for (let i = 0; i < ids.length; i++) {
-      for (let j = i + 1; j < ids.length; j++) {
-        const fromId = ids[i]!;
-        const toId = ids[j]!;
+    /** Push `a` by (x, y) and `b` the opposite way. */
+    const pushApart = (a: string, b: string, x: number, y: number) => {
+      const fa = point(force, a);
+      const fb = point(force, b);
+      fa.x += x;
+      fa.y += y;
+      fb.x -= x;
+      fb.y -= y;
+    };
+    for (let index = 0; index < ids.length; index++) {
+      for (let index_ = index + 1; index_ < ids.length; index_++) {
+        const fromId = ids[index]!;
+        const toId = ids[index_]!;
         const a = point(pos, fromId);
         const b = point(pos, toId);
         let dx = a.x - b.x;
         let dy = a.y - b.y;
         let d = Math.hypot(dx, dy);
         if (d < 0.01) {
-          dx = 0.01 * (i - j);
+          dx = 0.01 * (index - index_);
           dy = 0.01;
           d = Math.hypot(dx, dy);
         }
         const push = (ideal * ideal) / d;
-        point(force, fromId).x += (dx / d) * push;
-        point(force, fromId).y += (dy / d) * push;
-        point(force, toId).x -= (dx / d) * push;
-        point(force, toId).y -= (dy / d) * push;
+        pushApart(fromId, toId, (dx / d) * push, (dy / d) * push);
       }
     }
     for (const e of edges) {
@@ -135,10 +141,7 @@ export function layoutWeb(
       const dy = a.y - b.y;
       const d = Math.max(0.01, Math.hypot(dx, dy));
       const pull = (d * d) / ideal;
-      point(force, e.from).x -= (dx / d) * pull;
-      point(force, e.from).y -= (dy / d) * pull;
-      point(force, e.to).x += (dx / d) * pull;
-      point(force, e.to).y += (dy / d) * pull;
+      pushApart(e.from, e.to, -(dx / d) * pull, -(dy / d) * pull);
     }
     for (const id of ids) {
       if (fixed[id]) continue;

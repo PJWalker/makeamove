@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { Campaign } from "../../../campaign/campaign";
 
+import {
+  characterLinkTargets,
+  linkLabel,
+  linkTargets,
+  linkTip,
+  matchingLinkTargets,
+} from "../targets";
+
 const dependencies = vi.hoisted(() => ({
   getCharacter: vi.fn(),
   listCharacters: vi.fn(),
@@ -14,14 +22,6 @@ vi.mock("../../characters/api", () => ({
   systemOf: dependencies.systemOf,
 }));
 vi.mock("../api", () => ({ listNotes: dependencies.listNotes }));
-
-import {
-  characterLinkTargets,
-  linkLabel,
-  linkTargets,
-  linkTip,
-  matchingLinkTargets,
-} from "../targets";
 
 const notes = [
   { id: "current", title: "Current Page", gmOnly: false },

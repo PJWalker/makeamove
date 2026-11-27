@@ -20,7 +20,7 @@ export const pan: ToolPress = (c, _e, _world, start) => {
 /** Two fingers down: they pan and zoom the view together, whatever the tool. */
 export function pinch(c: ToolContext): Gesture {
   const [a, b] = [...c.pointers.values()] as [{ x: number; y: number }, { x: number; y: number }];
-  const startDist = Math.hypot(a.x - b.x, a.y - b.y);
+  const startDistribution = Math.hypot(a.x - b.x, a.y - b.y);
   const startMid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
   const cam = c.renderer.camera;
   return {
@@ -30,13 +30,13 @@ export function pinch(c: ToolContext): Gesture {
       const [a, b] = [...c.pointers.values()];
       if (!a || !b) return;
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
-      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const distribution = Math.hypot(a.x - b.x, a.y - b.y);
       const panned = {
         ...cam,
         x: cam.x + mid.x - startMid.x,
         y: cam.y + mid.y - startMid.y,
       };
-      c.renderer.setCamera(zoomAt(panned, mid, dist / startDist));
+      c.renderer.setCamera(zoomAt(panned, mid, distribution / startDistribution));
     },
   };
 }

@@ -13,24 +13,25 @@ import {
   searchNotes,
 } from "../api";
 import { NoteDoc, noteDbName } from "../noteDoc";
+import { isString } from "../../../lib/guards";
 
 async function setUp() {
   device.value = { id: "gm", name: "Gwen" };
   return Campaign.open(await createCampaign("Barrows", "Gwen"));
 }
 
-const paragraph = (...content: (string | Y.XmlElement)[]) => {
+const paragraph = (...content: (Y.XmlElement | string)[]) => {
   const p = new Y.XmlElement("paragraph");
   p.insert(
     0,
-    content.map((c) => (typeof c === "string" ? new Y.XmlText(c) : c)),
+    content.map((c) => (isString(c) ? new Y.XmlText(c) : c)),
   );
   return p;
 };
 
 /** Write paragraphs into a page, as the editor would, through `open`. */
 function write(page: NoteDoc | null, ...paragraphs: Y.XmlElement[]) {
-  page!.doc.transact(() => page!.body.push(paragraphs));
+  page!.doc.transact(() => { page!.body.push(paragraphs); });
   page!.destroy();
 }
 
@@ -112,8 +113,8 @@ describe("note search", () => {
     write(await openNotePage(c, inn), paragraph("The duke drinks here."));
     (await noteTextIndex(c)).flush();
     await settle();
-    const id = c.id;
-    const guid = noteSubdoc(c, inn)!.guid;
+    const {id} = c;
+    const {guid} = (noteSubdoc(c, inn)!);
     c.destroy();
     // With the page's text gone, only the stored index can find it.
     indexedDB.deleteDatabase(noteDbName(guid));

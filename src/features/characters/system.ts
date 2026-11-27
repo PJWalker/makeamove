@@ -25,7 +25,7 @@ export function systemOf(campaign: Campaign): GameSystem {
   const base = baseSystemOf(campaign);
   const version = homebrewVersion(campaign);
   const known = merged.get(campaign);
-  if (known && known.base === base && known.version === version) return known.system;
+  if (known?.base === base && known.version === version) return known.system;
   const system = withHomebrew(base, listHomebrew(campaign.homebrew));
   merged.set(campaign, { base, version, system });
   return system;

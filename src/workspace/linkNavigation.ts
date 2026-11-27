@@ -25,7 +25,7 @@ export class LinkNavigation {
 
   /** Show a character's sheet: in My Character for this device's own, else in Characters. */
   openCharacter(id: string) {
-    if (id === playedCharacterId(this.campaign)) return this.panels.showPanel("pc");
+    if (id === playedCharacterId(this.campaign)) { this.panels.showPanel("pc"); return; }
     viewCharacter(this.campaign, id);
     this.panels.showPanel("characters");
   }
@@ -39,22 +39,26 @@ export class LinkNavigation {
 
   /** Show a link's target in its panel: the page, the sheet, the Scenes list, or the Libraries. */
   openInSidebar(kind: LinkKind, id: string) {
-    if (kind === "scene") return this.panels.showPanel("scene");
+    if (kind === "scene") { this.panels.showPanel("scene"); return; }
     this.followLink(kind, id);
   }
 
   /** Follow a link: open the page, the character's sheet, the scene, or the Libraries. */
   followLink(kind: LinkKind, id: string) {
     switch (kind) {
-      case "note":
-        return this.openNote(id);
-      case "character":
-        return this.openCharacter(id);
-      case "scene":
-        return this.campaign.setActiveScene(id);
+      case "note": {
+        this.openNote(id); return;
+      }
+      case "character": {
+        this.openCharacter(id); return;
+      }
+      case "scene": {
+        this.campaign.setActiveScene(id); return;
+      }
       case "item":
-      case "move":
-        return this.library.search(kind, linkLabel(this.campaign, kind, id) ?? "");
+      case "move": {
+        this.library.search(kind, linkLabel(this.campaign, kind, id) ?? ""); return;
+      }
     }
   }
 }

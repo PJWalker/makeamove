@@ -1,8 +1,9 @@
-import { SheetFrame, SheetSectionView, type SheetProps } from "../../workspace/DeclarativeSheet";
+import { SheetFrame, SheetSectionView  } from "../../workspace/DeclarativeSheet";
+import type {SheetProps as SheetProperties} from "../../workspace/DeclarativeSheet";
 import { useSheet } from "../../workspace/sheetModel";
 
-export function DungeonWorldSheet(props: SheetProps) {
-  const sheet = useSheet(props);
+export function DungeonWorldSheet(properties: SheetProperties) {
+  const sheet = useSheet(properties);
   return (
     <SheetFrame {...sheet}>
       <SheetSectionView {...sheet} section={{ kind: "header" }} />
@@ -53,8 +54,8 @@ export function DungeonWorldSheet(props: SheetProps) {
   );
 }
 
-export function DungeonWorldNpcSheet(props: SheetProps) {
-  const sheet = useSheet(props);
+export function DungeonWorldNpcSheet(properties: SheetProperties) {
+  const sheet = useSheet(properties);
   return (
     <SheetFrame {...sheet}>
       <SheetSectionView {...sheet} section={{ kind: "header" }} />

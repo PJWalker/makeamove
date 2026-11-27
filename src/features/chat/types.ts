@@ -37,7 +37,7 @@ export interface TextMessage extends Base {
  *            is seen only by the GM
  * There are no blind rolls: if a player shouldn't see a result, the GM rolls.
  */
-export type RollVisibility = "public" | "private";
+export type RollVisibility = "private" | "public";
 
 export interface RollMessage extends Base {
   kind: "roll";
@@ -51,7 +51,7 @@ export interface RollMessage extends Base {
 export interface SystemMessage extends Base {
   kind: "system";
   text: string;
-  event?: "join" | "session-start" | "session-end" | "scene-change";
+  event?: "join" | "scene-change" | "session-end" | "session-start";
   /** For session markers. */
   session?: number;
   /** For scene changes: where the GM went. */
@@ -157,15 +157,10 @@ export interface CounterMessage extends Base {
 }
 
 export type ChatMessage =
-  | TextMessage
-  | RollMessage
-  | SystemMessage
-  | MoveMessage
-  | TimerMessage
-  | CounterMessage;
+  CounterMessage | MoveMessage | RollMessage | SystemMessage | TextMessage | TimerMessage;
 
 /** What someone sees of a message: all of it, a placeholder, or nothing. */
-export type Visibility = "full" | "masked" | "hidden";
+export type Visibility = "full" | "hidden" | "masked";
 
 /** Players may delete their own messages; the GM may delete anyone's. */
 export const canDelete = (m: ChatMessage, me: string, isGm: boolean) => isGm || m.author === me;

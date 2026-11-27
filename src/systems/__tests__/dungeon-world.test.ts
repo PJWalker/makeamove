@@ -58,9 +58,12 @@ describe("Dungeon World campaign behavior", () => {
     const move = dungeonWorld.actions.find((action) => action.id === "defy-danger")!;
 
     startMove(campaign, id, move);
-    expect(campaign.moves.ask.value).toEqual({ moveId: "defy-danger", characterId: id });
-    expect(campaign.moves.targets.value).toBeNull();
-    campaign.moves.ask.value = null;
+    expect(campaign.moves.actor.getSnapshot().context.ask).toEqual({
+      moveId: "defy-danger",
+      characterId: id,
+    });
+    expect(campaign.moves.actor.getSnapshot().context.targets).toBeNull();
+    campaign.moves.ask(null);
 
     const message = await makeMove(campaign, id, move, { stat: "str" });
     expect(message).toMatchObject({ kind: "move", moveId: "defy-danger", characterName: "Ayla" });

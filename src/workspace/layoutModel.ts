@@ -13,18 +13,10 @@
  */
 
 import { generateKeyBetween, generateNKeysBetween } from "fractional-indexing";
+import { isString } from "../lib/guards";
 
 export type PanelId =
-  | "scene"
-  | "chat"
-  | "pc"
-  | "characters"
-  | "combat"
-  | "libraries"
-  | "reference"
-  | "items"
-  | "notes"
-  | "members";
+  "characters" | "chat" | "combat" | "items" | "libraries" | "members" | "notes" | "pc" | "reference" | "scene";
 export type DockItemId = PanelId | `entity:${string}`;
 export type Side = "left" | "right";
 
@@ -95,7 +87,7 @@ const PANEL_IDS = new Set<string>(PANEL_ORDER);
 
 function isDockItemId(id: unknown): id is DockItemId {
   return (
-    typeof id === "string" && (PANEL_IDS.has(id) || (id.startsWith("entity:") && id.length > 7))
+    isString(id) && (PANEL_IDS.has(id) || (id.startsWith("entity:") && id.length > 7))
   );
 }
 
@@ -123,11 +115,11 @@ export function defaultLayout(narrow: boolean): Layout {
 /** Fresh order keys for tabs in this order. */
 function orderKeys(panels: DockItemId[]): Layout["order"] {
   const keys = generateNKeysBetween(null, null, panels.length);
-  return Object.fromEntries(panels.map((id, i) => [id, keys[i]]));
+  return Object.fromEntries(panels.map((id, index) => [id, keys[index]]));
 }
 
 function isOrderKey(key: unknown): key is string {
-  if (typeof key !== "string") return false;
+  if (!isString(key)) return false;
   try {
     generateKeyBetween(key, null);
     return true;
@@ -139,13 +131,13 @@ function isOrderKey(key: unknown): key is string {
 /** Whether a side's tabs all have keys, sorted the way the tabs are. */
 function inOrder(panels: DockItemId[], order: Layout["order"]) {
   const keys = panels.map((id) => order[id]);
-  return keys.every((key, i) => {
-    const prev = keys[i - 1];
-    return key !== undefined && (i === 0 || (prev !== undefined && prev < key));
+  return keys.every((key, index) => {
+    const previous = keys[index - 1];
+    return key !== undefined && (index === 0 || (previous !== undefined && previous < key));
   });
 }
 
-export function locate(l: Layout, id: DockItemId): Side | "floating" | "closed" {
+export function locate(l: Layout, id: DockItemId): Side | "closed" | "floating" {
   if (l.floating.some((w) => w.id === id)) return "floating";
   if (l.closed.includes(id)) return "closed";
   if (l.left.panels.includes(id)) return "left";
@@ -214,7 +206,7 @@ export function normalise(saved: unknown, narrow: boolean): Layout {
 
 /** The layout as shown, leaving out panels this campaign doesn't have (Combat without initiative). */
 export function withoutPanels(l: Layout, ids: PanelId[]): Layout {
-  if (!ids.length) return l;
+  if (ids.length === 0) return l;
   const keep = (id: DockItemId) => !isPanelId(id) || !ids.includes(id);
   return {
     ...l,
@@ -258,10 +250,10 @@ export function bothSidesCramped(l: Layout, viewportWidth: number): boolean {
  * In a window too narrow for both sidebars and the map, opening one sidebar
  * shuts the other. A side that was already open stays as it is.
  */
-export function oneSideIfCramped(prev: Layout, next: Layout, viewportWidth: number): Layout {
+export function oneSideIfCramped(previous: Layout, next: Layout, viewportWidth: number): Layout {
   if (!next.left.open || !next.right.open || !bothSidesCramped(next, viewportWidth)) return next;
-  if (!prev.left.open) return { ...next, right: { ...next.right, open: false } };
-  if (!prev.right.open) return { ...next, left: { ...next.left, open: false } };
+  if (!previous.left.open) return { ...next, right: { ...next.right, open: false } };
+  if (!previous.right.open) return { ...next, left: { ...next.left, open: false } };
   return next;
 }
 
@@ -273,6 +265,8 @@ export function resizeSide(l: Layout, side: Side, width: number, max: number): L
   return w !== s.width || !s.open ? { ...l, [side]: { ...s, width: w, open: true } } : l;
 }
 
+const ARROW_DIRECTION: Record<string, -1 | 1> = { ArrowRight: 1, ArrowLeft: -1 };
+
 /**
  * The width a key asks of a side's resize separator, or null for keys it
  * doesn't handle. A shut side counts as zero wide: growing reopens it at its
@@ -283,11 +277,11 @@ export function keyedSideWidth(
   s: SideState,
   key: string,
   shift: boolean,
-  grow: 1 | -1,
+  grow: -1 | 1,
   max: number,
 ): number | null {
   const step = shift ? SIDEBAR_KEY_STEP_LARGE : SIDEBAR_KEY_STEP;
-  const delta = key === "ArrowRight" ? grow * step : key === "ArrowLeft" ? -grow * step : 0;
+  const delta = (ARROW_DIRECTION[key] ?? 0) * grow * step;
   if (delta > 0) return s.open ? s.width + delta : s.width;
   if (delta < 0) return s.open ? Math.max(SIDEBAR_MIN_W, s.width + delta) : null;
   if (key === "Home") return 0;
@@ -343,11 +337,11 @@ function place(
   const keys = panels.map((p) => l.order[p] ?? null);
   const remembered = l.order[id];
   const at =
-    index !== "remembered"
-      ? Math.min(Math.max(index, 0), panels.length)
-      : remembered === undefined
+    index === "remembered"
+      ? (remembered === undefined
         ? panels.length
-        : keys.filter((k) => k !== null && k <= remembered).length;
+        : keys.filter((k) => k !== null && k <= remembered).length)
+      : Math.min(Math.max(index, 0), panels.length);
   const before = keys[at - 1] ?? null;
   const after = keys[at] ?? null;
   // The remembered key is kept unless a tab placed since has taken it.

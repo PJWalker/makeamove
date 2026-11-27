@@ -3,6 +3,7 @@ import type { Icon } from "../ui/icons";
 import { IconClose } from "../ui/icons";
 import { Button } from "../ui/Button";
 import { withTransition } from "../ui/transition";
+import { isPhone } from "../ui/viewport";
 
 export function WindowControls({
   title,
@@ -31,7 +32,8 @@ export function WindowControls({
     <header
       className="panel-header window-header"
       onPointerDown={(event) => {
-        if ((event.target as HTMLElement).closest("button")) return;
+        // On a phone a window fills the screen, so there's nowhere to move it.
+        if ((event.target as HTMLElement).closest("button") || isPhone()) return;
         onDragStart(event.nativeEvent);
       }}
       onDoubleClick={(event) => {

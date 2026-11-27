@@ -1,5 +1,6 @@
-import { store, watch, type ReadonlyStore } from "../lib/store";
-import * as Y from "yjs";
+import type * as Y from "yjs";
+import { store, watch  } from "../lib/store";
+import type {ReadonlyStore} from "../lib/store";
 import { colourOf, Presence } from "../scene/presence";
 import { PeerBlobs } from "../media/images";
 import { BlobExchange } from "../sync/blobs";
@@ -20,7 +21,7 @@ export class CampaignConnection {
 
   constructor(
     private readonly id: string,
-    private readonly doc: Y.Doc,
+    private readonly document: Y.Doc,
     private readonly device: ReadonlyStore<Device>,
     private readonly joinRoom: JoinRoom,
   ) {}
@@ -38,7 +39,7 @@ export class CampaignConnection {
       return false;
     }
 
-    const session = new SyncSession(this.doc, transport);
+    const session = new SyncSession(this.document, transport);
     this.session = session;
     const refresh = () => {
       this.peerCount.value = session.peerIds().length;

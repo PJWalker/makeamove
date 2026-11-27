@@ -30,7 +30,7 @@
     gap: var(--space-1);
     margin: calc(var(--space-3) * -1) calc(var(--space-4) * -1) 0;
     padding: var(--space-4) var(--space-4) 0;
-    border-bottom: var(--tab-rule) solid var(--hairline-strong);
+    border-bottom: var(--tab-rule) solid var(--gilt-lo);
     background: linear-gradient(to bottom, transparent, var(--surface-sunken));
   }
   .popup-tab {
@@ -45,6 +45,7 @@
     border-bottom-width: 0;
 
     color: var(--text-muted);
+    font-family: var(--font-display);
     font-size: var(--text-base);
     font-weight: 600;
     cursor: pointer;
@@ -57,9 +58,9 @@
   }
   .popup-tab[aria-selected="true"] {
     z-index: 1;
-    border-image: var(--shine);
+    border-image: var(--gilt-edge);
     background-color: var(--surface);
-    background-image: var(--window-sheen);
+    background-image: var(--grain), var(--window-sheen);
     background-clip: padding-box;
     color: var(--accent);
   }

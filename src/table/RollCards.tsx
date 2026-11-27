@@ -1,18 +1,16 @@
-import { asRichText, sameRichText } from "../data/richText";
+import type { Ref } from "react";
 import { RichTextView } from "../workspace/RichTextView";
-import { type Ref } from "react";
+import { asRichText, sameRichText } from "../data/richText";
 import { useConstant } from "../ui/useConstant";
 import type { MoveMessage, RollMessage, RollVisibility } from "../features/chat/types";
-import { type Roll } from "../features/dice/notation";
+import type { Roll } from "../features/dice/notation";
 import { getCharacter, systemOf } from "../features/characters/api";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
-import { DamageTargets, SaveRequests, TargetRolls } from "./CardParts";
-import { poolFormula, type TrayPick } from "../features/dice/pool";
-import { PendingDie, RollChip, RollDie } from "./RollDie";
-import { rollCarriedDice } from "./rollDieHelpers";
+import { poolFormula  } from "../features/dice/pool";
+import type {TrayPick} from "../features/dice/pool";
 import { colourOf } from "../scene/presence";
 import { canWork } from "../features/chat/types";
 import { readRollState } from "../features/chat/rollState";
@@ -23,6 +21,9 @@ import { applySuggestion } from "../workspace/commands/characters";
 import { useCampaign } from "../workspace/campaignContext";
 import { reroll, toggleDie } from "../workspace/commands/chat";
 import { can } from "../workspace/commands/views";
+import { carryDice, rollCarriedDice } from "./rollDieHelpers";
+import { PendingDie, RollChip, RollDie } from "./RollDie";
+import { DamageTargets, SaveRequests, TargetRolls } from "./CardParts";
 
 /* Rolls and moves in the chat: their dice, which anyone allowed can reroll or throw, and their outcome. */
 
@@ -31,10 +32,10 @@ const VISIBILITY_LABEL: Record<RollVisibility, string> = {
   private: "Secret: you and the GM",
 };
 
-type Thrown = { arriving: boolean; mine: boolean };
+interface Thrown { arriving: boolean; mine: boolean }
 
 /** The dice of a roll take the colour of the player who rolled them. */
-const rollerDiceColour = (m: RollMessage | MoveMessage) =>
+const rollerDiceColour = (m: MoveMessage | RollMessage) =>
   colourOf({ id: m.author, ...(m.colour ? { colour: m.colour } : {}) });
 
 /** What a queued roll shows, in order: its dice by size, then its modifier, then its stats. */
@@ -95,6 +96,13 @@ export function PendingRollCard({
   const formula = poolFormula(picks);
   if (!formula) return null;
   const landed = landedValues(releasedRoll?.roll);
+  /** What a queued die rolls when the roll is released. */
+  const releaseOf = ({ sides, dieIndex }: { sides: number; dieIndex: number }, index: number) => {
+    const value = landed.get(sides)?.[dieIndex];
+    return releasedRoll && value !== undefined
+      ? { value, seed: `${releasedRoll.seed}:${index}`, trayVelocity: releasedRoll.trayVelocity }
+      : undefined;
+  };
   const views = pendingEntries(picks).map((entry, index) => {
     if (entry.kind === "die") {
       const entryKey = `${entry.sides}:${entry.dieIndex}`;
@@ -103,13 +111,9 @@ export function PendingRollCard({
           key={entryKey}
           sides={entry.sides}
           index={index}
-          seed={`pending:${entryKey}`}
-          entryKey={entryKey}
-          releaseValue={landed.get(entry.sides)?.[entry.dieIndex]}
-          releaseSeed={releasedRoll ? `${releasedRoll.seed}:${index}` : undefined}
-          trayVelocity={releasedRoll?.trayVelocity}
-          onLanded={() => onDieLanded(index)}
-          onEntered={onDieEntered}
+          release={releaseOf(entry, index)}
+          onLanded={() => { onDieLanded(index); }}
+          onEntered={() => { onDieEntered(entryKey); }}
         />
       );
     }
@@ -146,25 +150,43 @@ export function PendingRollCard({
   );
 }
 
-function useSharedRoll(campaign: Campaign, message: RollMessage | MoveMessage) {
-  const ctx = useCampaign();
+function useSharedRoll(campaign: Campaign, message: MoveMessage | RollMessage) {
+  const context = useCampaign();
   const source = message.roll;
   const snapshot = JSON.parse(
     useQuery(campaign.messageState, () =>
       JSON.stringify(source ? readRollState(campaign.messageState, message.id, source) : null),
     ),
   ) as ReturnType<typeof readRollState> | null;
-  const allowed = useQuery(campaign.members, () => can(ctx, reroll, { id: message.id }));
+  const allowed = useQuery(campaign.members, () => can(context, reroll, { id: message.id }));
   return {
     snapshot,
     allowed,
-    rerollAll: () => ctx.execute(reroll, { id: message.id }),
-    reroll: (term: number, die: number) => ctx.execute(reroll, { id: message.id, term, die }),
-    toggle: (term: number, die: number) => ctx.execute(toggleDie, { id: message.id, term, die }),
+    rerollAll: () => context.execute(reroll, { id: message.id }),
+    reroll: (term: number, die: number) => context.execute(reroll, { id: message.id, term, die }),
+    toggle: (term: number, die: number) => context.execute(toggleDie, { id: message.id, term, die }),
   };
 }
 
 type RollInteraction = ReturnType<typeof useSharedRoll>;
+
+/** A shared roll that, when `throwable` and this player may reroll it, is thrown again by flicking its card. */
+function useThrowableRoll(
+  campaign: Campaign,
+  message: MoveMessage | RollMessage,
+  throwable: boolean,
+) {
+  const interaction = useSharedRoll(campaign, message);
+  const canThrow = interaction.allowed && throwable;
+  const gesture = useThrow({
+    onThrow: interaction.rerollAll,
+    onAway: rollCarriedDice,
+    onLift: carryDice,
+    enabled: canThrow,
+    ignoreControls: true,
+  });
+  return { interaction, canThrow, gesture };
+}
 
 export function RollCard({
   campaign,
@@ -174,20 +196,14 @@ export function RollCard({
   mine,
   quickRoll = false,
   quickRollActive = false,
-}: {
+}: Thrown & {
   campaign: Campaign;
   m: RollMessage;
   masked: boolean;
   quickRoll?: boolean;
   quickRollActive?: boolean;
-} & Thrown) {
-  const interaction = useSharedRoll(campaign, m);
-  const gesture = useThrow({
-    onThrow: interaction.rerollAll,
-    onAway: rollCarriedDice,
-    enabled: interaction.allowed && !masked,
-    ignoreControls: true,
-  });
+}) {
+  const { interaction, canThrow, gesture } = useThrowableRoll(campaign, m, !masked);
   if (masked) {
     return (
       <div className="roll-card" data-masked="true">
@@ -202,10 +218,10 @@ export function RollCard({
       aria-label={`${r.formula}${m.comment ? `, ${m.comment}` : ""}: ${r.total}`}
       data-quick-roll={quickRoll || undefined}
       data-quick-roll-active={quickRollActive || undefined}
-      data-throwable={interaction.allowed || undefined}
-      data-dice-target={interaction.allowed ? m.id : undefined}
-      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be rerolled by keyboard
-      tabIndex={interaction.allowed ? 0 : undefined}
+      data-throwable={canThrow || undefined}
+      data-dice-target={canThrow ? m.id : undefined}
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be rerolled by keyboard
+      tabIndex={canThrow ? 0 : undefined}
       {...gesture}
     >
       <div className="roll-head">
@@ -229,67 +245,72 @@ export function RollCard({
     </div>
   );
 }
+
 function RollTerms({
   roll,
   colour,
   arriving,
   mine,
   interaction,
-}: {
+}: Thrown & {
   roll: Roll;
   colour: string;
   interaction: RollInteraction;
-} & Thrown) {
-  const seeds = interaction.snapshot!.seeds;
-  const initial = useConstant(
-    () => new Set(seeds.flatMap((row, i) => (row.length ? row : [`flat:${i}`]))),
-  );
+}) {
+  const {seeds} = (interaction.snapshot!);
+  const initial = useConstant(() => new Set(seeds.flat()));
+  // Each die and chip is keyed by its own seed, so it keeps its place as others are rerolled, added or taken away.
   return (
     <div className="roll-terms">
-      {roll.terms.map((t, i) => {
-        const key =
-          t.kind === "flat"
-            ? (seeds[i]?.[0] ?? `${t.sign}:${t.value}:${t.label ?? ""}`)
-            : (seeds[i]?.join(":") ?? `${t.sign}:${t.label ?? ""}:${t.dice.length}`);
-        return (
-          <span key={key} className="roll-term">
-            {/* A chip shows its own sign. */}
-            {t.kind === "dice" && (i > 0 || t.sign < 0) && (
-              <span className="roll-op">{t.sign < 0 ? "−" : "+"}</span>
-            )}
-            {t.kind === "flat" ? (
-              <RollChip
-                value={t.sign * t.value}
-                label={t.label}
-                index={i}
-                // Rolls edited before chips had seeds have none for them.
-                seed={seeds[i]?.[0] ?? `flat:${i}`}
-                arriving={arriving || !initial.has(seeds[i]?.[0] ?? `flat:${i}`)}
+      {roll.terms.flatMap((t, index) => {
+        const termSeeds = seeds[index]!;
+        if (t.kind === "flat") {
+          const seed = termSeeds[0]!;
+          return (
+            // A chip shows its own sign.
+            <RollChip
+              key={seed}
+              value={t.sign * t.value}
+              label={t.label}
+              index={index}
+              seed={seed}
+              arriving={arriving || !initial.has(seed)}
+              mine={mine}
+            />
+          );
+        }
+        return [
+          (index > 0 || t.sign < 0) && (
+            <span key={`op:${termSeeds[0]}`} className="roll-op">
+              {t.sign < 0 ? "−" : "+"}
+            </span>
+          ),
+          ...t.dice.map((d, dieIndex) => {
+            const seed = termSeeds[dieIndex]!;
+            return (
+              <RollDie
+                key={seed}
+                die={d}
+                index={dieIndex}
+                arriving={arriving || !initial.has(seed)}
                 mine={mine}
+                seed={seed}
+                colour={colour}
+                onReroll={
+                  interaction.allowed ? () => interaction.reroll(index, dieIndex) : undefined
+                }
+                onToggle={
+                  interaction.allowed ? () => interaction.toggle(index, dieIndex) : undefined
+                }
               />
-            ) : (
-              <>
-                {t.dice.map((d, j) => {
-                  const seed = seeds[i]![j]!;
-                  return (
-                    <RollDie
-                      key={seed}
-                      die={d}
-                      index={j}
-                      arriving={arriving || !initial.has(seed)}
-                      mine={mine}
-                      seed={seed}
-                      colour={colour}
-                      onReroll={interaction.allowed ? () => interaction.reroll(i, j) : undefined}
-                      onToggle={interaction.allowed ? () => interaction.toggle(i, j) : undefined}
-                    />
-                  );
-                })}
-                {t.label && <span className="roll-label">{t.label}</span>}
-              </>
-            )}
-          </span>
-        );
+            );
+          }),
+          t.label && (
+            <span key={`label:${termSeeds[0]}`} className="roll-label">
+              {t.label}
+            </span>
+          ),
+        ];
       })}
     </div>
   );
@@ -330,9 +351,9 @@ function MoveTargets({ campaign, m }: { campaign: Campaign; m: MoveMessage }) {
   return (
     <p className="move-targets">
       <span className="muted">Targeting</span>{" "}
-      {m.targets.map((t, i) => (
+      {m.targets.map((t, index) => (
         <span key={t.id}>
-          {i > 0 && ", "}
+          {index > 0 && ", "}
           {t.name}
           {t.distance && <span className="muted"> ({t.distance})</span>}
         </span>
@@ -376,9 +397,9 @@ function MoveText({ campaign, m }: { campaign: Campaign; m: MoveMessage }) {
 
 /** The follow-ups a move suggests, each a button unless a counter it moves can't be worked by this player. */
 function MoveSuggestions({ m }: { m: MoveMessage }) {
-  const ctx = useCampaign();
-  const messages = useQuery(ctx.campaign.chat.messages);
-  const gm = useQuery(ctx.campaign.members, () => ctx.campaign.isGm());
+  const context = useCampaign();
+  const messages = useQuery(context.campaign.chat.messages);
+  const gm = useQuery(context.campaign.members, () => context.campaign.isGm());
   const me = useQuery(device).id;
   if (m.suggestions.length === 0) return null;
   const canAdvance = (s: MoveMessage["suggestions"][number]) => {
@@ -395,7 +416,7 @@ function MoveSuggestions({ m }: { m: MoveMessage }) {
           variant="ghost"
           disabled={!canAdvance(s)}
           onClick={() =>
-            ctx.execute(applySuggestion, { characterId: m.characterId, suggestion: s })
+            context.execute(applySuggestion, { characterId: m.characterId, suggestion: s })
           }
         >
           {s.label}
@@ -412,21 +433,18 @@ export function MoveCard({
   canAct,
   arriving,
   mine,
-}: { campaign: Campaign; m: MoveMessage; canAct: boolean } & Thrown) {
-  const interaction = useSharedRoll(campaign, original);
-  const gesture = useThrow({
-    onThrow: interaction.rerollAll,
-    onAway: rollCarriedDice,
-    enabled: interaction.allowed && !!original.roll,
-    ignoreControls: true,
-  });
+}: Thrown & { campaign: Campaign; m: MoveMessage; canAct: boolean }) {
+  const {
+    interaction,
+    canThrow: throwable,
+    gesture,
+  } = useThrowableRoll(campaign, original, !!original.roll);
   const m = displayedMove(
     campaign,
     original,
     interaction.snapshot?.edited ? interaction.snapshot.roll : undefined,
   );
   const result = resultOf(campaign, m);
-  const throwable = interaction.allowed && !!m.roll;
   return (
     <div
       className="roll-card move-card"
@@ -434,7 +452,7 @@ export function MoveCard({
       data-rolled={!!m.roll || undefined}
       data-throwable={throwable || undefined}
       data-dice-target={throwable ? m.id : undefined}
-      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be rerolled by keyboard
+      // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the roll can be rerolled by keyboard
       tabIndex={throwable ? 0 : undefined}
       {...gesture}
     >

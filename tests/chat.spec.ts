@@ -12,76 +12,100 @@ test("a player can send a chat message", async ({ page }) => {
 });
 
 for (const width of [1280, 390]) {
-  test(`quick dice enter once from the pointer and roll from their existing tray slot at ${width}px`, async ({
+  test(`a quick die is one canvas, carried in from the pointer, rolled from its slot into chat at ${width}px`, async ({
     page,
   }) => {
     await createCampaign(page);
     await page.setViewportSize({ width, height: 844 });
     const chat = page.getByRole("tab", { name: "Chat", exact: true });
     if ((await chat.getAttribute("aria-selected")) !== "true") await chat.click();
-    await expect(page.getByRole("button", { name: "d6", exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "d6", exact: true })).toBeInViewport();
     await settled(page);
     const button = await page.getByRole("button", { name: "d6", exact: true }).boundingBox();
     if (!button) throw new Error("Quick die button was not mounted.");
     const pointer = { x: button.x + button.width / 2, y: button.y + button.height / 2 };
+    type Point = { x: number; y: number };
     const observed = page.evaluate(
       () =>
         new Promise<{
-          flights: { x: number; y: number; slotX: number; slotY: number }[];
-          maxVisible: number;
+          lifts: { at: Point; slot: Point }[];
+          lowers: { at: Point; slot: Point }[];
           sameCanvas: boolean;
-          drawn: boolean;
-          entryFinishedBeforePosting: boolean;
+          gaps: number;
+          doubles: number;
+          restingSizes: number[];
+          colourful: boolean;
         }>((resolve) => {
-          const flights: { x: number; y: number; slotX: number; slotY: number }[] = [];
-          let maxVisible = 0;
-          let original: Element | null = null;
-          let sameCanvas = true;
-          let drawn = true;
-          let entryFinishedBeforePosting = true;
-          const deadline = performance.now() + 20000;
-          const observer = new MutationObserver((records) => {
-            for (const record of records) {
-              for (const node of record.addedNodes) {
-                if (!(node instanceof HTMLCanvasElement) || !node.matches(".dice-flight")) continue;
-                const flight = node.getBoundingClientRect();
-                const slot = document.querySelector(".pending-die")?.getBoundingClientRect();
-                if (!slot) continue;
-                flights.push({
-                  x: flight.left + flight.width / 2,
-                  y: flight.top + flight.height / 2,
-                  slotX: slot.left + slot.width / 2,
-                  slotY: slot.top + slot.height / 2,
-                });
-              }
+          const centre = (element: Element): Point => {
+            const box = element.getBoundingClientRect();
+            return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+          };
+          /** Whether a canvas has anything drawn in it. */
+          const drawn = (canvas: HTMLCanvasElement) =>
+            canvas
+              .getContext("2d")!
+              .getImageData(0, 0, canvas.width, canvas.height)
+              .data.some((value, index) => index % 4 === 3 && value > 0);
+          /** Whether the opaque pixels are, on the whole, a colour rather than grey. */
+          const coloured = (canvas: HTMLCanvasElement) => {
+            const data = canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height).data;
+            let spread = 0;
+            let count = 0;
+            for (let i = 0; i < data.length; i += 4) {
+              if (data[i + 3]! < 250) continue;
+              spread += Math.max(data[i]!, data[i + 1]!, data[i + 2]!) - Math.min(data[i]!, data[i + 1]!, data[i + 2]!);
+              count++;
             }
+            return count > 0 && spread / count > 30;
+          };
+          const lifts: { at: Point; slot: Point }[] = [];
+          const lowers: { at: Point; slot: Point }[] = [];
+          const restingSizes: number[] = [];
+          let original: HTMLCanvasElement | null = null;
+          let sameCanvas = true;
+          /** Where a lifted canvas is carried to, from the transform the die sets on it. */
+          const carriedTo = (transform: string): Point | undefined => {
+            const match = /translate\(([-\d.]+)px, ([-\d.]+)px\)/.exec(transform);
+            return match ? { x: Number(match[1]) + 32, y: Number(match[2]) + 32 } : undefined;
+          };
+          // Read in step with the die: as it moves its canvas, not a frame later.
+          let watched: HTMLCanvasElement | null = null;
+          let last: Point | undefined;
+          const moves = new MutationObserver(() => {
+            const at = carriedTo(watched!.style.transform);
+            const slot = centre(watched!.parentElement!);
+            if (at && !last) lifts.push({ at, slot });
+            if (!at && last) lowers.push({ at: last, slot });
+            last = at;
           });
-          observer.observe(document.body, { childList: true, subtree: true });
+          let started = false;
+          let gaps = 0;
+          let doubles = 0;
+          let colourful = false;
+          const deadline = performance.now() + 20000;
           const sample = () => {
-            const canvas = document.querySelector(".pending-die canvas");
+            const canvas = document.querySelector<HTMLCanvasElement>(".pending-die canvas");
             if (canvas) {
               original ??= canvas;
               sameCanvas &&= original === canvas;
+              if (!watched) {
+                watched = canvas;
+                moves.observe(canvas, { attributes: true, attributeFilter: ["style"] });
+              }
+              const lifted = canvas.matches(":popover-open");
+              if (!lifted && drawn(canvas)) restingSizes.push(canvas.getBoundingClientRect().width);
+              if (lifted && drawn(canvas)) colourful ||= coloured(canvas);
             }
             const visible = [
-              ...document.querySelectorAll<HTMLCanvasElement>(
-                ".pending-die canvas, .dice-flight, .chat-log .die canvas",
-              ),
-            ].filter(
-              (die) => getComputedStyle(die).visibility === "visible" && die.checkVisibility(),
-            );
-            maxVisible = Math.max(maxVisible, visible.length);
-            drawn &&= visible.every((die) => {
-              const pixels = die.getContext("2d")!.getImageData(0, 0, die.width, die.height).data;
-              return pixels.some((value, index) => index % 4 === 3 && value > 0);
-            });
-            const posted = document.querySelector(".chat-log .roll-card");
-            const flying = document.querySelector(".dice-flight");
-            if (posted && flying && flights.length === 1) entryFinishedBeforePosting = false;
-            if ((original && !canvas && posted && !flying) || performance.now() > deadline) {
-              observer.disconnect();
-              resolve({ flights, maxVisible, sameCanvas, drawn, entryFinishedBeforePosting });
+              ...document.querySelectorAll<HTMLCanvasElement>(".die-canvas"),
+            ].filter((die) => die.checkVisibility({ visibilityProperty: true }) && drawn(die));
+            started ||= visible.length > 0;
+            if (started && visible.length === 0) gaps++;
+            if (visible.length > 1) doubles++;
+            const posted = document.querySelector(".chat-log .roll-card:not([data-quick-roll-active])");
+            if ((original && !canvas && posted) || performance.now() > deadline) {
+              moves.disconnect();
+              resolve({ lifts, lowers, sameCanvas, gaps, doubles, restingSizes, colourful });
             } else requestAnimationFrame(sample);
           };
           requestAnimationFrame(sample);
@@ -89,14 +113,22 @@ for (const width of [1280, 390]) {
     );
     await page.mouse.click(pointer.x, pointer.y);
     const result = await observed;
+    const near = (a: Point, b: Point) => Math.hypot(a.x - b.x, a.y - b.y) < 2;
     expect(result.sameCanvas).toBe(true);
-    expect(result.drawn).toBe(true);
-    expect(result.entryFinishedBeforePosting).toBe(true);
-    expect(result.maxVisible).toBe(1);
-    expect(result.flights).toHaveLength(2);
-    const [entry, release] = result.flights;
-    expect(Math.hypot(entry!.x - pointer.x, entry!.y - pointer.y)).toBeLessThan(2);
-    expect(Math.hypot(release!.x - release!.slotX, release!.y - release!.slotY)).toBeLessThan(2);
+    // Carried in from the pointer, then rolled from where it lay in its slot.
+    expect(result.lifts).toHaveLength(2);
+    expect(near(result.lifts[0]!.at, pointer)).toBe(true);
+    expect(near(result.lifts[1]!.at, result.lifts[1]!.slot)).toBe(true);
+    // Each time, it comes down in its slot, wherever the slot has moved to.
+    expect(result.lowers).toHaveLength(2);
+    for (const { at, slot } of result.lowers) expect(near(at, slot)).toBe(true);
+    // Drawn in the roller's colour as it moves, and the size of its slot at rest.
+    expect(result.colourful).toBe(true);
+    expect(result.restingSizes.length).toBeGreaterThan(0);
+    expect(result.restingSizes.every((size) => size === 64)).toBe(true);
+    // Never missing, nor shown twice, from the moment it appears.
+    expect(result.gaps).toBe(0);
+    expect(result.doubles).toBe(0);
     await expect(page.locator(".pending-roll")).toHaveCount(0);
     await expect(page.locator(".chat-log .roll-card .die")).toHaveCount(1);
   }, 30000);
@@ -106,7 +138,7 @@ test("quick dice peek out before rolling into chat", async ({ page }) => {
   await createCampaign(page);
   await page.getByRole("button", { name: "d6", exact: true }).click();
   await expect(page.locator(".pending-die canvas")).toHaveCount(1);
-  await expect(page.locator('.pending-die[data-phase="flying"]')).toHaveCount(1);
+  await expect(page.locator('.pending-die[data-phase="moving"]')).toHaveCount(1);
   await page.evaluate(() => {
     const canvas = document.querySelector(".pending-die canvas");
     if (!canvas) throw new Error("Pending die canvas was not mounted.");
@@ -142,7 +174,7 @@ test("quick dice peek out before rolling into chat", async ({ page }) => {
   expect(await page.locator(".pending-roll-now").count()).toBe(0);
   await expect(page.locator(".pending-roll .roll-formula")).toHaveText("1d6");
   await expect(page.getByRole("button", { name: "Public", exact: true })).toBeVisible();
-  await expect(page.locator('.pending-die[data-phase="flying"]')).toHaveCount(1);
+  await expect(page.locator('.pending-die[data-phase="moving"]')).toHaveCount(1);
   expect(
     await page.evaluate(
       () =>
@@ -172,7 +204,7 @@ test("quick dice peek out before rolling into chat", async ({ page }) => {
   expect(offsets.startTop).toBeGreaterThan(offsets.currentTop);
   await expect(page.locator(".chat-log .roll-card")).toHaveCount(1);
   await expect(page.locator(".chat-log .roll-card")).toContainText("1d6");
-  expect(await page.locator('.chat-log .roll-card .die[data-phase="flying"]').count()).toBe(0);
+  expect(await page.locator('.chat-log .roll-card .die[data-phase="moving"]').count()).toBe(0);
   await expect(page.locator(".pending-roll")).toHaveCount(0);
   await page.getByRole("button", { name: "d8", exact: true }).click();
   await expect(page.locator(".chat-log .roll-card")).toHaveCount(2);
@@ -216,3 +248,70 @@ test("using a move asks for its stat and posts the result to chat", async ({ pag
 
   await expect(page.getByRole("log").getByText(/Defy Danger.*Ayla/)).toBeVisible();
 });
+
+test("dice still settling stay on a roll card that's picked up, and land in it when it's put back", async ({
+  page,
+}) => {
+  await createCampaign(page);
+  await page.getByRole("textbox", { name: "Message" }).fill("/roll 3d6");
+  await page.keyboard.press("Enter");
+  const card = page.locator(".chat-log .roll-card").last();
+  await expect(card).toBeVisible();
+  // While the dice still roll, the card is picked up by its heading and held off to one side,
+  // short of a throw, then put back. (Dispatched in the page: the harness's mouse loses pointer capture.)
+  const held = await card.evaluate(
+    async (element) => {
+      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      const head = element.querySelector(".roll-head")!.getBoundingClientRect();
+      const grip = { x: head.left + head.width / 2, y: head.top + head.height / 2 };
+      const pointer = (type: string, x: number, y: number) =>
+        element.dispatchEvent(
+          new PointerEvent(type, {
+            pointerId: 1,
+            pointerType: "mouse",
+            isPrimary: true,
+            button: 0,
+            buttons: type === "pointerup" ? 0 : 1,
+            clientX: x,
+            clientY: y,
+            bubbles: true,
+            cancelable: true,
+          }),
+        );
+      pointer("pointerdown", grip.x, grip.y);
+      for (let step = 1; step <= 4; step++) {
+        pointer("pointermove", grip.x - 15 * step, grip.y - 10 * step);
+        await frame();
+      }
+      const carrier = document.querySelector(".throw-carrier")!.getBoundingClientRect();
+      let moving = 0;
+      let offCopy = 0;
+      const until = performance.now() + 500;
+      while (performance.now() < until) {
+        await frame();
+        for (const canvas of document.querySelectorAll(".die-canvas:popover-open")) {
+          const box = canvas.getBoundingClientRect();
+          const [x, y] = [box.left + box.width / 2, box.top + box.height / 2];
+          moving++;
+          if (x < carrier.left || x > carrier.right || y < carrier.top || y > carrier.bottom)
+            offCopy++;
+        }
+      }
+      pointer("pointermove", grip.x, grip.y);
+      pointer("pointerup", grip.x, grip.y);
+      return { moving, offCopy };
+    },
+  );
+  expect(held.moving).toBeGreaterThan(0);
+  expect(held.offCopy).toBe(0);
+  await expect(card.locator('.die[data-phase="landed"]')).toHaveCount(3);
+  const offsets = await card.evaluate((element) =>
+    [...element.querySelectorAll(".die")].map((die) => {
+      const slot = die.getBoundingClientRect();
+      const canvas = die.querySelector("canvas")!.getBoundingClientRect();
+      return Math.hypot(slot.left - canvas.left, slot.top - canvas.top);
+    }),
+  );
+  expect(offsets.every((offset) => offset < 1)).toBe(true);
+}, 30000);

@@ -1,10 +1,13 @@
-import * as Y from "yjs";
+import { applyUpdate  } from "yjs";
+import type {Doc} from "yjs";
 import { device } from "../platform/device";
 import { openFile, saveFile } from "../platform/files";
-import { BACKUP_FILE, backupFileName, claimGm, type BackupDevice } from "./backupFormat";
+import { BACKUP_FILE, backupFileName, claimGm } from "./backupFormat";
+import type { BackupDevice } from "./backupFormat";
 import { runInBackupWorker } from "./backupWorker";
 import type { ImportSummary } from "./backupWorkerProtocol";
-import { openCampaigns, type Campaign } from "./campaign";
+import { openCampaigns  } from "./campaign";
+import type {Campaign} from "./campaign";
 import { summaryOf, upsertCampaign } from "./registry";
 
 /*
@@ -27,14 +30,14 @@ const openOne = (campaignId: string): Campaign | undefined =>
   [...openCampaigns].find((c) => c.id === campaignId);
 
 /** The campaign's documents open in memory right now, by guid. */
-function liveDocs(campaignId: string): Map<string, Y.Doc> {
-  const live = new Map<string, Y.Doc>();
+function liveDocs(campaignId: string): Map<string, Doc> {
+  const live = new Map<string, Doc>();
   const campaign = openOne(campaignId);
   if (!campaign) return live;
-  const add = (doc: Y.Doc) => {
-    live.set(doc.guid, doc);
+  const add = (document: Doc) => {
+    live.set(document.guid, document);
     // `shouldLoad` is what load() sets; Yjs sets `isLoaded` only once a provider says so.
-    for (const sub of doc.getSubdocs()) if (sub.shouldLoad) live.set(sub.guid, sub);
+    for (const sub of document.getSubdocs()) if (sub.shouldLoad) live.set(sub.guid, sub);
   };
   add(campaign.doc);
   const vault = campaign.vault.value;
@@ -55,11 +58,11 @@ export const openGuids = () => [...openCampaigns].flatMap((c) => [...liveDocs(c.
 export function finishImport(imported: ImportSummary): string {
   const { campaignId, gm } = imported;
   const live = liveDocs(campaignId);
-  for (const doc of imported.live) {
-    const open = live.get(doc.guid);
+  for (const document of imported.live) {
+    const open = live.get(document.guid);
     if (!open) continue;
-    Y.applyUpdate(open, doc.update);
-    if (doc.kind === "campaign" && gm) claimGm(open, thisDevice(), imported.exportedBy);
+    applyUpdate(open, document.update);
+    if (document.kind === "campaign" && gm) claimGm(open, thisDevice(), imported.exportedBy);
   }
   if (!summaryOf(campaignId)) {
     const now = Date.now();

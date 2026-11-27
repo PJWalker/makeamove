@@ -1,5 +1,7 @@
-import { emptyRichText, type RichText } from "../../data/richText";
-import { roll, type Roll } from "../dice/notation";
+import { emptyRichText  } from "../../data/richText";
+import type {RichText} from "../../data/richText";
+import { roll  } from "../dice/notation";
+import type {Roll} from "../dice/notation";
 
 import type { MoveSuggestion, MoveTarget, SaveRequest } from "../chat/types";
 import type {
@@ -60,7 +62,7 @@ export function needsChoice(action: ActionDef): Ask | null {
 
 /** Whether using this action opens the roll dialog: it asks for something, or the system offers roll modes. */
 export function asksFirst(system: GameSystem, action: ActionDef): boolean {
-  return !!needsChoice(action) || (!!rollModesFor(system, action).length && !!checkOf(action));
+  return !!needsChoice(action) || (rollModesFor(system, action).length > 0 && !!checkOf(action));
 }
 
 export function rollModesFor(system: GameSystem, action: ActionDef) {
@@ -75,18 +77,33 @@ export function resolveDifficulty(
   chosen?: number,
   target?: number,
 ): number {
-  const value =
-    spec.kind === "fixed"
-      ? spec.value
-      : spec.kind === "derived"
-        ? derived.values[spec.value]
-        : spec.kind === "target"
-          ? (target ?? chosen)
-          : (chosen ?? spec.initial);
+  const value = difficultyValue(spec, derived, chosen, target);
   if (value === undefined || !Number.isFinite(value)) throw new Error("Difficulty must be finite");
   if (spec.kind === "prompt" && (value < (spec.min ?? 0) || value > (spec.max ?? 99)))
     throw new Error("Difficulty is outside the allowed range");
   return value;
+}
+
+function difficultyValue(
+  spec: CheckDifficulty,
+  derived: Derived,
+  chosen: number | undefined,
+  target: number | undefined,
+): number | undefined {
+  switch (spec.kind) {
+    case "fixed": {
+      return spec.value;
+    }
+    case "derived": {
+      return derived.values[spec.value];
+    }
+    case "target": {
+      return target ?? chosen;
+    }
+    default: {
+      return chosen ?? spec.initial;
+    }
+  }
 }
 
 export function canPayMove(c: CharacterView, plan: MovePlan): boolean {
@@ -101,7 +118,7 @@ function resourcesFor(
   const totals = new Map<string, number>();
   for (const { resource, by } of [...(action.costs ?? []), ...variantCosts, ...bonusCosts])
     totals.set(resource, (totals.get(resource) ?? 0) + by);
-  return [...totals].flatMap(([id, by]) => (by !== 0 ? [{ id, by }] : []));
+  return [...totals].flatMap(([id, by]) => (by === 0 ? [] : [{ id, by }]));
 }
 
 /**
@@ -213,6 +230,54 @@ function modeFor(
   return lr.mode;
 }
 
+/**
+ * The suggestion buttons for a move's follow-ups. Rolls are worked out with
+ * `derived`; damage rolls are aimed at `aimed`.
+ */
+function suggestionsFor(
+  system: GameSystem,
+  ids: string[],
+  c: CharacterView,
+  derived: Derived,
+  aimed: MoveTarget[] | undefined,
+  counterMessageId: string | undefined,
+): MoveSuggestion[] {
+  return ids.flatMap((id): MoveSuggestion[] => {
+    const f = system.followUps.find((x) => x.id === id);
+    if (!f) return [];
+    if (f.kind === "bump") return [{ id, label: f.label, bump: { field: f.field, by: f.by } }];
+    if (f.kind === "resource")
+      return [{ id, label: f.label, resource: { id: f.resource, by: f.by } }];
+    if (f.kind === "counter")
+      return [
+        {
+          id,
+          label: f.label,
+          count: {
+            ...(f.systemCounter ? { systemCounter: f.systemCounter } : {}),
+            ...(counterMessageId ? { messageId: counterMessageId } : {}),
+            by: f.by,
+          },
+        },
+      ];
+    const formula = f.formula(c, derived);
+    const damage =
+      f.damage && aimed?.length
+        ? {
+            damage: f.damage,
+            targets: aimed.map(({ id: targetId, name, characterId }) => ({
+              id: targetId,
+              name,
+              ...(characterId ? { characterId } : {}),
+            })),
+          }
+        : {};
+    return [
+      { id, label: `${f.label} (${formula})`, roll: { formula, comment: f.comment, ...damage } },
+    ];
+  });
+}
+
 /** Roll (or just read out) a move and decide what follow-ups to offer. */
 export function performMove(
   system: GameSystem,
@@ -225,63 +290,22 @@ export function performMove(
 ): MoveResult {
   const { targets, valueAt } = aim;
   const check = checkOf(action);
-  if (action.variants && !action.variants(c, d).length) throw new Error("Not enough resources");
+  if (action.variants && action.variants(c, d).length === 0) throw new Error("Not enough resources");
   const basePlan = planMove(system, action, c, d, choice);
   if (!canPayMove(c, basePlan)) throw new Error("Not enough resources");
-  const difficulty = check?.difficulty
-    ? check.difficulty.kind === "target"
-      ? undefined
-      : resolveDifficulty(check.difficulty, d, choice.difficulty)
-    : undefined;
+  const difficulty =
+    check?.difficulty && check.difficulty.kind !== "target"
+      ? resolveDifficulty(check.difficulty, d, choice.difficulty)
+      : undefined;
   const sharedResult = {
-    ...(basePlan.resources.length ? { resourcesSpent: basePlan.resources } : {}),
-    ...(Object.keys(basePlan.rollValues).length ? { rollValues: basePlan.rollValues } : {}),
-    ...(difficulty !== undefined ? { difficulty } : {}),
+    ...(basePlan.resources.length > 0 ? { resourcesSpent: basePlan.resources } : {}),
+    ...(Object.keys(basePlan.rollValues).length > 0 ? { rollValues: basePlan.rollValues } : {}),
+    ...(difficulty === undefined ? {} : { difficulty }),
     ...(choice.counterMessageId ? { counterMessageId: choice.counterMessageId } : {}),
   };
+  const rollDerived = { ...d, values: { ...d.values, ...basePlan.rollValues } };
   const offer = (ids: string[], aimed?: MoveTarget[]) =>
-    ids.flatMap((id): MoveSuggestion[] => {
-      const f = system.followUps.find((x) => x.id === id);
-      if (!f) return [];
-      if (f.kind === "bump")
-        return [{ id: f.id, label: f.label, bump: { field: f.field, by: f.by } }];
-      if (f.kind === "resource")
-        return [{ id: f.id, label: f.label, resource: { id: f.resource, by: f.by } }];
-      if (f.kind === "counter")
-        return [
-          {
-            id: f.id,
-            label: f.label,
-            count: {
-              ...(f.systemCounter ? { systemCounter: f.systemCounter } : {}),
-              ...(choice.counterMessageId ? { messageId: choice.counterMessageId } : {}),
-              by: f.by,
-            },
-          },
-        ];
-      const formula = f.formula(c, {
-        ...d,
-        values: { ...d.values, ...basePlan.rollValues },
-      });
-      const damage =
-        f.damage && aimed?.length
-          ? {
-              damage: f.damage,
-              targets: aimed.map(({ id, name, characterId }) => ({
-                id,
-                name,
-                ...(characterId ? { characterId } : {}),
-              })),
-            }
-          : {};
-      return [
-        {
-          id: f.id,
-          label: `${f.label} (${formula})`,
-          roll: { formula, comment: f.comment, ...damage },
-        },
-      ];
-    });
+    suggestionsFor(system, ids, c, rollDerived, aimed, choice.counterMessageId);
   const step = saveOf(action);
   const save: SaveRequest | undefined = step && {
     action: step.action,
@@ -303,7 +327,7 @@ export function performMove(
   // Against targets: one roll each, read against that target's value.
   const targetDifficulty = check.difficulty?.kind === "target" ? check.difficulty : undefined;
   if (targetDifficulty && targets?.length) {
-    const spends = basePlan.spends;
+    const {spends} = basePlan;
     const rolled = targets.map((t): MoveTarget => {
       const plan = planMove(system, action, c, d, {
         ...choice,
@@ -319,28 +343,23 @@ export function performMove(
       const context = {
         action,
         character: c,
-        ...(against !== undefined ? { difficulty: against } : {}),
+        ...(against === undefined ? {} : { difficulty: against }),
       };
       const result = system.result(r.total, natural, r, context);
-      const hit =
-        against === undefined
-          ? undefined
-          : system.hits
-            ? system.hits(r.total, natural, against, r, context)
-            : r.total >= against;
+      let hit: boolean | undefined;
+      if (against !== undefined)
+        hit = system.hits ? system.hits(r.total, natural, against, r, context) : r.total >= against;
       return {
         ...t,
         roll: r,
         result,
-        ...(against !== undefined ? { against, ...(hit !== undefined ? { hit } : {}) } : {}),
+        ...(against === undefined ? {} : { against, ...(hit === undefined ? {} : { hit }) }),
       };
     });
     // Follow-ups for the best result that hit (or might have, against an unknown value).
     const landed = rolled.filter((t) => t.hit !== false);
     const best = system.results.find((res) => landed.some((t) => t.result === res.id))?.id;
-    const outcome = best
-      ? (check.outcomes[best] ?? emptyRichText())
-      : (check.outcomes[rolled[0]!.result!] ?? emptyRichText());
+    const outcome = check.outcomes[best ?? rolled[0]!.result!] ?? emptyRichText();
     return {
       targets: rolled,
       outcome,
@@ -361,7 +380,7 @@ export function performMove(
   const result = system.result(r.total, naturalOf(r), r, {
     action,
     character: c,
-    ...(difficulty !== undefined ? { difficulty } : {}),
+    ...(difficulty === undefined ? {} : { difficulty }),
   });
   const followUps = [
     ...(check.followUps?.[result] ?? []),
@@ -394,54 +413,23 @@ export function readRollResult(
   const result = system.result(resultRoll.total, naturalOf(resultRoll), resultRoll, {
     action,
     character,
-    ...(difficulty !== undefined ? { difficulty } : {}),
+    ...(difficulty === undefined ? {} : { difficulty }),
   });
-  const suggestions = (check.followUps?.[result] ?? []).flatMap((id): MoveSuggestion[] => {
-    const followUp = system.followUps.find((entry) => entry.id === id);
-    if (!followUp) return [];
-    if (followUp.kind === "bump")
-      return [{ id, label: followUp.label, bump: { field: followUp.field, by: followUp.by } }];
-    if (followUp.kind === "resource")
-      return [{ id, label: followUp.label, resource: { id: followUp.resource, by: followUp.by } }];
-    if (followUp.kind === "counter")
-      return [
-        {
-          id,
-          label: followUp.label,
-          count: {
-            ...(followUp.systemCounter ? { systemCounter: followUp.systemCounter } : {}),
-            ...(counterMessageId ? { messageId: counterMessageId } : {}),
-            by: followUp.by,
-          },
-        },
-      ];
-    const formula = followUp.formula(character, derived);
-    const damage =
-      followUp.damage && targets?.length
-        ? {
-            damage: followUp.damage,
-            targets: targets.map(({ id: targetId, name, characterId }) => ({
-              id: targetId,
-              name,
-              ...(characterId ? { characterId } : {}),
-            })),
-          }
-        : {};
-    return [
-      {
-        id,
-        label: `${followUp.label} (${formula})`,
-        roll: { formula, comment: followUp.comment, ...damage },
-      },
-    ];
-  });
+  const suggestions = suggestionsFor(
+    system,
+    check.followUps?.[result] ?? [],
+    character,
+    derived,
+    targets,
+    counterMessageId,
+  );
   return {
     result,
     outcome: check.outcomes[result] ?? emptyRichText(),
     suggestions,
     spent: [],
     ...(targets ? { targets } : {}),
-    ...(difficulty !== undefined ? { difficulty } : {}),
+    ...(difficulty === undefined ? {} : { difficulty }),
     ...(counterMessageId ? { counterMessageId } : {}),
   };
 }

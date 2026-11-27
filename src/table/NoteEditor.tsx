@@ -1,11 +1,11 @@
 import type { Editor } from "@tiptap/core";
 import { useEffect, useRef, useState } from "react";
+import { Awareness } from "y-protocols/awareness";
 import { getNote, noteSubdoc, openNotePage, touchNote } from "../features/notes/api";
-import type { NoteDoc } from "../features/notes/noteDoc";
+import type { NoteDoc as NoteDocument } from "../features/notes/noteDoc";
 import { linksIn } from "../features/notes/links";
 import type { Campaign } from "../campaign/campaign";
 import { mountRichText } from "../workspace/richText";
-import { Awareness } from "y-protocols/awareness";
 import { myName } from "../features/chat/send";
 import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "../workspace/campaignContext";
@@ -23,26 +23,26 @@ export function NoteEditor({
   noteId: string;
   active: boolean;
 }) {
-  const ctx = useCampaign();
-  const hostRef = useRef<HTMLDivElement>(null);
-  const editorRef = useRef<Editor | null>(null);
+  const context = useCampaign();
+  const hostReference = useRef<HTMLDivElement>(null);
+  const editorReference = useRef<Editor | null>(null);
   const [loading, setLoading] = useState(true);
-  const searchTarget = useQuery(ctx.links.noteSearchTarget);
+  const searchTarget = useQuery(context.links.noteSearchTarget);
 
   useEffect(() => {
-    const host = hostRef.current;
+    const host = hostReference.current;
     const sub = noteSubdoc(campaign, noteId);
     if (!host || !sub) return;
     let cancelled = false;
-    let note: NoteDoc | null = null;
+    let note: NoteDocument | null = null;
     let editor: Editor | null = null;
     let rich: ReturnType<typeof mountRichText> | null = null;
-    let timer = 0;
+    let timer: ReturnType<typeof globalThis.setTimeout> | undefined;
 
     let local: Awareness | null = null;
     void openNotePage(campaign, noteId).then((n) => {
       if (!n) return;
-      if (cancelled) return n.destroy();
+      if (cancelled) { n.destroy(); return; }
       note = n;
       const gmOnly = !!getNote(campaign, noteId)?.gmOnly;
       // Carets travel with the page's own sync: the campaign's, or for a GM page the vault's.
@@ -54,22 +54,22 @@ export function NoteEditor({
         ...(gmOnly
           ? {}
           : { secrets: { vault: campaign.isGm() ? (campaign.vault.value?.doc ?? null) : null } }),
-        ctx,
+        ctx: context,
         fragment: n.body,
         placeholder: "Write here. Type @ to link a note, character, scene, gear or move.",
         label: "Note text",
         noteId,
         shared: !getNote(campaign, noteId)?.gmOnly,
         onLocalEdit: (ed) => {
-          clearTimeout(timer);
-          timer = window.setTimeout(
-            () => touchNote(campaign, noteId, linksIn(ed.getJSON())),
+          if (timer !== undefined) clearTimeout(timer);
+          timer = globalThis.setTimeout(
+            () => { touchNote(campaign, noteId, linksIn(ed.getJSON())); },
             TOUCH_MS,
           );
         },
       });
       editor = rich.editor;
-      editorRef.current = editor;
+      editorReference.current = editor;
       setLoading(false);
     });
 
@@ -81,25 +81,25 @@ export function NoteEditor({
         touchNote(campaign, noteId, linksIn(editor.getJSON()));
       }
       rich?.destroy();
-      editorRef.current = null;
+      editorReference.current = null;
       local?.destroy();
       note?.destroy();
     };
-  }, [ctx, campaign, noteId]);
+  }, [context, campaign, noteId]);
 
   useEffect(() => {
     const target = searchTarget;
-    const editor = editorRef.current;
+    const editor = editorReference.current;
     if (!active || loading || !editor || target?.noteId !== noteId) return;
     const from = Math.max(1, Math.min(target.from, editor.state.doc.content.size));
     const to = Math.max(from, Math.min(target.to, editor.state.doc.content.size));
     editor.chain().setTextSelection({ from, to }).scrollIntoView().focus().run();
-    ctx.links.noteSearchTarget.set(null);
-  }, [ctx, active, loading, noteId, searchTarget]);
+    context.links.noteSearchTarget.set(null);
+  }, [context, active, loading, noteId, searchTarget]);
 
   return (
     <div className="note-editor" data-loading={loading || undefined}>
-      <div ref={hostRef} />
+      <div ref={hostReference} />
     </div>
   );
 }

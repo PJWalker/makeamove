@@ -1,6 +1,6 @@
-import { type Grid, type Point, snapPoint, snapSize } from "./grid";
-import type { BlobRef } from "../media/images";
-import type { EntityGraphic, EntityGraphicRef } from "../media/images";
+import type { BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference } from "../media/images";
+import { cellOr,   snapPoint, snapSize } from "./grid";
+import type {Grid, Point} from "./grid";
 import type { NewElement, SceneElement, TokenStyle } from "./types";
 
 /*
@@ -12,12 +12,12 @@ export interface TokenSpec {
   name: string;
   colour: string;
   style: TokenStyle;
-  image?: BlobRef | undefined;
+  image?: BlobReference | undefined;
   icon?: string | undefined;
   itemDefId?: string | undefined;
   characterId?: string | undefined;
   graphic?: EntityGraphic | undefined;
-  entityRef?: EntityGraphicRef | undefined;
+  entityRef?: EntityGraphicReference | undefined;
 }
 
 /** Muted, mid-tone colours that sit well behind white text and over any map. */
@@ -43,7 +43,7 @@ export const randomTokenColour = () =>
   TOKEN_PALETTE[Math.floor(Math.random() * TOKEN_PALETTE.length)]!;
 
 /** A token's side for a grid: a cell, or 70 px without one. */
-const tokenSize = (grid: Grid) => (grid.type === "none" ? 70 : grid.size);
+const tokenSize = (grid: Grid) => cellOr(grid, 70);
 
 /** A new token a cell across, snapped to the grid at `at`. */
 export function newToken(grid: Grid, at: Point, spec: TokenSpec): NewElement {
@@ -73,7 +73,7 @@ export function newToken(grid: Grid, at: Point, spec: TokenSpec): NewElement {
  */
 export function imageElement(
   grid: Grid,
-  image: BlobRef,
+  image: BlobReference,
   fileName: string,
   at: Point,
   token: { colour: string; style: TokenStyle },
@@ -98,16 +98,16 @@ export function imageElement(
  * it's already that, or has no image.
  */
 export function conversion(
-  el: SceneElement,
+  element: SceneElement,
   to: "map" | "token",
   grid: Grid,
   token: { colour: string; style: TokenStyle },
 ): Partial<SceneElement> | null {
-  if (el.type === to || !("image" in el) || !el.image) return null;
-  const image = el.image;
+  if (element.type === to || !("image" in element) || !element.image) return null;
+  const {image} = element;
   if (to === "token") {
-    const size = snapSize(grid, Math.min(el.w, el.h, grid.size));
-    const p = snapPoint(grid, el, Math.round(size / grid.size));
+    const size = snapSize(grid, Math.min(element.w, element.h, grid.size));
+    const p = snapPoint(grid, element, Math.round(size / grid.size));
     return {
       type: "token",
       name: "",
@@ -118,7 +118,7 @@ export function conversion(
       rot: 0,
     };
   }
-  const k = el.w / Math.max(image.width, image.height);
+  const k = element.w / Math.max(image.width, image.height);
   return {
     type: "map",
     name: undefined,
@@ -133,7 +133,7 @@ export function conversion(
 function tokenName(file: string): string {
   const base = file
     .replace(/\.[^.]+$/, "")
-    .replace(/[-_]+/g, " ")
+    .replaceAll(/[_-]+/g, " ")
     .trim();
   return base ? base.charAt(0).toUpperCase() + base.slice(1) : "";
 }

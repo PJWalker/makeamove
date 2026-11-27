@@ -1,8 +1,6 @@
 /** What an entry window shows: a character's gear, a move on a character's sheet, or a library entry. */
 export type EntryRef =
-  | { kind: "inventory"; characterId: string; itemId: string }
-  | { kind: "move"; ownerId: string; moveId: string }
-  | { kind: "lib"; key: string };
+  { kind: "inventory"; characterId: string; itemId: string } | { kind: "lib"; key: string } | { kind: "move"; ownerId: string; moveId: string };
 
 export const inventoryKey = (characterId: string, itemId: string) =>
   `inventory:${characterId}:${itemId}`;
@@ -22,5 +20,5 @@ export function parseEntryKey(key: string): EntryRef | undefined {
 
 function splitOnce(text: string, separator: string): [string, string] {
   const at = text.indexOf(separator);
-  return at < 0 ? [text, ""] : [text.slice(0, at), text.slice(at + 1)];
+  return at === -1 ? [text, ""] : [text.slice(0, at), text.slice(at + 1)];
 }

@@ -1,13 +1,6 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it, vi } from "vite-plus/test";
 
-vi.mock("../../workspace/panelLayout", () => ({ showPanel: () => {} }));
-vi.mock("../../ui/icons", () => ({
-  IconDelete: () => null,
-  IconFolder: () => null,
-  IconImage: () => null,
-}));
-
 import { openCharacter, startMove as startMoveCommand } from "../../workspace/commands/characters";
 import type { CampaignContext } from "../../workspace/campaignContext";
 import { Campaign, createCampaign } from "../../campaign/campaign";
@@ -61,6 +54,13 @@ import {
   shopDungeonWorld2Service,
   trainDungeonWorld2,
 } from "../dungeon-world-2/campaign";
+
+vi.mock("../../workspace/panelLayout", () => ({ showPanel: () => {} }));
+vi.mock("../../ui/icons", () => ({
+  IconDelete: () => null,
+  IconFolder: () => null,
+  IconImage: () => null,
+}));
 
 async function setUp() {
   device.value = { id: "gm", name: "Gwen" };
@@ -157,9 +157,12 @@ describe("Dungeon World 2 campaign behavior", () => {
     const id = newCharacter(campaign, "Ayla", "fighter");
     const tradeBlows = systemOf(campaign).actions.find((move) => move.id === "trade-blows")!;
     startMove(campaign, id, tradeBlows);
-    expect(campaign.moves.ask.value).toEqual({ moveId: "trade-blows", characterId: id });
-    expect(campaign.moves.targets.value).toBeNull();
-    campaign.moves.ask.value = null;
+    expect(campaign.moves.actor.getSnapshot().context.ask).toEqual({
+      moveId: "trade-blows",
+      characterId: id,
+    });
+    expect(campaign.moves.actor.getSnapshot().context.targets).toBeNull();
+    campaign.moves.ask(null);
     const message = await makeMove(campaign, id, tradeBlows, { stat: "str" });
     expect(message).toMatchObject({ kind: "move", moveId: "trade-blows", characterName: "Ayla" });
     campaign.destroy();
@@ -405,12 +408,12 @@ describe("Dungeon World 2 campaign behavior", () => {
     ).toBe(true);
     expect(getCharacter(campaign, ayla)?.conditions).toContain("angry");
     expect(getCharacter(campaign, brom)?.conditions).toContain("frightened");
-    expect(campaign.moves.ask.value).toMatchObject({
+    expect(campaign.moves.actor.getSnapshot().context.ask).toMatchObject({
       moveId: "perilous-journey",
       characterId: ayla,
       choice: { extra: -1 },
     });
-    campaign.moves.ask.value = null;
+    campaign.moves.ask(null);
     campaign.destroy();
   });
 
@@ -490,7 +493,7 @@ describe("Dungeon World 2 campaign behavior", () => {
   it("tracks Artifact marks and applies the source unlock policies per item instance", async () => {
     const campaign = await setUp();
     const ayla = newCharacter(campaign, "Ayla", "barbarian");
-    const items = systemOf(campaign).items;
+    const {items} = systemOf(campaign);
     const soulstealer = items.find((item) => item.name === "Alveric’s Soulstealer Blade")!;
     const branch = items.find((item) => item.name === "Gwendolen’s Branch of the Green")!;
     addItem(campaign, ayla, soulstealer, true);

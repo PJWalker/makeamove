@@ -2,23 +2,26 @@ import type * as React from "react";
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useConstant } from "../ui/useConstant";
 import { withField, useMessageState } from "../features/chat/messageState";
-import { commandText, contentForCommand, type ChatContent } from "../features/chat/content";
+import { commandText, contentForCommand  } from "../features/chat/content";
+import type {ChatContent} from "../features/chat/content";
 import { sameRichText } from "../data/richText";
 import {
-  visibilityOf,
-  type ChatMessage,
-  type CounterMessage,
-  type TimerMessage,
+  visibilityOf
+  
+  
+  
 } from "../features/chat/types";
+import type {ChatMessage, CounterMessage, TimerMessage} from "../features/chat/types";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
 import { Button } from "../ui/Button";
 import { menuTrigger } from "../ui/menuTrigger";
 import { IconRemove, IconAdd } from "../ui/icons";
-import { ChatInput, type ChatInputHandle } from "./ChatInput";
 import { useCampaign } from "../workspace/campaignContext";
 import { saveMessageEdit, setCounterValue, timerControl } from "../workspace/commands/chat";
+import { ChatInput  } from "./ChatInput";
+import type {ChatInputHandle} from "./ChatInput";
 
 /*
  * What chat messages gained in M10, all kept in the campaign's message state
@@ -37,14 +40,14 @@ export function EditBox({
   id: string;
   text: ChatContent;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const value = useRef(text);
   const input = useRef<ChatInputHandle | null>(null);
   const done = (save: boolean) => {
     const body = commandText(value.current).trim();
     const content = contentForCommand(value.current, body);
-    if (save && body && !sameRichText(content, text)) ctx.execute(saveMessageEdit, { id, content });
-    ctx.table.editingMessage.set(null);
+    if (save && body && !sameRichText(content, text)) context.execute(saveMessageEdit, { id, content });
+    context.table.editingMessage.set(null);
   };
   return (
     <div
@@ -65,9 +68,9 @@ export function EditBox({
         onChange={(content) => {
           value.current = content;
         }}
-        onEnter={() => done(true)}
+        onEnter={() => { done(true); }}
         onUp={() => {}}
-        onEscape={() => done(false)}
+        onEscape={() => { done(false); }}
       />
     </div>
   );
@@ -76,11 +79,11 @@ export function EditBox({
 /** The clock now, ticking every half second while something needs it. */
 function useNow(running: boolean): number {
   const [now, setNow] = useState(() => Date.now());
-  const updateNow = useEffectEvent(() => setNow(Date.now()));
+  const updateNow = useEffectEvent(() => { setNow(Date.now()); });
   useEffect(() => {
     if (!running) return;
-    const t = window.setInterval(updateNow, 500);
-    return () => clearInterval(t);
+    const t = globalThis.setInterval(updateNow, 500);
+    return () => { clearInterval(t); };
   }, [running]);
   return now;
 }
@@ -92,6 +95,12 @@ const clock = (seconds: number) => {
   const pad = (n: number) => String(n).padStart(2, "0");
   return h ? `${h}:${pad(m)}:${pad(s % 60)}` : `${m}:${pad(s % 60)}`;
 };
+
+/** What a timer's clock reads: the time left, or that it's up. */
+function timerText(left: number, stopped: boolean) {
+  if (left <= 0) return "Time’s up";
+  return stopped ? `${clock(left)} stopped` : clock(left);
+}
 
 /** How long a timer's bar flashes when it runs out, while the page is in view. */
 const RING_MS = 3600;
@@ -111,11 +120,11 @@ function useRinging(done: boolean): boolean {
   }
   useEffect(() => {
     if (!ringing) return;
-    let timer = 0;
+    let timer: ReturnType<typeof globalThis.setTimeout> | undefined;
     const arm = () => {
-      clearTimeout(timer);
+      if (timer !== undefined) clearTimeout(timer);
       if (document.visibilityState === "visible")
-        timer = window.setTimeout(() => setRinging(false), RING_MS);
+        timer = globalThis.setTimeout(() => { setRinging(false); }, RING_MS);
     };
     arm();
     document.addEventListener("visibilitychange", arm);
@@ -143,12 +152,14 @@ export function TimerCard({
   const now = useNow(!stopped);
   const left = (((stopped ?? now) - endsAt) * -1) / 1000;
   const done = left <= 0;
-  const ctx = useCampaign();
+  const context = useCampaign();
   const can = useQuery(
     campaign.members,
-    () => ctx.commands.permits(timerControl, { id: m.id, action: "stop" }) === true,
+    () => context.commands.permits(timerControl, { id: m.id, action: "stop" }) === true,
   );
   const ringing = useRinging(done);
+  const control = (action: "restart" | "resume" | "stop") =>
+    context.execute(timerControl, { id: m.id, action });
   return (
     <div
       className="roll-card chat-timer"
@@ -159,7 +170,7 @@ export function TimerCard({
       <div className="roll-head">
         <span className="roll-formula">{m.label || "Timer"}</span>
         <span className="chat-timer-clock" aria-live={done ? "polite" : "off"}>
-          {done ? "Time’s up" : stopped ? `${clock(left)} stopped` : clock(left)}
+          {timerText(left, !!stopped)}
         </span>
       </div>
       <div className="chat-bar" aria-hidden="true">
@@ -171,28 +182,14 @@ export function TimerCard({
       </div>
       {can && !compact && (
         <div className="move-suggest">
-          <Button
-            variant="ghost"
-            onClick={() => ctx.execute(timerControl, { id: m.id, action: "restart" })}
-          >
+          <Button variant="ghost" onClick={() => control("restart")}>
             Restart
           </Button>
-          {!done &&
-            (stopped ? (
-              <Button
-                variant="ghost"
-                onClick={() => ctx.execute(timerControl, { id: m.id, action: "resume" })}
-              >
-                Resume
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                onClick={() => ctx.execute(timerControl, { id: m.id, action: "stop" })}
-              >
-                Stop
-              </Button>
-            ))}
+          {!done && (
+            <Button variant="ghost" onClick={() => control(stopped ? "resume" : "stop")}>
+              {stopped ? "Resume" : "Stop"}
+            </Button>
+          )}
         </div>
       )}
     </div>
@@ -211,12 +208,12 @@ export function CounterCard({
 }) {
   const state = useMessageState<number>(campaign, m.id, ["value"]);
   const value: number = state["value"] ?? m.start;
-  const ctx = useCampaign();
+  const context = useCampaign();
   const can = useQuery(
     campaign.members,
-    () => ctx.commands.permits(setCounterValue, { id: m.id, value: 0 }) === true,
+    () => context.commands.permits(setCounterValue, { id: m.id, value: 0 }) === true,
   );
-  const set = (value: number) => ctx.execute(setCounterValue, { id: m.id, value });
+  const set = (value: number) => context.execute(setCounterValue, { id: m.id, value });
   const full = m.max !== undefined && value >= m.max;
   return (
     <div
@@ -230,7 +227,7 @@ export function CounterCard({
           {can && (
             <Button
               variant="icon"
-              label="Down one"
+              label="Down One"
               disabled={m.max !== undefined && value <= 0}
               onClick={() => set(value - 1)}
             >
@@ -242,7 +239,7 @@ export function CounterCard({
             {m.max !== undefined && <span className="muted">/{m.max}</span>}
           </span>
           {can && (
-            <Button variant="icon" label="Up one" disabled={full} onClick={() => set(value + 1)}>
+            <Button variant="icon" label="Up One" disabled={full} onClick={() => set(value + 1)}>
               <IconAdd />
             </Button>
           )}
@@ -251,8 +248,8 @@ export function CounterCard({
       {m.max !== undefined &&
         (m.max <= 12 ? (
           <div className="chat-pips" aria-hidden="true">
-            {Array.from({ length: m.max }, (_, i) => (
-              <span key={i} data-on={i < value || undefined} />
+            {Array.from({ length: m.max }, (_, index) => (
+              <span key={index} data-on={index < value || undefined} />
             ))}
           </div>
         ) : (
@@ -282,28 +279,28 @@ export function PinnedStrip({
   onMenu: (x: number, y: number, id: string) => void;
 }) {
   const { gm, shown, initial, rows } = usePinnedMessages(campaign);
-  if (!rows.length) return null;
+  if (rows.length === 0) return null;
   return (
     <section className="chat-pinned" aria-label="Pinned">
       <div className="chat-pin-stack">
-        {rows.map((message) => (
-          <div
-            key={message.id}
-            className="chat-pin"
-            data-new={!initial.has(message.id) || undefined}
-            data-leaving={!shown.has(message.id) || undefined}
-            // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the GM can open its menu by keyboard
-            tabIndex={gm && shown.has(message.id) ? 0 : undefined}
-            aria-label={
-              gm && shown.has(message.id) ? `Pinned message from ${message.name}` : undefined
-            }
-            {...(gm && shown.has(message.id)
-              ? menuTrigger((x, y) => onMenu(x, y, message.id))
-              : {})}
-          >
-            <div className="chat-pin-body">{render(message)}</div>
-          </div>
-        ))}
+        {rows.map((message) => {
+          // The GM can unpin it, unless it's already on its way out.
+          const unpinnable = gm && shown.has(message.id);
+          return (
+            <div
+              key={message.id}
+              className="chat-pin"
+              data-new={!initial.has(message.id) || undefined}
+              data-leaving={!shown.has(message.id) || undefined}
+              // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- focusable so the GM can open its menu by keyboard
+              tabIndex={unpinnable ? 0 : undefined}
+              aria-label={unpinnable ? `Pinned message from ${message.name}` : undefined}
+              {...(unpinnable ? menuTrigger((x, y) => { onMenu(x, y, message.id); }) : {})}
+            >
+              <div className="chat-pin-body">{render(message)}</div>
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -329,13 +326,13 @@ function usePinnedMessages(campaign: Campaign) {
     const gone = [...before.current].filter((id) => !currentShown.has(id));
     const goneIds = new Set(gone);
     before.current = currentShown;
-    if (!gone.length) return;
+    if (gone.length === 0) return;
     setLeaving((current) => new Set([...current, ...gone]));
-    const timeout = window.setTimeout(
-      () => setLeaving((current) => new Set([...current].filter((id) => !goneIds.has(id)))),
+    const timeout = globalThis.setTimeout(
+      () => { setLeaving((current) => new Set([...current].filter((id) => !goneIds.has(id)))); },
       PIN_LEAVE_MS,
     );
-    return () => window.clearTimeout(timeout);
+    return () => { globalThis.clearTimeout(timeout); };
   }, [shownIds]);
   // Those here when the strip first drew came with it.
   const initial = useConstant(() => shown);

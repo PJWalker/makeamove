@@ -1,6 +1,6 @@
-/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The relationship picker is an active-descendant listbox and its web is an SVG image. */
+
 import type {
-  FormEvent as ReactFormEvent,
+  InputEvent as ReactInputEvent,
   KeyboardEvent as ReactKeyboardEvent,
   RefObject,
 } from "react";
@@ -10,12 +10,14 @@ import { canEdit, getCharacter, listCharacters, systemOf } from "../features/cha
 import {
   relationshipNotes,
   relationshipsOf,
-  relationshipWeb,
-  type Relationship,
+  relationshipWeb
+  
 } from "../features/characters/relationships";
+import type {Relationship} from "../features/characters/relationships";
 import type { CharacterView } from "../features/characters/types";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
+import { CommitInput } from "../ui/CommitInput";
 import { Button } from "../ui/Button";
 import { IconDelete, IconExpand } from "../ui/icons";
 import { Dialog } from "../workspace/Dialog";
@@ -27,12 +29,12 @@ import { registerEntityDrop } from "../workspace/entityDrag";
 import { extensionOf } from "../systems/extensions";
 import { useCampaign } from "../workspace/campaignContext";
 import { parseInputNumber } from "../lib/number";
-import { RelationshipWeb } from "./RelationshipWeb";
 import {
   removeRelationship,
   setRelationship,
   setRelationshipDepth,
 } from "../workspace/commands/characters";
+import { RelationshipWeb } from "./RelationshipWeb";
 
 /*
  * Relationships (M9): a section on every character sheet listing how this
@@ -42,7 +44,7 @@ import {
 
 /** The Relationships section of a sheet. */
 export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: CharacterView }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const editable = canEdit(campaign, c);
   const system = systemOf(campaign);
   const depth = system.relationshipDepth;
@@ -61,11 +63,11 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
         relationshipsOf(campaign.characters, c.id).some((relationship) => relationship.to === to)
       )
         return false;
-      ctx.execute(setRelationship, { from: c.id, to, label: "" });
+      context.execute(setRelationship, { from: c.id, to, label: "" });
       setOpen(null);
       return true;
     },
-    [ctx, campaign, c.id],
+    [context, campaign, c.id],
   );
   useRelationshipDrop(section, editable, others, add);
 
@@ -73,7 +75,7 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
     <section ref={section} className="form-section sheet-section" aria-label="Relationships">
       <header className="sheet-section-header">
         <h3 className="sheet-heading">Relationships</h3>
-        <Button variant="ghost" onClick={() => ctx.canvas.dialogRequest.set("relationships")}>
+        <Button variant="ghost" onClick={() => { context.canvas.dialogRequest.set("relationships"); }}>
           Web
         </Button>
       </header>
@@ -92,21 +94,21 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
                 editable={editable}
                 depth={depth}
                 expanded={open === r.to}
-                onOpenCharacter={() => ctx.links.openCharacter(other.id)}
+                onOpenCharacter={() => { context.links.openCharacter(other.id); }}
                 onLabelChange={(label) =>
-                  ctx.execute(setRelationship, { from: c.id, to: r.to, label })
+                  context.execute(setRelationship, { from: c.id, to: r.to, label })
                 }
                 onDepthChange={(value) => {
                   if (!depth) return;
-                  ctx.execute(setRelationshipDepth, {
+                  context.execute(setRelationshipDepth, {
                     from: c.id,
                     to: r.to,
                     depth: value,
                     max: depth.max,
                   });
                 }}
-                onToggleNotes={() => setOpen(open === r.to ? null : r.to)}
-                onRemove={() => ctx.execute(removeRelationship, { from: c.id, to: r.to })}
+                onToggleNotes={() => { setOpen(open === r.to ? null : r.to); }}
+                onRemove={() => context.execute(removeRelationship, { from: c.id, to: r.to })}
               />
             );
           })}
@@ -192,12 +194,12 @@ function RelationshipRow({
         <button type="button" className="relationship-name" onClick={onOpenCharacter}>
           {other.name}
         </button>
-        <input
+        <CommitInput
           aria-label={`How ${c.name} sees ${other.name}`}
           placeholder="Trusts, owes, fears…"
           value={relationship.label}
           disabled={!editable}
-          onChange={(event) => onLabelChange(event.currentTarget.value.trim())}
+          onCommit={onLabelChange}
         />
         {depth && (
           <RelationshipDepthInput
@@ -211,7 +213,7 @@ function RelationshipRow({
         )}
         <Button
           variant="icon"
-          label={expanded ? "Hide notes" : "Notes"}
+          label={expanded ? "Hide Notes" : "Notes"}
           pressed={expanded}
           onClick={onToggleNotes}
         >
@@ -307,12 +309,16 @@ function RelationshipPicker({
             listId={picker.listId}
             panel={picker.panel}
             onSelect={picker.handleAdd}
-            onPointerDown={picker.handlePointerDown}
+            onPointerDown={handleRelationshipPointerDown}
           />,
           document.body,
         )}
     </>
   );
+}
+
+function handleRelationshipPointerDown(event: React.PointerEvent<HTMLButtonElement>) {
+  event.preventDefault();
 }
 
 function useRelationshipPicker(
@@ -334,13 +340,13 @@ function useRelationshipPicker(
     setAdding("");
     setSuggesting(false);
   };
-  const handleInput = (event: ReactFormEvent<HTMLInputElement>) => {
+  const handleInput = (event: ReactInputEvent<HTMLInputElement>) => {
     setAdding(event.currentTarget.value);
     setActive(0);
     setSuggesting(true);
   };
-  const handleFocus = () => setSuggesting(adding.trim().length > 0);
-  const handleBlur = () => setSuggesting(false);
+  const handleFocus = () => { setSuggesting(adding.trim().length > 0); };
+  const handleBlur = () => { setSuggesting(false); };
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape" && expanded) {
       event.preventDefault();
@@ -348,7 +354,7 @@ function useRelationshipPicker(
       setSuggesting(false);
     } else if (
       expanded &&
-      matches.length &&
+      matches.length > 0 &&
       (event.key === "ArrowDown" || event.key === "ArrowUp")
     ) {
       event.preventDefault();
@@ -358,14 +364,12 @@ function useRelationshipPicker(
       handleAdd(matches[index].id);
     }
   };
-  const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) =>
-    event.preventDefault();
 
   useMenuOverlay({
     open: expanded,
     ref: panel,
     anchor: input,
-    onDismiss: () => setSuggesting(false),
+    onDismiss: () => { setSuggesting(false); },
   });
 
   return {
@@ -378,7 +382,6 @@ function useRelationshipPicker(
     panel,
     activeDescendant: expanded && matches[index] ? `${listId}-${matches[index].id}` : undefined,
     handleAdd,
-    handlePointerDown,
     handleBlur,
     handleFocus,
     handleInput,
@@ -404,7 +407,7 @@ function RelationshipPickerInput({
   expanded: boolean;
   activeDescendant: string | undefined;
   value: string;
-  onInput: (event: ReactFormEvent<HTMLInputElement>) => void;
+  onInput: (event: ReactInputEvent<HTMLInputElement>) => void;
   onFocus: () => void;
   onBlur: () => void;
   onKeyDown: (event: ReactKeyboardEvent<HTMLInputElement>) => void;
@@ -459,7 +462,7 @@ function RelationshipSuggestionList({
       aria-label="Character matches"
       className="note-suggest context-menu panel drops-down"
     >
-      {matches.length ? (
+      {matches.length > 0 ? (
         matches.map((target, matchIndex) => (
           <RelationshipSuggestion
             key={target.id}
@@ -467,7 +470,7 @@ function RelationshipSuggestionList({
             target={target}
             active={matchIndex === index}
             id={`${listId}-${target.id}`}
-            onSelect={() => onSelect(target.id)}
+            onSelect={() => { onSelect(target.id); }}
             onPointerDown={onPointerDown}
           />
         ))
@@ -519,7 +522,7 @@ export function RelationshipsDialog({
   campaign: Campaign;
   dialogRef: RefObject<HTMLDialogElement | null>;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const readWeb = useCallback(() => {
     const people = listCharacters(campaign);
     const ids = people.map((p) => p.id);
@@ -536,11 +539,11 @@ export function RelationshipsDialog({
   }, [people, edges]);
   return (
     <Dialog dialogRef={dialogRef} title="Relationships">
-      {shown.length ? (
+      {shown.length > 0 ? (
         <RelationshipWeb
           people={shown}
           edges={edges}
-          onOpenCharacter={(id) => ctx.links.openCharacter(id)}
+          onOpenCharacter={(id) => { context.links.openCharacter(id); }}
         />
       ) : (
         <p className="empty">No relationships yet. Add them from a character’s sheet.</p>

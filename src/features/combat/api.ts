@@ -23,11 +23,12 @@ import {
   tickDurations,
   turnOf,
   turnOrder,
-  updateCombatant,
-  type CombatMaps,
-  type Combatant,
-  type TurnChange,
+  updateCombatant
+  
+  
+  
 } from "./combat";
+import type {CombatMaps, Combatant, TurnChange} from "./combat";
 
 /*
  * The turn tracker as the table uses it: combatants from tokens, initiative
@@ -114,19 +115,19 @@ export async function rollAllInitiative(campaign: Campaign, { npcsOnly = false }
     if (c.init !== null) continue;
     const char = getCharacter(campaign, c.characterId);
     if (npcsOnly && char?.kind === "pc") continue;
-    // oxlint-disable-next-line react-doctor/async-await-in-loop -- Keep each result in turn order.
+    // eslint-disable-next-line react-doctor/async-await-in-loop -- Keep each result in turn order.
     await rollInitiative(campaign, c.id);
   }
 }
 
 /** Count down durations for one point of a turn, on every character, removing conditions that ran out. */
-function tick(campaign: Campaign, combatant: string | null, point: "start" | "end") {
+function tick(campaign: Campaign, combatant: string | null, point: "end" | "start") {
   if (!combatant) return;
   for (const [id, m] of campaign.characters.entries()) {
     const durations = m.get("durations");
-    if (!durations || !Object.keys(durations).length) continue;
+    if (!durations || Object.keys(durations).length === 0) continue;
     const { left, expired } = tickDurations(durations, combatant, point);
-    if (!expired.length && JSON.stringify(left) === JSON.stringify(durations)) continue;
+    if (expired.length === 0 && JSON.stringify(left) === JSON.stringify(durations)) continue;
     m.set("durations", left);
     for (const condition of expired) clearCondition(campaign, id, condition);
   }
@@ -199,8 +200,6 @@ export function setDuration(
 export function endConcentration(campaign: Campaign, characterId: string) {
   setField(campaign, characterId, "concentration", undefined);
 }
-
-/** Pip colours for conditions, by their order in the system's list. */
 
 /**
  * What each token shows of the fight: a pip per condition (and one for

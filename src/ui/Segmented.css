@@ -8,6 +8,10 @@
     background: var(--surface-sunken);
     box-shadow: var(--sunken-shadow);
   }
+  /* Each choice's field holds its value; the button is what's laid out. */
+  .segment-field {
+    display: contents;
+  }
   .segment {
     position: relative;
     display: flex;

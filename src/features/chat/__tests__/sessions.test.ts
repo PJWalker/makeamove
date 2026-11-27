@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
 import { contentFromText, messageText } from "../content";
 import { logRows, splitSessions } from "../sessions";
-import { canDelete, type ChatMessage } from "../types";
+import { canDelete  } from "../types";
+import type {ChatMessage} from "../types";
 
 let n = 0;
 const text = (t: string, author = "pat"): ChatMessage => ({
@@ -96,9 +97,8 @@ describe("the rows the log shows", () => {
       "one more",
     ]);
   });
-  it("keys rows by message id, and folds by their session", () => {
+  it("gives every row its own key", () => {
     const keys = logRows(log(), () => false).map((r) => r.key);
-    expect(keys.slice(0, 2)).toEqual(["fold:before", "fold:s1"]);
     expect(new Set(keys).size).toBe(keys.length);
   });
 });

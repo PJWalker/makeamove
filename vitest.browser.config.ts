@@ -35,6 +35,10 @@ export default mergeConfig(
         "trystero",
         "fuse.js",
         "@floating-ui/dom",
+        "xstate",
+        "@xstate/react",
+        "use-sync-external-store/shim",
+        "use-sync-external-store/shim/with-selector",
       ],
     },
     test: {

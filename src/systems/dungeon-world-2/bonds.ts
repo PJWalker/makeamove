@@ -8,7 +8,7 @@ export const BONDS = BOND_SPECS.map((bond) => ({
   moves: bond.moves.map((name, index) => ({
     id: name
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
+      .replaceAll(/[^\da-z]+/g, "-")
       .replace(/-$/, ""),
     name,
     starting: index === 0,

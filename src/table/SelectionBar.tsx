@@ -1,26 +1,34 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState  } from "react";
+import type {ReactNode} from "react";
 import type { SceneController } from "../scene/controller";
 import type { ElementPatch } from "../scene/sceneDoc";
 import { bounds } from "../scene/geometry";
 import { toScreen } from "../scene/camera";
 import { HANDLE_SIZE, ROTATE_HANDLE_GAP } from "../scene/render/handles";
 import { PEN_WIDTH_RANGE } from "../scene/tools";
-import { isPlainToken, sharedTextStyle, type EffectKind, type SceneElement } from "../scene/types";
+import {
+  isPlainToken,
+  sharedTextStyle
+  
+  
+  
+} from "../scene/types";
+import type {EffectKind, SceneElement, TextStyle} from "../scene/types";
 import { ColourPicker } from "../ui/ColourPicker";
 import { CommitInput } from "../ui/CommitInput";
 import { Button } from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
 import { IconLight, IconLock, IconReveal, IconSettings, IconUnlock } from "../ui/icons";
 import { useQuery } from "../ui/useQuery";
-import { EffectSightToggles } from "./effectOptions";
-import { EFFECT_OPTIONS } from "./effectOptionsData";
-import { TextStyleFields } from "./TextStyleFields";
 import { useCampaign } from "../workspace/campaignContext";
 import { Counter } from "../workspace/sheetParts";
 import { bumpData, bumpResource } from "../workspace/commands/characters";
 import { canEdit, getCharacter, systemOf } from "../features/characters/api";
 import { derive } from "../features/characters/store";
 import type { TokenStat } from "../systems/types";
+import { TextStyleFields } from "./TextStyleFields";
+import { EFFECT_OPTIONS } from "./effectOptionsData";
+import { EffectSightToggles } from "./effectOptions";
 import "./SelectionBar.css";
 
 /** Screen px between the selection (and its rotate handle) and the bar. */
@@ -34,7 +42,7 @@ const every = <T extends SceneElement["type"]>(
   ...types: T[]
 ): sel is readonly Of<T>[] => {
   const typeSet = new Set(types);
-  return sel.every((el) => typeSet.has(el.type as T));
+  return sel.every((element) => typeSet.has(element.type as T));
 };
 
 /**
@@ -51,7 +59,7 @@ export function SelectionBar({
   onTokenOptions: (id: string, from: Element) => void;
 }) {
   const { ref, els, shown } = useSelectionBar(controller);
-  if (!els.length) return null;
+  if (els.length === 0) return null;
   return (
     <div
       ref={ref}
@@ -67,22 +75,22 @@ export function SelectionBar({
 }
 
 function useSelectionBar(controller: SceneController) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const sel = useQuery(controller.selectedElements);
   const cam = useQuery(controller.camera);
   const pressing = useQuery(controller.pressing);
-  const tool = useQuery(ctx.tools.activeTool);
-  const ref = useRef<HTMLDivElement>(null);
+  const tool = useQuery(context.tools.activeTool);
+  const reference = useRef<HTMLDivElement>(null);
   // The last selection stays shown while the bar fades away.
   const [last, setLast] = useState(sel);
-  if (sel.length && sel !== last) setLast(sel);
+  if (sel.length > 0 && sel !== last) setLast(sel);
   const shown = tool === "select" && sel.length > 0 && !pressing;
-  const els = sel.length ? sel : last;
+  const els = sel.length > 0 ? sel : last;
   const b = bounds(els);
 
   // Over the selection, or under it where there's no room above; inside the scene's open space.
   useLayoutEffect(() => {
-    const bar = ref.current;
+    const bar = reference.current;
     if (!bar || !b) return;
     const host = controller.host.getBoundingClientRect();
     const inset = controller.renderer.insets();
@@ -99,7 +107,7 @@ function useSelectionBar(controller: SceneController) {
     bar.dataset["below"] = String(above < minY);
   });
 
-  return { ref, els, shown };
+  return { ref: reference, els, shown };
 }
 
 /** What can be changed about everything in `sel`. */
@@ -120,33 +128,41 @@ function useSelectionFields(
   sel: readonly SceneElement[],
   onTokenOptions: (id: string, from: Element) => void,
 ) {
-  const ctx = useCampaign();
-  const ids = sel.map((el) => el.id);
+  const context = useCampaign();
+  return buildSelectionFields(controller, sel, onTokenOptions, (patch) => { context.tools.setTextStyle(patch); });
+}
+
+function buildSelectionFields(
+  controller: SceneController,
+  sel: readonly SceneElement[],
+  onTokenOptions: (id: string, from: Element) => void,
+  setTextStyle: (patch: Partial<TextStyle>) => void,
+) {
+  const ids = sel.map((element) => element.id);
   const first = sel[0]!;
-  const set = (patch: ElementPatch) => controller.setProps(ids, patch);
+  const set = (patch: ElementPatch) => { controller.setProps(ids, patch); };
   const one = sel.length === 1 ? first : null;
-  const grid = controller.renderer.grid;
+  const {grid} = controller.renderer;
   const fields: ReactNode[] = [];
 
   if (one?.type === "token" && one.characterId)
     fields.push(<TokenStats key="stats" characterId={one.characterId} hidden={!!one.hideBars} />);
   if (every(sel, "effect")) {
-    const effect = sel[0]!.effect;
+    const {effect} = (sel[0]!);
     fields.push(
       <Segmented
         key="effect"
         label="Effect"
         // None chosen when the zones differ.
-        value={sel.every((el) => el.effect === effect) ? effect : ("" as EffectKind)}
+        value={sel.every((element) => element.effect === effect) ? effect : ("" as EffectKind)}
         options={EFFECT_OPTIONS}
-        onChange={(effect) => set({ effect })}
+        onChange={(effect) => { set({ effect }); }}
       />,
       <EffectSightToggles
         key="sight"
         // On only where every zone has it.
-        value={{ glow: sel.every((el) => el.glow), obscures: sel.every((el) => el.obscures) }}
-        onChange={(patch) =>
-          set(Object.fromEntries(Object.entries(patch).map(([k, on]) => [k, on || undefined])))
+        value={{ glow: sel.every((element) => element.glow), obscures: sel.every((element) => element.obscures) }}
+        onChange={(patch) => { set(Object.fromEntries(Object.entries(patch).map(([k, on]) => [k, on || undefined]))); }
         }
       />,
     );
@@ -159,7 +175,7 @@ function useSelectionFields(
         onChange={(patch) => {
           set(patch);
           // New text follows, as does text being edited (see TextEditor).
-          ctx.tools.setTextStyle(patch);
+          setTextStyle(patch);
         }}
       />,
     );
@@ -169,7 +185,7 @@ function useSelectionFields(
         key="colour"
         controller={controller}
         ids={ids}
-        label={sel.every((el) => el.type === "token") ? "Background and Border" : "Colour"}
+        label={sel.every((element) => element.type === "token") ? "Background and Border" : "Colour"}
         value={sel[0]!.colour}
         prop="colour"
         disabled={sel.every(isPlainToken)}
@@ -205,7 +221,7 @@ function useSelectionFields(
           { id: "over", label: "Over Tokens" },
           { id: "under", label: "Under Tokens" },
         ]}
-        onChange={(layer) => controller.setLayer(ids, layer)}
+        onChange={(layer) => { controller.setLayer(ids, layer); }}
       />,
     );
   if (every(sel, "token"))
@@ -216,7 +232,7 @@ function useSelectionFields(
         icon={IconReveal}
         label="Show Name"
         pressed={!sel.every((t) => t.hideName)}
-        onClick={() => set({ hideName: sel.every((t) => !t.hideName) ? true : undefined })}
+        onClick={() => { set({ hideName: sel.every((t) => !t.hideName) ? true : undefined }); }}
       />,
     );
   if (every(sel, "wall")) {
@@ -230,7 +246,7 @@ function useSelectionFields(
           { id: "wall", label: "Wall" },
           { id: "door", label: "Door" },
         ]}
-        onChange={(kind) => set(kind === "door" ? { door: true, open: false } : { door: false })}
+        onChange={(kind) => { set(kind === "door" ? { door: true, open: false } : { door: false }); }}
       />,
     );
     if (doors)
@@ -243,7 +259,7 @@ function useSelectionFields(
             { id: "closed", label: "Closed" },
             { id: "open", label: "Open" },
           ]}
-          onChange={(state) => set({ open: state === "open" })}
+          onChange={(state) => { set({ open: state === "open" }); }}
         />,
       );
   }
@@ -284,7 +300,7 @@ function useSelectionFields(
         icon={IconLight}
         label="Flicker"
         pressed={sel.every((x) => x.flicker)}
-        onClick={() => set({ flicker: sel.every((x) => x.flicker) ? undefined : true })}
+        onClick={() => { set({ flicker: sel.every((x) => x.flicker) ? undefined : true }); }}
       />,
     );
   }
@@ -298,10 +314,10 @@ function useSelectionFields(
           { id: "light", label: "Light" },
           { id: "dark", label: "Dark" },
         ]}
-        onChange={(tone) => set({ tone })}
+        onChange={(tone) => { set({ tone }); }}
       />,
     );
-  const locked = sel.every((el) => el.locked);
+  const locked = sel.every((element) => element.locked);
   fields.push(
     <Button
       key="lock"
@@ -309,7 +325,7 @@ function useSelectionFields(
       icon={locked ? IconLock : IconUnlock}
       label={locked ? "Unlock" : "Lock"}
       pressed={locked}
-      onClick={() => controller.setLocked(ids, !locked)}
+      onClick={() => { controller.setLocked(ids, !locked); }}
     />,
   );
   if (one?.type === "token")
@@ -319,7 +335,7 @@ function useSelectionFields(
         variant="icon"
         icon={IconSettings}
         label="Token Options"
-        onClick={(e) => onTokenOptions(one.id, e.currentTarget)}
+        onClick={(e) => { onTokenOptions(one.id, e.currentTarget); }}
       />,
     );
   return fields;
@@ -331,17 +347,17 @@ function useSelectionFields(
  * table only show to those who can change them.
  */
 function TokenStats({ characterId, hidden }: { characterId: string; hidden: boolean }) {
-  const ctx = useCampaign();
-  const { campaign } = ctx;
+  const context = useCampaign();
+  const { campaign } = context;
   const character = useQuery(campaign.characters, () => getCharacter(campaign, characterId));
   if (!character) return null;
   const system = systemOf(campaign);
   const editable = canEdit(campaign, character);
   if (hidden && !editable) return null;
   const change = ({ source, max }: TokenStat, by: number) => {
-    const id = character.id;
-    if ("resource" in source) ctx.execute(bumpResource, { id, resource: source.resource, by, max });
-    else ctx.execute(bumpData, { id, key: source.data, by, max });
+    const {id} = character;
+    if ("resource" in source) context.execute(bumpResource, { id, resource: source.resource, by, max });
+    else context.execute(bumpData, { id, key: source.data, by, max });
   };
   return system
     .tokenStats(character, derive(character, system))
@@ -352,9 +368,32 @@ function TokenStats({ characterId, hidden }: { characterId: string; hidden: bool
         value={stat.value}
         max={stat.max}
         disabled={!editable}
-        onChange={(by) => change(stat, by)}
+        onChange={(by) => { change(stat, by); }}
       />
     ));
+}
+
+/**
+ * A property of the selection's being changed: it shows on the scene as it's
+ * changed, and is set when committed, as one undo step.
+ */
+function usePreviewedProperty<T>(
+  controller: SceneController,
+  ids: string[],
+  property: "colour" | "fill" | "stroke" | "width",
+) {
+  const [draft, setDraft] = useState<T | null>(null);
+  const preview = (value: T) => {
+    setDraft(value);
+    controller.previewProps(ids, { [property]: value });
+  };
+  const commit = () => {
+    if (draft === null) return;
+    controller.previewProps(ids, null);
+    controller.setProps(ids, { [property]: draft });
+    setDraft(null);
+  };
+  return { draft, preview, commit };
 }
 
 /**
@@ -373,26 +412,18 @@ function PaintField({
   ids: string[];
   label: string;
   value: string;
-  prop: "colour" | "stroke" | "fill";
+  prop: "colour" | "fill" | "stroke";
   disabled?: boolean;
 }) {
-  const [draft, setDraft] = useState<string | null>(null);
+  const { draft, preview, commit } = usePreviewedProperty<string>(controller, ids, prop);
   return (
     <ColourPicker
       label={label}
       alpha
       value={draft ?? value}
       disabled={disabled ?? false}
-      onChange={(colour) => {
-        setDraft(colour);
-        controller.previewProps(ids, { [prop]: colour });
-      }}
-      onClose={() => {
-        if (draft === null) return;
-        controller.previewProps(ids, null);
-        controller.setProps(ids, { [prop]: draft });
-        setDraft(null);
-      }}
+      onChange={preview}
+      onClose={commit}
     />
   );
 }
@@ -407,13 +438,7 @@ function WidthField({
   ids: string[];
   value: number;
 }) {
-  const [draft, setDraft] = useState<number | null>(null);
-  const commit = () => {
-    if (draft === null) return;
-    controller.previewProps(ids, null);
-    controller.setProps(ids, { width: draft });
-    setDraft(null);
-  };
+  const { draft, preview, commit } = usePreviewedProperty<number>(controller, ids, "width");
   return (
     <input
       type="range"
@@ -423,11 +448,7 @@ function WidthField({
       value={draft ?? value}
       aria-label="Outline Width"
       data-tip="Outline Width"
-      onChange={(e) => {
-        const width = Number(e.currentTarget.value);
-        setDraft(width);
-        controller.previewProps(ids, { width });
-      }}
+      onChange={(e) => { preview(Number(e.currentTarget.value)); }}
       onPointerUp={commit}
       onKeyUp={commit}
       onBlur={commit}

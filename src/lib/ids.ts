@@ -4,7 +4,7 @@ const ALPHABET = "0123456789abcdefghjkmnpqrstvwxyz";
 export function newId(): string {
   let time = Date.now();
   let head = "";
-  for (let i = 0; i < 10; i++) {
+  for (let index = 0; index < 10; index++) {
     head = ALPHABET[time % 32] + head;
     time = Math.floor(time / 32);
   }
@@ -18,7 +18,7 @@ export function newId(): string {
 export function newSecret(byteLength = 32): string {
   const bytes = crypto.getRandomValues(new Uint8Array(byteLength));
   return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
+    .replaceAll('+', "-")
+    .replaceAll('/', "_")
     .replace(/=+$/, "");
 }

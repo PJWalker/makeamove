@@ -1,25 +1,20 @@
-import { readReference } from "./readReference";
 import type { MonsterDef } from "../../src/systems/types";
-
-const slug = (value: string) =>
-  value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+import { readReference } from "./readReference";
+import { slug } from "./slug";
 
 function valueAfter(section: string, label: string) {
   return new RegExp(`\\*\\*${label}\\*\\*\\s*([^<*\\n]+)`, "i").exec(section)?.[1]?.trim() ?? "";
 }
 
 function sectionText(block: string, name: string) {
-  const headings = [...block.matchAll(/^#### (.+)$/gm)];
+  const headings = [...block.matchAll(/^#{4} (.+)$/gm)];
   const heading = headings.find((entry) => entry[1]?.trim().toLowerCase() === name.toLowerCase());
-  if (!heading || heading.index === undefined) return "";
+  if (heading?.index === undefined) return "";
   const end = headings.find((entry) => (entry.index ?? -1) > heading.index)?.index ?? block.length;
   return block
     .slice(heading.index + (heading[0]?.length ?? 0), end)
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
+    .replaceAll(/<[^>]+>/g, " ")
+    .replaceAll('&nbsp;', " ")
     .trim();
 }
 
@@ -32,13 +27,13 @@ export function parseSrdMonsters(markdown: string): MonsterDef[] {
       const name = block.split(/\r?\n/, 1)[0]?.trim();
       if (!name || name === "Monster A–Z") return [];
       const details = /^_([^_]+)_/m.exec(block)?.[1] ?? "";
-      const size = /^(Tiny|Small|Medium|Large|Huge|Gargantuan)\b/i
+      const size = /^(tiny|small|medium|large|huge|gargantuan)\b/i
         .exec(details)?.[1]
         ?.toLowerCase();
       const scores = Object.fromEntries(
         [
           ...block.matchAll(
-            /<strong>(STR|DEX|CON|INT|WIS|CHA)<\/strong>\s*<\/td>\s*<td>(\d+)<\/td>/gi,
+            /<strong>(str|dex|con|int|wis|cha)<\/strong>\s*<\/td>\s*<td>(\d+)<\/td>/gi,
           ),
         ].flatMap((match) => {
           const ability = match[1];
@@ -64,7 +59,7 @@ export function parseSrdMonsters(markdown: string): MonsterDef[] {
           id: slug(name),
           name,
           description: `${details}${fields.cr ? ` · CR ${fields.cr}` : ""}`,
-          hp: Number(valueAfter(block, "HP").replace(/,/g, "").match(/^\d+/)?.[0]) || 1,
+          hp: Number((/^\d+/.exec(valueAfter(block, "HP").replaceAll(',', "")))?.[0]) || 1,
           scores,
           fields,
           ...(size ? { size } : {}),

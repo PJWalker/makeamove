@@ -1,6 +1,7 @@
 import type { Characters } from "../../campaign/schema";
-import { pairKey, type SystemData } from "../../campaign/systemStore";
-import { isObject } from "../../data/guards";
+import { pairKey  } from "../../campaign/systemStore";
+import type {SystemData} from "../../campaign/systemStore";
+import { isObject } from "../../lib/guards";
 import { relationshipsOf, removeRelationship } from "../../features/characters/relationships";
 import type { RelationshipDepthDef } from "../types";
 
@@ -67,7 +68,7 @@ export function forgeBond(
     bonds.set(pairKey(first, second), bond);
     removeRelationship(characters, first, second);
     removeRelationship(characters, second, first);
-    if (existing && existing.type !== type && existing.advancedMoves.length)
+    if (existing && existing.type !== type && existing.advancedMoves.length > 0)
       for (const id of [first, second]) awardXp(id, existing.advancedMoves.length);
   });
   return true;

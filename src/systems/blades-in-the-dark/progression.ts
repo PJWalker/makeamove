@@ -7,7 +7,8 @@ import {
 } from "../../features/characters/api";
 import { commaListOf, formatCommaList } from "../../lib/list";
 import { getState, setState } from "../../features/chat/messageState";
-import { systemCampaignData, setSystemCampaignData, type Campaign } from "../../campaign/campaign";
+import { systemCampaignData, setSystemCampaignData  } from "../../campaign/campaign";
+import type {Campaign} from "../../campaign/campaign";
 import { ATTRIBUTES } from "./index";
 
 export function advanceAttribute(
@@ -42,7 +43,7 @@ export function advanceCrew(campaign: Campaign, reward: string): boolean {
   const counter = campaign.chat.messages.value.find(
     (message) => message.id === counterId && message.kind === "counter",
   );
-  if (!counter || counter.kind !== "counter") return false;
+  if (counter?.kind !== "counter") return false;
   const needed = counter.max ?? 10;
   const xp = getState<number>(campaign.messageState, counter.id, "value") ?? counter.start;
   const state = systemCampaignData(campaign);
@@ -79,7 +80,7 @@ export function buyCrewUpgrade(campaign: Campaign, upgrade: string): boolean {
     ?.options?.some((option) => option.id === upgrade);
   const state = systemCampaignData(campaign);
   const owned = commaListOf(state["crewUpgrades"]);
-  const cost = upgrade === "mastery" ? 4 : upgrade === "cohort" ? 2 : 1;
+  const cost = upgrade === "mastery" ? 4 : (upgrade === "cohort" ? 2 : 1);
   if (
     system.id !== "blades-in-the-dark" ||
     !allowed ||

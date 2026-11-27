@@ -1,35 +1,34 @@
-import { lazy, Suspense, useState } from "react";
-import { useEffect, useLayoutEffect } from "react";
+import { lazy, Suspense, useState , useEffect, useLayoutEffect } from "react";
 import { sceneOklchFromHex } from "../lib/colour";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
-import { FloatingWindows } from "./FloatingWindows";
 import { windowLayer } from "../ui/windows";
-import { CampaignDialogHost } from "./CampaignDialogHost";
-import { Sidebar } from "./Sidebar";
 import { hasCombat } from "../features/combat/api";
 import { playedCharacterId, systemOf } from "../features/characters/api";
 import { canvasColour } from "../workspace/canvasState";
 import { autohide } from "../workspace/autohide";
 import { ActionDialogs } from "../workspace/ActionDialogs";
-import { ChatPopups } from "./ChatPopups";
-import { Hotbar } from "./Hotbar";
-import { LinkPopups } from "./LinkPopups";
 import { EntityWindowHost } from "../workspace/entityWindows";
-import { MovePrompt } from "./MovePrompt";
 import { GraphicDialogs } from "../workspace/GraphicDialogs";
-import { Palette } from "./Palette";
-import { Toolbar } from "./Toolbar";
 import { extensionOf } from "../systems/extensions";
 import { SystemExtensions } from "../workspace/systemExtensions";
 import { useCommandKeys } from "../workspace/commands/keys";
 import { useCampaign } from "../workspace/campaignContext";
+import { Toolbar } from "./Toolbar";
+import { Palette } from "./Palette";
+import { MovePrompt } from "./MovePrompt";
+import { LinkPopups } from "./LinkPopups";
+import { Hotbar } from "./Hotbar";
+import { ChatPopups } from "./ChatPopups";
+import { Sidebar } from "./Sidebar";
+import { CampaignDialogHost } from "./CampaignDialogHost";
+import { FloatingWindows } from "./FloatingWindows";
 
 // PixiJS is big; load it only once someone opens a table.
-const SceneCanvas = lazy(() => import("./SceneCanvas"));
+const SceneCanvas = lazy(() => import("./SceneCanvas").then((m) => ({ default: m.SceneCanvas })));
 
 export function Tabletop({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const scenes = useQuery(campaign.scenes, () => campaign.sceneViews());
   // A system without initiative has no turn tracker.
   const combat = useQuery(campaign.meta, () => hasCombat(campaign));
@@ -41,19 +40,19 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
   // My Character is there once this device has claimed one.
   const playing = useQuery(campaign.members, () => !!playedCharacterId(campaign));
   useLayoutEffect(() => {
-    ctx.panels.unavailablePanels.set([
+    context.panels.unavailablePanels.set([
       ...(playing ? [] : (["pc"] as const)),
       ...(combat ? [] : (["combat"] as const)),
       ...(reference ? [] : (["reference"] as const)),
     ]);
     return () => {
-      ctx.panels.unavailablePanels.set([]);
+      context.panels.unavailablePanels.set([]);
     };
-  }, [ctx, playing, combat, reference]);
+  }, [context, playing, combat, reference]);
   const activeId = useQuery(campaign.members, () => campaign.activeSceneId());
   const scene = scenes.find((s) => s.id === activeId) ?? scenes[0];
 
-  const mapColour = useQuery(ctx.canvas.activeMapColour);
+  const mapColour = useQuery(context.canvas.activeMapColour);
   const colour = scene ? canvasColour(scene, mapColour) : null;
 
   // Tint the whole UI from the scene's custom colour, else from the map, else from the canvas.
@@ -72,11 +71,11 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
   );
 
   // Every command's shortcuts, built-in and the player's own.
-  useCommandKeys(ctx);
+  useCommandKeys(context);
 
   const hiding = useQuery(autohide);
-  const dragging = useQuery(ctx.panels.windowDragging);
-  const insets = useQuery(ctx.panels.dockInsets);
+  const dragging = useQuery(context.panels.windowDragging);
+  const insets = useQuery(context.panels.dockInsets);
   const edges = useNearEdges(hiding);
 
   return (
@@ -94,8 +93,8 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
           "--panel-r": `${insets.right.body}px`,
         }}
         // Pulled-out panels and pop-ups render into this layer (ui/windows.ts).
-        ref={(el) => {
-          if (el && el.lastChild !== windowLayer) el.appendChild(windowLayer);
+        ref={(element) => {
+          if (element && element.lastChild !== windowLayer) element.append(windowLayer);
         }}
       >
         <div
@@ -149,8 +148,8 @@ function useNearEdges(on: boolean) {
     if (!on) return;
     let shown = new Set<Edge>();
     const over = (edge: Edge, x: number, y: number) =>
-      [...document.querySelectorAll(EDGE_CHROME[edge])].some((el) => {
-        const r = el.getBoundingClientRect();
+      [...document.querySelectorAll(EDGE_CHROME[edge])].some((element) => {
+        const r = element.getBoundingClientRect();
         return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
       });
     const onMove = (e: PointerEvent) => {
@@ -174,10 +173,10 @@ function useNearEdges(on: boolean) {
       shown = new Set();
       setEdges("");
     };
-    window.addEventListener("pointermove", onMove);
+    globalThis.addEventListener("pointermove", onMove);
     document.documentElement.addEventListener("pointerleave", onLeave);
     return () => {
-      window.removeEventListener("pointermove", onMove);
+      globalThis.removeEventListener("pointermove", onMove);
       document.documentElement.removeEventListener("pointerleave", onLeave);
       setEdges("");
     };

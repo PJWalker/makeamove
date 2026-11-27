@@ -1,16 +1,18 @@
-/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The icon grid is a keyboard-selectable listbox, not a native select. */
+
 import { useState } from "react";
+import type { Campaign } from "../campaign/campaign";
+import { Button } from "../ui/Button";
+import { ENTRY_ICONS  } from "../ui/entryIcons";
+import type {EntryIconName} from "../ui/entryIcons";
+import { closePopup } from "../ui/popup";
+import { useQuery } from "../ui/useQuery";
+import { CommitInput } from "../ui/CommitInput";
 import { actionForCombo, comboOf, shortcuts, showCombo, slotLook } from "./commands/custom";
 import { bindKey, lookOfSlot } from "./commands/campaign";
 import { RECORDER } from "./commands/keys";
 import { findAction } from "./commands/views";
-import type { Campaign } from "../campaign/campaign";
-import { Button } from "../ui/Button";
-import { ENTRY_ICONS, type EntryIconName } from "../ui/entryIcons";
-import { closePopup } from "../ui/popup";
 import { Dialog } from "./Dialog";
 import { usePopupDialog } from "./usePopupDialog";
-import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "./campaignContext";
 
 /*
@@ -20,91 +22,89 @@ import { useCampaign } from "./campaignContext";
  */
 
 export function ActionDialogs({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
-  const req = useQuery(ctx.table.actionEdit);
-  if (!req) return null;
+  const context = useCampaign();
+  const request = useQuery(context.table.actionEdit);
+  if (!request) return null;
   // A new pop-up for each request, opened as it mounts so the menu item's morph catches it.
-  const props = { key: req.n, campaign, id: req.id, title: req.title };
-  if (req.kind === "rename") return <RenameDialog {...props} />;
-  if (req.kind === "icon") return <IconDialog {...props} />;
-  return <ShortcutDialog {...props} />;
+  const properties = { key: request.n, campaign, id: request.id, title: request.title };
+  if (request.kind === "rename") return <RenameDialog {...properties} />;
+  if (request.kind === "icon") return <IconDialog {...properties} />;
+  return <ShortcutDialog {...properties} />;
 }
 
-interface Props {
+interface Properties {
   campaign: Campaign;
   id: string;
   title: string;
 }
 
 function usePopup() {
-  const ctx = useCampaign();
-  const ref = usePopupDialog();
-  const onClose = () => ctx.table.actionEdit.set(null);
+  const context = useCampaign();
+  const reference = usePopupDialog();
+  const onClose = () => { context.table.actionEdit.set(null); };
   return {
-    ref,
-    close: () => closePopup(ref.current, onClose),
+    ref: reference,
+    close: () => { closePopup(reference.current, onClose); },
     onClose,
   };
 }
 
-function RenameDialog({ campaign, id, title }: Props) {
-  const ctx = useCampaign();
+function RenameDialog({ campaign, id, title }: Properties) {
+  const context = useCampaign();
   const { ref, close, onClose } = usePopup();
   const custom = slotLook(campaign, id).label;
-  const [text, setText] = useState(custom ?? title);
-  const done = (label: string | undefined) => {
-    ctx.execute(lookOfSlot, { key: id, look: { label: label?.trim() || undefined } });
-    close();
+  const done = (label: string | undefined = undefined) => {
+    context.execute(lookOfSlot, { key: id, look: { label: label?.trim() || undefined } });
   };
   return (
     <Dialog dialogRef={ref} title="Rename" onClose={onClose}>
-      <form
-        className="dialog-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          done(text);
-        }}
-      >
+      <div className="dialog-form">
         <label className="field">
           Show on the hotbar as
-          <input
-            value={text}
+          <CommitInput
+            name="label"
+            value={custom ?? title}
             // The field is the dialog's one input.
             // react-doctor-disable-next-line react-doctor/no-autofocus
             autoFocus
-            onFocus={(e) => e.currentTarget.select()}
-            onInput={(e) => setText(e.currentTarget.value)}
+            onFocus={(e) => { e.currentTarget.select(); }}
+            onCommit={(label) => { done(label); }}
+            onBlur={close}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") close();
+            }}
           />
         </label>
-        <div className="form-actions">
-          {custom && (
-            <Button variant="ghost" className="form-actions-start" onClick={() => done(undefined)}>
+        {custom && (
+          <div className="form-actions">
+            <Button
+              variant="ghost"
+              className="form-actions-start"
+              onClick={() => {
+                done();
+                close();
+              }}
+            >
               Use Its Own Name
             </Button>
-          )}
-          <Button variant="ghost" onClick={close}>
-            Cancel
-          </Button>
-          <Button variant="primary" type="submit">
-            Save
-          </Button>
-        </div>
-      </form>
+          </div>
+        )}
+      </div>
     </Dialog>
   );
 }
 
 /** Each icon once: some names share one (fighter and longsword). */
 const CHOICES = (Object.keys(ENTRY_ICONS) as EntryIconName[]).filter(
-  (name, i, all) => all.findIndex((n) => ENTRY_ICONS[n] === ENTRY_ICONS[name]) === i,
+  (name, index, all) => all.findIndex((n) => ENTRY_ICONS[n] === ENTRY_ICONS[name]) === index,
 );
 
-function IconDialog({ campaign, id, title }: Props) {
-  const ctx = useCampaign();
+function IconDialog({ campaign, id, title }: Properties) {
+  const context = useCampaign();
   const { ref, close, onClose } = usePopup();
   const current = slotLook(campaign, id).icon;
-  const choose = (icon: EntryIconName | undefined) => {
-    ctx.execute(lookOfSlot, { key: id, look: { icon } });
+  const choose = (icon: EntryIconName | undefined = undefined) => {
+    context.execute(lookOfSlot, { key: id, look: { icon } });
     close();
   };
   return (
@@ -126,7 +126,7 @@ function IconDialog({ campaign, id, title }: Props) {
                 aria-selected={name === current}
                 aria-label={name.replace("-", " ")}
                 data-tip={name.replace("-", " ")}
-                onClick={() => choose(name)}
+                onClick={() => { choose(name); }}
               >
                 <Icon size={24} />
               </button>
@@ -134,7 +134,7 @@ function IconDialog({ campaign, id, title }: Props) {
           })}
         </div>
         <div className="form-actions">
-          <Button variant="ghost" disabled={!current} onClick={() => choose(undefined)}>
+          <Button variant="ghost" disabled={!current} onClick={() => { choose(); }}>
             Use Its Own Icon
           </Button>
         </div>
@@ -143,18 +143,18 @@ function IconDialog({ campaign, id, title }: Props) {
   );
 }
 
-function ShortcutDialog({ campaign, id, title }: Props) {
-  const ctx = useCampaign();
+function ShortcutDialog({ campaign, id, title }: Properties) {
+  const context = useCampaign();
   const { ref, close, onClose } = usePopup();
   const existing = shortcuts(campaign)[id] ?? null;
   const [combo, setCombo] = useState<string | null>(existing);
   const other = combo ? actionForCombo(shortcuts(campaign), combo) : undefined;
   const taken =
     other && other !== id
-      ? (slotLook(campaign, other).label ?? findAction(ctx, other)?.title ?? "another action")
+      ? (slotLook(campaign, other).label ?? findAction(context, other)?.title ?? "another action")
       : null;
   const save = (value: string | null) => {
-    ctx.execute(bindKey, { key: id, combo: value });
+    context.execute(bindKey, { key: id, combo: value });
     close();
   };
   return (
@@ -169,6 +169,7 @@ function ShortcutDialog({ campaign, id, title }: Props) {
         <label className="field">
           Press the keys to use
           <input
+            name="keys"
             className={`input ${RECORDER}`}
             readOnly
             // The field is the dialog's one input.
@@ -206,7 +207,7 @@ function ShortcutDialog({ campaign, id, title }: Props) {
         </output>
         <div className="form-actions">
           {existing && (
-            <Button variant="ghost" className="form-actions-start" onClick={() => save(null)}>
+            <Button variant="ghost" className="form-actions-start" onClick={() => { save(null); }}>
               Remove Shortcut
             </Button>
           )}

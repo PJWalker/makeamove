@@ -1,15 +1,17 @@
-import { arrayOf, isNumber, isObject, isString, oneOf } from "../data/guards";
-import { collection, list, lww, record, subdoc, type Root } from "../data/schema";
+import type * as Y from "yjs";
+import { arrayOf, isBoolean, isNumber, isObject, isString, oneOf } from "../lib/guards";
+import { collection, list, lww, record, subdoc  } from "../data/schema";
+import type {Root} from "../data/schema";
 import { systemCampaignData } from "../systems/schema";
 import { characterEntry } from "../features/characters/schema";
 import { combatShape } from "../features/combat/schema";
 import { homebrewField } from "../features/homebrew/schema";
-import { noteEntry, type NoteFolder } from "../features/notes/schema";
+import { noteEntry  } from "../features/notes/schema";
+import type {NoteFolder} from "../features/notes/schema";
 import type { EntityGraphic } from "../media/images";
 import type { EntryIconName } from "../ui/entryIcons";
 import { GRID_TYPES } from "../scene/grid";
 import { TOKEN_STYLES } from "../scene/types";
-import type * as Y from "yjs";
 
 /*
  * The campaign root document (see design doc, "Data model").
@@ -32,7 +34,7 @@ export const campaignMeta = record({
   defaultGridType: lww(oneOf(...GRID_TYPES.map((g) => g.id))).or("square"),
   /** The scene last announced to the table. */
   tableScene: lww(isString),
-  noteFoldersMade: lww((v): v is boolean => typeof v === "boolean").or(false),
+  noteFoldersMade: lww(isBoolean).or(false),
   /** Sessions started so far. */
   sessions: lww(isNumber).or(0),
 });

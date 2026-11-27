@@ -19,7 +19,7 @@ test("notes can be written, reopened, and deleted", async ({ page }) => {
   await page.getByRole("button", { name: "Back to the notes" }).click();
   await page.getByText("Council of Ravens", { exact: true }).click({ button: "right" });
   await page.getByRole("menuitem", { name: "Delete Page…" }).click();
-  const confirmation = page.getByRole("dialog", { name: "Delete page" });
+  const confirmation = page.getByRole("dialog", { name: "Delete Page" });
   await confirmation.getByRole("button", { name: "Delete", exact: true }).click();
   await expect(page.getByText("Council of Ravens", { exact: true })).toHaveCount(0);
 });

@@ -1,6 +1,14 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it, vi } from "vite-plus/test";
 
+import { putBlob } from "../../platform/blobs";
+import { device } from "../../platform/device";
+import { SceneDoc } from "../../scene/sceneDoc";
+import { decodeBackup } from "../backupFormat";
+import { Campaign, createCampaign, deleteLocalCampaign } from "../campaign";
+import { FolderBackup, folderSaveDelay, importFromFolder } from "../folderBackup";
+import { summaryOf } from "../registry";
+
 const mocks = vi.hoisted(() => ({
   blobs: new Map<string, Blob>(),
   values: new Map<string, unknown>(),
@@ -30,14 +38,6 @@ vi.mock("../../platform/files", async (original) => ({
   ...(await original<typeof import("../../platform/files")>()),
   pickFolder: () => Promise.resolve(mocks.picked),
 }));
-
-import { putBlob } from "../../platform/blobs";
-import { device } from "../../platform/device";
-import { SceneDoc } from "../../scene/sceneDoc";
-import { decodeBackup } from "../backupFormat";
-import { Campaign, createCampaign, deleteLocalCampaign } from "../campaign";
-import { FolderBackup, folderSaveDelay, importFromFolder } from "../folderBackup";
-import { summaryOf } from "../registry";
 
 /** A folder in memory, shaped like the File System API's. */
 class FakeFolder {
@@ -86,9 +86,9 @@ const backupOf = (c: Campaign) => {
 /** The next time the folder is brought up to date. */
 const saved = (backup: FolderBackup) =>
   new Promise<void>((resolve) => {
-    const stop = backup.status.subscribe(() => {
-      if (backup.status.value.state === "saved") {
-        stop();
+    const stop = backup.actor.subscribe((snapshot) => {
+      if (snapshot.context.state.state === "saved") {
+        stop.unsubscribe();
         resolve();
       }
     });
@@ -124,7 +124,10 @@ describe("backing up to a folder", () => {
     const first = saved(backupOf(c));
     await backupOf(c).link();
     await first;
-    expect(backupOf(c).status.value).toMatchObject({ state: "saved", folder: "Dropbox" });
+    expect(backupOf(c).actor.getSnapshot().context.state).toMatchObject({
+      state: "saved",
+      folder: "Dropbox",
+    });
     expect((await backupIn(folder)).name).toBe("Barrows");
     expect(folder.folders.get("images")!.files.has(hash)).toBe(true);
 
@@ -152,7 +155,7 @@ describe("backing up to a folder", () => {
     expect(new TextDecoder().decode(sceneDoc.update)).toContain("Here");
 
     await backupOf(c).unlink();
-    expect(backupOf(c).status.value).toEqual({ state: "off" });
+    expect(backupOf(c).actor.getSnapshot().context.state).toEqual({ state: "off" });
     scene.destroy();
     backups.get(c)?.dispose();
     c.destroy();

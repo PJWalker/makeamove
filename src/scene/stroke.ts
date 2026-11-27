@@ -13,8 +13,8 @@ export const STRIDE = 3;
 export function strokeOutline(points: number[], width: number, realPressure: boolean): number[] {
   const input: number[][] = [];
   if (points.length % STRIDE !== 0) throw new RangeError("Stroke points must be complete triples");
-  for (let i = 0; i < points.length; i += STRIDE)
-    input.push([points[i]!, points[i + 1]!, points[i + 2]!]);
+  for (let index = 0; index < points.length; index += STRIDE)
+    input.push([points[index]!, points[index + 1]!, points[index + 2]!]);
   const outline = getStroke(input, {
     size: width,
     thinning: 0.55,
@@ -28,7 +28,7 @@ export function strokeOutline(points: number[], width: number, realPressure: boo
 
 /** Whether a stroke's pressure values came from a pen rather than a default. */
 export function hasRealPressure(points: number[]): boolean {
-  for (let i = 2; i < points.length; i += STRIDE) if (points[i] !== 0.5) return true;
+  for (let index = 2; index < points.length; index += STRIDE) if (points[index] !== 0.5) return true;
   return false;
 }
 
@@ -40,28 +40,28 @@ export function finishStroke(
   world: number[],
   width: number,
 ): Transform & { points: number[]; bw: number; bh: number } {
-  if (!world.length || world.length % STRIDE !== 0)
+  if (world.length === 0 || world.length % STRIDE !== 0)
     throw new RangeError("Stroke points must be complete triples");
   let x0 = Infinity;
   let y0 = Infinity;
   let x1 = -Infinity;
   let y1 = -Infinity;
-  for (let i = 0; i < world.length; i += STRIDE) {
-    x0 = Math.min(x0, world[i]!);
-    x1 = Math.max(x1, world[i]!);
-    y0 = Math.min(y0, world[i + 1]!);
-    y1 = Math.max(y1, world[i + 1]!);
+  for (let index = 0; index < world.length; index += STRIDE) {
+    x0 = Math.min(x0, world[index]!);
+    x1 = Math.max(x1, world[index]!);
+    y0 = Math.min(y0, world[index + 1]!);
+    y1 = Math.max(y1, world[index + 1]!);
   }
   const cx = (x0 + x1) / 2;
   const cy = (y0 + y1) / 2;
   const w = Math.max(1, x1 - x0 + width);
   const h = Math.max(1, y1 - y0 + width);
   const points: number[] = [];
-  for (let i = 0; i < world.length; i += STRIDE) {
+  for (let index = 0; index < world.length; index += STRIDE) {
     points.push(
-      round(world[i]! - cx, 10),
-      round(world[i + 1]! - cy, 10),
-      round(world[i + 2]!, 100),
+      round(world[index]! - cx, 10),
+      round(world[index + 1]! - cy, 10),
+      round(world[index + 2]!, 100),
     );
   }
   return { x: cx, y: cy, w, h, rot: 0, points, bw: w, bh: h };
@@ -74,16 +74,16 @@ export function distanceToStroke(points: number[], x: number, y: number): number
   let best = Infinity;
   if (points.length === STRIDE) return Math.hypot(points[0]! - x, points[1]! - y);
   if (points.length % STRIDE !== 0) throw new RangeError("Stroke points must be complete triples");
-  for (let i = STRIDE; i < points.length; i += STRIDE) {
+  for (let index = STRIDE; index < points.length; index += STRIDE) {
     best = Math.min(
       best,
       distanceToSegment(
         x,
         y,
-        points[i - STRIDE]!,
-        points[i - STRIDE + 1]!,
-        points[i]!,
-        points[i + 1]!,
+        points[index - STRIDE]!,
+        points[index - STRIDE + 1]!,
+        points[index]!,
+        points[index + 1]!,
       ),
     );
   }
@@ -101,7 +101,7 @@ export function distanceToSegment(
 ): number {
   const dx = bx - ax;
   const dy = by - ay;
-  const len2 = dx * dx + dy * dy;
-  const t = len2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
+  const length2 = dx * dx + dy * dy;
+  const t = length2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / length2)) : 0;
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }

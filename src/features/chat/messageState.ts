@@ -1,7 +1,7 @@
 import type { CampaignRoot } from "../../campaign/schema";
-import type { ChatContent } from "./content";
 import type { Campaign } from "../../campaign/campaign";
 import { useQuery } from "../../ui/useQuery";
+import type { ChatContent } from "./content";
 
 /*
  * Chat messages never change, but some things about them do: a target's

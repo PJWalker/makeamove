@@ -96,7 +96,7 @@ export function newNpc(campaign: Campaign, name: string, folder?: string) {
 export function newNpcFromMonster(campaign: Campaign, monsterId: string) {
   const system = systemOf(campaign);
   const monster = system.monsters?.find((entry) => entry.id === monsterId);
-  if (!monster) return undefined;
+  if (!monster) return;
   const id = newNpc(campaign, monster.name);
   for (const [stat, value] of Object.entries(monster.scores ?? {}))
     if (system.stats.some((entry) => entry.id === stat)) setScore(campaign, id, stat, value);

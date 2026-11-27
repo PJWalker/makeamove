@@ -6,5 +6,6 @@
     "vitest.browser.config.ts"
   ],
   "ignoreExportsUsedInFile": true,
-  "ignoreDependencies": ["@svgr/plugin-jsx", "@swc/core"]
+  "ignoreDependencies": ["@svgr/plugin-jsx", "@swc/core"],
+  "entry": ["scripts/icons/studio.ts"]
 }

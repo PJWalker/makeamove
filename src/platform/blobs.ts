@@ -6,6 +6,7 @@
  * by hash.
  */
 
+import { sha256 } from "../lib/hash";
 import { dataName } from "./dataEpoch";
 
 const DIR = dataName("blobs");
@@ -28,11 +29,6 @@ function blobDir(): Promise<FileSystemDirectoryHandle | null> {
 }
 
 const cacheKey = (hash: string) => `/blobs/${hash}`;
-
-export async function sha256(data: ArrayBuffer): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", data);
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 /** Store a blob and return its hash. Storing the same bytes twice is a no-op. */
 export async function putBlob(blob: Blob): Promise<string> {
@@ -59,7 +55,7 @@ export async function getBlob(hash: string): Promise<Blob | null> {
   if (dir) {
     try {
       const file = await (await dir.getFileHandle(hash)).getFile();
-      return file.size ? file : null;
+      return file.size > 0 ? file : null;
     } catch {
       return null;
     }

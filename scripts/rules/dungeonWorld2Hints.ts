@@ -19,7 +19,7 @@ const IDENTITY_FIELDS: Record<string, string> = {
   Background: "background",
 };
 
-const oneLine = (text: string) => text.replace(/\s+/g, " ").trim();
+const oneLine = (text: string) => text.replaceAll(/\s+/g, " ").trim();
 
 /** "Ancestry: I am a\ne.g. dwarf, elf, etc. Question?" paragraphs, keyed by identity field. */
 function originHints(classId: string) {
@@ -27,7 +27,7 @@ function originHints(classId: string) {
     sourceClassSectionText(classId, "Origins")
       .split(/\n\s*\n/)
       .flatMap((paragraph) => {
-        const match = /^(\w+):[^\n]*\n([\s\S]+)$/.exec(paragraph.trim());
+        const match = /^(\w+):[^\n]*\n([\S\s]+)$/.exec(paragraph.trim());
         const field = match && IDENTITY_FIELDS[match[1]!];
         return field ? [[field, oneLine(match[2]!)]] : [];
       }),
@@ -39,9 +39,9 @@ function relationshipHint(classId: string) {
   const examples = sourceClassSectionText(classId, "Relationships").split(
     "#### Relationship Examples",
   )[1];
-  if (!examples) return undefined;
+  if (!examples) return;
   const items = examples
-    .replace(/~~[^~]*~~\s*/g, "")
+    .replaceAll(/~~[^~]*~~\s*/g, "")
     .split("✦")
     .map(oneLine)
     .filter(Boolean);

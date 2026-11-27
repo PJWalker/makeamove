@@ -4,13 +4,53 @@ function rememberPointer(event: PointerEvent) {
   lastPosition = { x: event.clientX, y: event.clientY };
 }
 
-if (typeof window !== "undefined") {
-  window.addEventListener("pointermove", rememberPointer, { passive: true });
-  window.addEventListener("pointerdown", rememberPointer, { passive: true });
+if (globalThis.window !== undefined) {
+  globalThis.addEventListener("pointermove", rememberPointer, { passive: true });
+  globalThis.addEventListener("pointerdown", rememberPointer, { passive: true });
 }
 
 export function lastPointer() {
   return lastPosition;
+}
+
+/**
+ * Follow a press that may become a drag. Once the pointer has travelled
+ * `threshold` px, `lift` runs, then `move` on every move (the lifting one
+ * included). Releasing ends it with `commit`, a cancelled pointer without;
+ * `lifted` says whether it ever became a drag, so a press that stayed put
+ * can be left to click.
+ */
+export function followPress(
+  down: Pick<PointerEvent, "clientX" | "clientY">,
+  threshold: number,
+  on: {
+    lift: (e: PointerEvent) => void;
+    move: (e: PointerEvent) => void;
+    end: (e: PointerEvent, commit: boolean, lifted: boolean) => void;
+  },
+) {
+  const startX = down.clientX;
+  const startY = down.clientY;
+  let lifted = false;
+  const move = (e: PointerEvent) => {
+    if (!lifted) {
+      if (Math.hypot(e.clientX - startX, e.clientY - startY) < threshold) return;
+      lifted = true;
+      on.lift(e);
+    }
+    on.move(e);
+  };
+  const end = (e: PointerEvent, commit: boolean) => {
+    globalThis.removeEventListener("pointermove", move);
+    globalThis.removeEventListener("pointerup", up);
+    globalThis.removeEventListener("pointercancel", cancel);
+    on.end(e, commit, lifted);
+  };
+  const up = (e: PointerEvent) => { end(e, true); };
+  const cancel = (e: PointerEvent) => { end(e, false); };
+  globalThis.addEventListener("pointermove", move);
+  globalThis.addEventListener("pointerup", up);
+  globalThis.addEventListener("pointercancel", cancel);
 }
 
 /**
@@ -34,13 +74,13 @@ export function trackPointer(
   const stop = (event?: Event) => {
     if (done) return;
     done = true;
-    window.removeEventListener("pointermove", onMove);
-    for (const type of ends) window.removeEventListener(type, stop);
+    globalThis.removeEventListener("pointermove", onMove);
+    for (const type of ends) globalThis.removeEventListener(type, stop);
     root.classList.remove("is-dragging");
     root.style.removeProperty("--drag-cursor");
     onEnd?.(event);
   };
-  window.addEventListener("pointermove", onMove);
-  for (const type of ends) window.addEventListener(type, stop);
-  return () => stop();
+  globalThis.addEventListener("pointermove", onMove);
+  for (const type of ends) globalThis.addEventListener(type, stop);
+  return () => { stop(); };
 }

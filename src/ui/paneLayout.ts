@@ -1,9 +1,17 @@
-import { createElement, type PointerEvent as ReactPointerEvent } from "react";
-import { derived, store, type ReadonlyStore } from "../lib/store";
-import { IconLayoutSingle, IconLayoutSplit } from "./icons";
+import { createElement  } from "react";
+import type {PointerEvent as ReactPointerEvent} from "react";
+import { derived, store  } from "../lib/store";
+import type {ReadonlyStore} from "../lib/store";
 import { getStorageJson, setStorageJson } from "../platform/localStorage";
+import { isNumber, objectOf, oneOf, optional } from "../lib/guards";
+import { IconLayoutSingle, IconLayoutSplit } from "./icons";
 import { useQuery } from "./useQuery";
 import type { PaneLayout, PaneLayoutMode } from "./TwoPane";
+
+const isSavedPaneLayout = objectOf({
+  w: optional(isNumber),
+  layout: optional(oneOf<PaneLayoutMode[]>("split", "stack")),
+});
 
 const DEFAULT_LIST_W = 200;
 
@@ -20,11 +28,7 @@ function PaneToggle({
 }) {
   const split = useQuery(mode) === "split";
   const narrow = useQuery(tooNarrow);
-  const label = narrow
-    ? `One at a time (widen the panel to see the ${names.list} and ${names.detail} side by side)`
-    : split
-      ? "Side by side: click to show one at a time"
-      : `One at a time: click to show the ${names.list} and ${names.detail} side by side`;
+  const label = toggleLabel(split, narrow, names);
   return createElement(
     "button",
     {
@@ -34,11 +38,18 @@ function PaneToggle({
       title: label,
       "aria-pressed": split,
       disabled: narrow,
-      onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => event.stopPropagation(),
+      onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => { event.stopPropagation(); },
       onClick: onToggle,
     },
     createElement(split ? IconLayoutSplit : IconLayoutSingle, { size: 22 }),
   );
+}
+
+function toggleLabel(split: boolean, narrow: boolean, names: { list: string; detail: string }) {
+  const both = `the ${names.list} and ${names.detail}`;
+  if (narrow) return `One at a time (widen the panel to see ${both} side by side)`;
+  if (split) return "Side by side: click to show one at a time";
+  return `One at a time: click to show ${both} side by side`;
 }
 
 /**
@@ -47,7 +58,7 @@ function PaneToggle({
  */
 export function createPaneLayout(key: string, names: { list: string; detail: string }): PaneLayout {
   const storeKey = `makeamove.${key}`;
-  const saved = getStorageJson<{ w?: number; layout?: PaneLayoutMode }>(storeKey, {});
+  const saved = getStorageJson(storeKey, isSavedPaneLayout, {});
   const listWidth = store(saved.w ?? DEFAULT_LIST_W);
   const chosen = store<PaneLayoutMode>(saved.layout ?? "split");
   const tooNarrow = store(false);
@@ -58,8 +69,8 @@ export function createPaneLayout(key: string, names: { list: string; detail: str
     setStorageJson(storeKey, { w: listWidth.value, layout: chosen.value });
   };
 
-  const Toggle = () =>
-    createElement(PaneToggle, {
+  function Toggle() {
+    return createElement(PaneToggle, {
       mode,
       tooNarrow,
       names,
@@ -68,6 +79,7 @@ export function createPaneLayout(key: string, names: { list: string; detail: str
         save();
       },
     });
+  }
 
   const layout: PaneLayout = {
     key,
@@ -81,8 +93,8 @@ export function createPaneLayout(key: string, names: { list: string; detail: str
       save();
     },
     el: null,
-    attach: (el) => {
-      layout.el = el;
+    attach: (element) => {
+      layout.el = element;
     },
     Toggle,
   };

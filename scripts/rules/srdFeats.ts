@@ -1,15 +1,23 @@
-import { readReference } from "./readReference";
 import type { OptionDef } from "../../src/systems/types";
+import { readReference } from "./readReference";
+import { slug } from "./slug";
 
 export type SrdFeat = OptionDef & {
-  category: "origin" | "general" | "fighting-style" | "epic";
+  category: "epic" | "fighting-style" | "general" | "origin";
+};
+
+const CATEGORIES: Record<string, SrdFeat["category"]> = {
+  Origin: "origin",
+  General: "general",
+  "Fighting Style": "fighting-style",
+  "Epic Boon": "epic",
 };
 
 /** Parse the local SRD's feat headings and category labels without duplicating its catalog in code. */
 export function parseSrdFeats(markdown: string): SrdFeat[] {
   const sections = [
     ...markdown.matchAll(
-      /^### (Origin|General|Fighting Style|Epic Boon) Feats\s*$([\s\S]*?)(?=^### |^## |$(?![\s\S]))/gm,
+      /^### (Origin|General|Fighting Style|Epic Boon) Feats\s*$([\S\s]*?)(?=^### |^## |$(?![\S\s]))/gm,
     ),
   ];
   const feats: SrdFeat[] = [];
@@ -17,13 +25,9 @@ export function parseSrdFeats(markdown: string): SrdFeat[] {
     const sectionTitle = section[1];
     const sectionBody = section[2];
     if (!sectionTitle || !sectionBody) continue;
-    const category =
-      sectionTitle === "Fighting Style"
-        ? "fighting-style"
-        : sectionTitle === "Epic Boon"
-          ? "epic"
-          : (sectionTitle.toLowerCase() as "origin" | "general");
-    for (const block of sectionBody.split(/^#### /m).slice(1)) {
+    const category = CATEGORIES[sectionTitle];
+    if (!category) continue;
+    for (const block of sectionBody.split(/^#{4} /m).slice(1)) {
       const [heading, ...lines] = block.split(/\r?\n/);
       const name = heading?.trim();
       if (!name) continue;
@@ -32,10 +36,7 @@ export function parseSrdFeats(markdown: string): SrdFeat[] {
         .join("\n")
         .trim();
       feats.push({
-        id: name
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, ""),
+        id: slug(name),
         name,
         category,
         text,

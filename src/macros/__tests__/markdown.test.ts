@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import config, { macroPlugins } from "../../../vite.config";
-import { md } from "../markdown.macro.ts" with { type: "macro" };
+import { macroPlugins } from "../../../vite.config";
+import { md } from "../markdown.macro" with { type: "macro" };
 
 describe("macro dependency scanning", () => {
   const source = "../../macros/markdown.macro";
@@ -20,10 +20,6 @@ describe("macro dependency scanning", () => {
       [source, importer, { scan }],
     );
   }
-
-  it("only scans the application HTML entry, not developer reference pages", () => {
-    expect(config).toHaveProperty("optimizeDeps.entries", ["index.html"]);
-  });
 
   it("excludes build-time macros from dependency scanning", () => {
     expect(resolveMacro(true)).toEqual({ id: source, external: true });

@@ -17,10 +17,11 @@ import { OptionPicker } from "../../ui/OptionPicker";
 import { closePopup } from "../../ui/popup";
 import { usePopupDialog } from "../../workspace/usePopupDialog";
 import { Dialog } from "../../workspace/Dialog";
-import { ChoiceField, RuleScoreFields, type Picked } from "../../workspace/CreationParts";
+import { ChoiceField, RuleScoreFields  } from "../../workspace/CreationParts";
+import type {Picked} from "../../workspace/CreationParts";
 import { emptyPick, scoreCapsOf } from "../../workspace/creationModel";
-import { changeClass } from "./commands";
 import { useCampaign } from "../../workspace/campaignContext";
+import { changeClass } from "./commands";
 
 /*
  * Dungeon World 2's Class Change: pick a new Class and its stat line, then
@@ -49,7 +50,7 @@ function ClassChangeDialog({
   characterId: string;
   onClose: () => void;
 }) {
-  const ref = usePopupDialog();
+  const reference = usePopupDialog();
   const {
     system,
     character,
@@ -67,11 +68,11 @@ function ClassChangeDialog({
     apply,
   } = useClassChange(campaign, characterId);
   const submit = () => {
-    if (apply()) closePopup(ref.current, onClose);
+    if (apply()) closePopup(reference.current, onClose);
   };
 
   return (
-    <Dialog dialogRef={ref} title={`${character.name}: change Class`} onClose={onClose}>
+    <Dialog dialogRef={reference} title={`${character.name}: Change Class`} onClose={onClose}>
       <form
         className="creation-form"
         onSubmit={(event) => {
@@ -107,14 +108,14 @@ function ClassChangeDialog({
             system={system}
             choice={display}
             value={picks[id] ?? emptyPick()}
-            onChange={(pick) => setPicks({ ...picks, [id]: pick })}
+            onChange={(pick) => { setPicks({ ...picks, [id]: pick }); }}
           />
         ))}
         {!oldAdvancementCount && newClassId && (
           <p className="muted">This character has no advancements to reassign.</p>
         )}
         <div className="form-actions">
-          <Button variant="ghost" onClick={() => closePopup(ref.current, onClose)}>
+          <Button variant="ghost" onClick={() => { closePopup(reference.current, onClose); }}>
             Cancel
           </Button>
           <Button variant="primary" type="submit" disabled={!ready}>
@@ -127,10 +128,10 @@ function ClassChangeDialog({
 }
 
 function useClassChange(campaign: Campaign, characterId: string) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const system = systemOf(campaign);
   const character = getCharacter(campaign, characterId)!;
-  const creation = system.creation;
+  const {creation} = system;
   const classChoice = creation?.choices.find((choice) => choice.id === "class");
   const [newClassId, setNewClassId] = useState("");
   const [scores, setScores] = useState<Record<string, number>>({});
@@ -183,7 +184,7 @@ function useClassChange(campaign: Campaign, characterId: string) {
     classChoice?.options.filter((option) => option.id !== character.data["classId"]) ?? [];
   const apply = () =>
     ready &&
-    ctx.execute(changeClass, {
+    context.execute(changeClass, {
       characterId,
       classId: newClassId,
       scores: stageScores,
@@ -225,14 +226,14 @@ export function ChangeClassAction({
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="ghost" onClick={() => setOpen(true)}>
+      <Button variant="ghost" onClick={() => { setOpen(true); }}>
         Change Class…
       </Button>
       {open && (
         <ClassChangeDialog
           campaign={campaign}
           characterId={characterId}
-          onClose={() => setOpen(false)}
+          onClose={() => { setOpen(false); }}
         />
       )}
     </>

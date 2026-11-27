@@ -2,27 +2,29 @@ import {
   useCallback,
   useEffect,
   useRef,
-  useState,
-  type DragEvent as ReactDragEvent,
-  type MouseEvent as ReactMouseEvent,
+  useState
+  
+  
 } from "react";
+import type {DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent} from "react";
 import { menuTrigger } from "../ui/menuTrigger";
 import { bounds } from "../scene/geometry";
 import { setMorphOrigin } from "../ui/morph";
 import { openPopup } from "../ui/popup";
 import { watch } from "../lib/store";
-import { TextEditor } from "./TextEditor";
-import { SceneController } from "../scene/controller";
-import { SceneDoc } from "../scene/sceneDoc";
+import type { SceneController } from "../scene/controller";
+import type { SceneDoc as SceneDocument } from "../scene/sceneDoc";
 import type { Point } from "../scene/grid";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
-import { SelectionBar } from "./SelectionBar";
 import { Dialog } from "../workspace/Dialog";
-import { SceneSettingsFields } from "./SceneSettingsFields";
-import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
+import { ContextMenu  } from "../ui/ContextMenu";
+import type {MenuItem} from "../ui/ContextMenu";
 import { useCampaign } from "../workspace/campaignContext";
 import { menuFor } from "../workspace/commands/views";
+import { SceneSettingsFields } from "./SceneSettingsFields";
+import { SelectionBar } from "./SelectionBar";
+import { TextEditor } from "./TextEditor";
 import { TokenOptionsDialog } from "./TokenOptionsDialog";
 import {
   useLighting,
@@ -42,22 +44,22 @@ function useCanvasCommands(
     importImagesAt: (at: Point) => void;
   },
 ) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const { openTokenOptions, importImagesAt } = actions;
   useEffect(() => {
     if (!controller) {
-      ctx.canvas.activeMapColour.set(null);
-      ctx.canvas.canvasCommands.set(null);
+      context.canvas.activeMapColour.set(null);
+      context.canvas.canvasCommands.set(null);
       return;
     }
     return watch([controller.mapColour], () => {
       const colour = controller.mapColour.value;
-      ctx.canvas.activeMapColour.set(colour);
-      ctx.canvas.seenMapColours.set({
-        ...ctx.canvas.seenMapColours.value,
+      context.canvas.activeMapColour.set(colour);
+      context.canvas.seenMapColours.set({
+        ...context.canvas.seenMapColours.value,
         [controller.sceneId]: colour,
       });
-      ctx.canvas.canvasCommands.set({
+      context.canvas.canvasCommands.set({
         sceneId: controller.sceneId,
         scene: controller.scene,
         controller,
@@ -65,29 +67,23 @@ function useCanvasCommands(
         importImagesAt,
       });
     });
-  }, [ctx, controller, openTokenOptions, importImagesAt]);
+  }, [context, controller, openTokenOptions, importImagesAt]);
   // The scene's undo steps are in the player's history while it's open.
   useEffect(
-    () => (controller ? ctx.history.track(controller.scene.undo) : undefined),
-    [ctx, controller],
+    () => (controller ? context.history.track(controller.scene.undo) : undefined),
+    [context, controller],
   );
-  useEffect(() => () => ctx.canvas.canvasCommands.set(null), [ctx]);
+  useEffect(() => () => { context.canvas.canvasCommands.set(null); }, [context]);
 }
 
 /**
  * The scene canvas: hosts the PixiJS renderer and wires it to the active
  * scene.
  */
-export default function SceneCanvas({
-  campaign,
-  sceneId,
-}: {
-  campaign: Campaign;
-  sceneId: string | null;
-}) {
-  const hostRef = useRef<HTMLDivElement>(null);
-  const { renderer, ready } = useSceneRenderer(campaign, hostRef);
-  const controller = useSceneController(campaign, renderer, ready, sceneId, hostRef);
+export function SceneCanvas({ campaign, sceneId }: { campaign: Campaign; sceneId: string | null }) {
+  const hostReference = useRef<HTMLDivElement>(null);
+  const { renderer, ready } = useSceneRenderer(campaign, hostReference);
+  const controller = useSceneController(campaign, renderer, ready, sceneId, hostReference);
   useSheetOnTokenSelect(campaign, controller);
   useLighting(campaign, controller);
   const {
@@ -109,20 +105,20 @@ export default function SceneCanvas({
     onSelectionTokenOptions,
     setTokenTab,
     setTokenOptions,
-  } = useSceneCanvasInteractions(controller, hostRef);
+  } = useSceneCanvasInteractions(controller, hostReference);
   useSceneTargeting(ctx, controller);
   useSceneShortcuts(controller);
 
   return (
     <>
       <div
-        ref={hostRef}
+        ref={hostReference}
         className="scene-canvas"
         data-drop={dropping}
         {...menuOpener}
         onDoubleClick={onDoubleClick}
         onDragOver={onDragOver}
-        onDragLeave={() => setDropping(false)}
+        onDragLeave={() => { setDropping(false); }}
         onDrop={onDrop}
       />
       <input
@@ -133,7 +129,7 @@ export default function SceneCanvas({
         hidden
         onChange={(e) => {
           const ctl = controller;
-          const files = e.currentTarget.files;
+          const {files} = e.currentTarget;
           if (ctl && files?.length)
             void ctl.importFiles([...files], importAt.current ?? ctl.centre());
           e.currentTarget.value = "";
@@ -145,7 +141,7 @@ export default function SceneCanvas({
           key={textEdit.id ?? `${textEdit.at.x},${textEdit.at.y}`}
           controller={controller}
           request={textEdit}
-          onDone={() => setTextEdit(null)}
+          onDone={() => { setTextEdit(null); }}
         />
       )}
       {controller && (
@@ -157,7 +153,7 @@ export default function SceneCanvas({
             id={tokenOptions}
             tab={tokenTab}
             onTabChange={setTokenTab}
-            onClose={() => setTokenOptions(null)}
+            onClose={() => { setTokenOptions(null); }}
           />
           <SceneSettingsDialog campaign={campaign} sceneId={sceneId!} scene={controller.scene} />
         </>
@@ -168,10 +164,10 @@ export default function SceneCanvas({
 
 function useSceneCanvasInteractions(
   controller: SceneController | null,
-  hostRef: React.RefObject<HTMLDivElement | null>,
+  hostReference: React.RefObject<HTMLDivElement | null>,
 ) {
-  const ctx = useCampaign();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const context = useCampaign();
+  const fileReference = useRef<HTMLInputElement>(null);
   const importAt = useRef<Point | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const [tokenOptions, setTokenOptions] = useState<string | null>(null);
@@ -184,10 +180,10 @@ function useSceneCanvasInteractions(
   }, []);
   const importImagesAt = useCallback((at: Point) => {
     importAt.current = at;
-    fileRef.current?.click();
+    fileReference.current?.click();
   }, []);
   useCanvasCommands(controller, { openTokenOptions, importImagesAt });
-  const closeMenu = useCallback(() => setMenu(null), []);
+  const closeMenu = useCallback(() => { setMenu(null); }, []);
 
   function openMenuAt(x: number, y: number) {
     if (!controller) return;
@@ -200,7 +196,7 @@ function useSceneCanvasInteractions(
       x,
       y,
       items: menuFor(
-        ctx,
+        context,
         hit
           ? { kind: "selection", sceneId: controller.sceneId, ids: controller.selection.value }
           : { kind: "canvas", sceneId: controller.sceneId, at },
@@ -210,12 +206,12 @@ function useSceneCanvasInteractions(
   const menuOpener = menuTrigger(openMenuAt);
 
   function onDoubleClick(event: ReactMouseEvent<HTMLDivElement>) {
-    if (!controller || ctx.tools.activeTool.value !== "select") return;
+    if (!controller || context.tools.activeTool.value !== "select") return;
     const hit = controller.hitTest(controller.toWorld(event.clientX, event.clientY));
     if (hit?.type !== "token") return;
     const box = bounds([hit])!;
-    const camera = controller.renderer.camera;
-    const host = hostRef.current!.getBoundingClientRect();
+    const {camera} = controller.renderer;
+    const host = hostReference.current!.getBoundingClientRect();
     setMorphOrigin(
       new DOMRect(
         host.left + box.x * camera.zoom + camera.x,
@@ -252,8 +248,8 @@ function useSceneCanvasInteractions(
   };
 
   return {
-    ctx,
-    fileRef,
+    ctx: context,
+    fileRef: fileReference,
     importAt,
     dropping,
     setDropping,
@@ -280,22 +276,22 @@ function SceneSettingsDialog({
 }: {
   campaign: Campaign;
   sceneId: string;
-  scene: SceneDoc;
+  scene: SceneDocument;
 }) {
-  const ctx = useCampaign();
-  const ref = useRef<HTMLDialogElement>(null);
+  const context = useCampaign();
+  const reference = useRef<HTMLDialogElement>(null);
   const view = useQuery(campaign.scenes, () => campaign.sceneViews().find((s) => s.id === sceneId));
-  const isOpen = useQuery(ctx.canvas.sceneSettingsOpen);
+  const isOpen = useQuery(context.canvas.sceneSettingsOpen);
 
   useEffect(() => {
-    if (isOpen) openPopup(ref.current);
+    if (isOpen) openPopup(reference.current);
   }, [isOpen]);
 
   return (
     <Dialog
-      dialogRef={ref}
-      title={view ? `${view.name} settings` : "Scene settings"}
-      onClose={() => ctx.canvas.sceneSettingsOpen.set(false)}
+      dialogRef={reference}
+      title={view ? `${view.name} Settings` : "Scene Settings"}
+      onClose={() => { context.canvas.sceneSettingsOpen.set(false); }}
     >
       <SceneSettingsFields
         campaign={campaign}

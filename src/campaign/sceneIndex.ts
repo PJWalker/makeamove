@@ -1,7 +1,9 @@
 import { generateKeyBetween } from "fractional-indexing";
 import type * as Y from "yjs";
 import { newId } from "../lib/ids";
-import { sceneDbName } from "../scene/sceneDoc";
+import { byOrder } from "../lib/order";
+import { sceneDbName as sceneDatabaseName } from "../scene/sceneDoc";
+import { deleteData } from "../platform/dataEpoch";
 import type { Members, Scenes } from "./schema";
 import type { SceneView } from "./types";
 
@@ -21,13 +23,12 @@ export function sceneViews(scenes: Scenes): SceneView[] {
         visibility: scene.get("visibility"),
       };
     })
-    .sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0));
+    .sort(byOrder);
 }
 
 export function createScene(campaignId: string, scenes: Scenes, name: string): string {
   const id = newId();
-  const views = sceneViews(scenes);
-  const last = views.length ? views[views.length - 1]!.order : null;
+  const last = sceneViews(scenes).at(-1)?.order ?? null;
   scenes.transact(() => {
     scenes.set(id, { name, order: generateKeyBetween(last, null), visibility: "everyone" });
     scenes.get(id)!.subdoc("doc", sceneGuid(campaignId, id));
@@ -50,7 +51,7 @@ export function updateScene(scenes: Scenes, id: string, patch: Partial<Omit<Scen
 
 export function removeScene(campaignId: string, scenes: Scenes, id: string) {
   scenes.delete(id);
-  indexedDB.deleteDatabase(sceneDbName(sceneGuid(campaignId, id)));
+  deleteData(sceneDatabaseName(sceneGuid(campaignId, id)));
 }
 
 export function activeSceneId(members: Members, scenes: Scenes, deviceId: string): string | null {

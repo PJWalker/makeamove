@@ -12,9 +12,9 @@ import type { ReactNode } from "react";
  * count) with its rows indented beneath.
  */
 
-type LiProps = Omit<React.HTMLAttributes<HTMLLIElement>, "children"> &
+type LiProperties = Omit<React.HTMLAttributes<HTMLLIElement>, "children"> &
   Record<`data-${string}`, unknown>;
-type ButtonProps = Omit<React.HTMLAttributes<HTMLButtonElement>, "children" | "type"> &
+type ButtonProperties = Omit<React.HTMLAttributes<HTMLButtonElement>, "children" | "type"> &
   Record<`data-${string}`, unknown>;
 
 export function List({ children, label }: { children: ReactNode; label?: string }) {
@@ -52,9 +52,9 @@ export function ListRow({
   dim?: boolean | undefined;
   onPick?: ((e: React.MouseEvent<HTMLButtonElement>) => void) | undefined;
   /** Extra attributes for the row (tooltips, drags onto it). */
-  row?: LiProps | undefined;
+  row?: LiProperties | undefined;
   /** Extra attributes for the name button (menus, drags from it). */
-  pick?: ButtonProps | undefined;
+  pick?: ButtonProperties | undefined;
   /** Buttons after the name. */
   children?: ReactNode | undefined;
 }) {
@@ -101,7 +101,7 @@ export function ListGroup({
   open: boolean;
   onToggle: () => void;
   /** Extra attributes for the heading (menus). */
-  head?: ButtonProps;
+  head?: ButtonProperties;
   /** Shown instead of the heading, such as a field to rename the group. */
   replaceHead?: ReactNode;
   /** Extra attributes for the group (drops into it). */

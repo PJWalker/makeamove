@@ -1,26 +1,20 @@
 import { Container, Graphics } from "pixi.js";
-import { type Camera, type Rect, toScreen } from "../camera";
+import {   toScreen } from "../camera";
+import type {Camera, Rect} from "../camera";
 import { conditionContains, conditionLayout, hoverSpring } from "../conditionLayout";
 import { pointerToward, unionRect } from "../edgePin";
 import type { Point } from "../grid";
 import type { TokenMarks } from "../tokenMarks";
 import type { Transform } from "../types";
+import { reducedMotion } from "../../ui/transition";
 import { SdfText } from "./sdfText";
 import type { RenderState } from "./state";
-import {
-  drawPointer,
-  INK,
-  POINTER_ROOM,
-  reducedMotion,
-  screenViewport,
-  TOKEN_NAME,
-  cabin,
-} from "./style";
+import { drawPointer, INK, POINTER_ROOM, screenViewport, TOKEN_NAME, cabin } from "./style";
 
 const NO_MARKS: TokenMarks = { pips: [], turn: false };
 const PIP_MIN_R = 3;
 const PIP_MAX_R = 6;
-const TURN_COLOUR = 0xf0c23b;
+const TURN_COLOUR = 0xF0_C2_3B;
 /** How long a newly applied condition shows its name, in ms, before it closes to a pip. */
 const ANNOUNCE_MS = 1800;
 /** How long the ring that rings out from a newly applied condition takes, in ms. */
@@ -46,11 +40,11 @@ export class ConditionLayer {
   readonly view = new Graphics();
   readonly texts = new Container();
   private hover: { id: string; anchor: number; bounds: Rect } | null = null;
-  private views = new Map<string, ConditionView>();
+  private readonly views = new Map<string, ConditionView>();
   /** Names of off-screen tokens, over the conditions they've just had applied. */
-  private names = new Map<string, SdfText>();
+  private readonly names = new Map<string, SdfText>();
   /** Off-screen tokens whose names head their conditions out at the edge: which condition it rides on, and where. */
-  private pinnedNames = new Map<string, { view: ConditionView; offset: Point }>();
+  private readonly pinnedNames = new Map<string, { view: ConditionView; offset: Point }>();
   /** Tokens drawn last frame: a condition new on one of these was just applied. */
   private drawnTokens = new Set<string>();
   /** Whose turn it was last frame, and when it became theirs, to ring it in. */
@@ -67,7 +61,7 @@ export class ConditionLayer {
   draw(turns: Graphics, pointer: Point | null, unseen: (t: Transform) => boolean) {
     const s = this.state;
     const now = performance.now();
-    const still = reducedMotion();
+    const still = reducedMotion.matches;
     const cam = s.camera;
     const previousCamera = this.camera;
     const cameraChanged =
@@ -82,14 +76,14 @@ export class ConditionLayer {
     this.camera = { ...cam };
     const viewport = screenViewport(s);
     const tokens = s.elements.filter(
-      (el) => el.type === "token" && !s.hidden.has(el.id) && !unseen(s.previews.get(el.id) ?? el),
+      (element) => element.type === "token" && !s.hidden.has(element.id) && !unseen(s.previews.get(element.id) ?? element),
     );
     const boxes = new Map(
-      tokens.map((el) => {
-        const t = s.previews.get(el.id) ?? el;
+      tokens.map((element) => {
+        const t = s.previews.get(element.id) ?? element;
         const c = toScreen(cam, t);
         return [
-          el.id,
+          element.id,
           {
             x: c.x - (t.w * cam.zoom) / 2,
             y: c.y - (t.h * cam.zoom) / 2,
@@ -101,15 +95,15 @@ export class ConditionLayer {
     );
     const used = new Set<string>();
     const turnTokens: { id: string; x: number; y: number; r: number }[] = [];
-    const plans = tokens.map((el) => {
-      const marks = this.marksFor(el.id, el.type === "token" ? el.characterId : undefined);
-      const t = s.previews.get(el.id) ?? el;
+    const plans = tokens.map((element) => {
+      const marks = this.marksFor(element.id, element.type === "token" ? element.characterId : undefined);
+      const t = s.previews.get(element.id) ?? element;
       const c = toScreen(cam, t);
       const half = (Math.max(t.w, t.h) * cam.zoom) / 2;
-      if (marks.turn) turnTokens.push({ id: el.id, x: c.x, y: c.y, r: half + 5 });
+      if (marks.turn) turnTokens.push({ id: element.id, x: c.x, y: c.y, r: half + 5 });
       const radius = Math.round(Math.min(PIP_MAX_R, Math.max(PIP_MIN_R, half * 0.12)));
       const views = marks.pips.map((pip) => {
-        const key = `${el.id}:${pip.id}`;
+        const key = `${element.id}:${pip.id}`;
         used.add(key);
         let view = this.views.get(key);
         if (!view) {
@@ -120,13 +114,13 @@ export class ConditionLayer {
             fill: INK,
             wrapWidth: Math.max(1, viewport.w - 16),
           });
-          const applied = this.drawnTokens.has(el.id) && !still;
+          const applied = this.drawnTokens.has(element.id) && !still;
           // Just applied, it grows out of a point; otherwise it's simply there.
           const initial = applied
-            ? { x: c.x, y: boxes.get(el.id)!.y, w: 0, h: 0 }
+            ? { x: c.x, y: boxes.get(element.id)!.y, w: 0, h: 0 }
             : {
                 x: c.x - radius,
-                y: boxes.get(el.id)!.y - radius,
+                y: boxes.get(element.id)!.y - radius,
                 w: radius * 2,
                 h: radius * 2,
               };
@@ -149,15 +143,15 @@ export class ConditionLayer {
       });
       const layout = conditionLayout({
         x: c.x,
-        y: boxes.get(el.id)!.y,
+        y: boxes.get(element.id)!.y,
         tokenWidth: t.w * cam.zoom,
         radius,
         labels: views.map((view) => ({ w: view.text.width + 16, h: view.text.height + 8 })),
         viewport,
-        obstacles: [...boxes.entries()].flatMap(([id, box]) => (id === el.id ? [] : [box])),
+        obstacles: [...boxes.entries()].flatMap(([id, box]) => (id === element.id ? [] : [box])),
       });
-      const name = el.type === "token" && !el.hideName ? el.name.trim() : "";
-      return { id: el.id, name, marks, views, layout, radius };
+      const name = element.type === "token" && !element.hideName ? element.name.trim() : "";
+      return { id: element.id, name, marks, views, layout, radius };
     });
     let hovered =
       this.hover && pointer && conditionContains(this.hover.bounds, pointer.x, pointer.y)
@@ -173,7 +167,7 @@ export class ConditionLayer {
             Math.hypot(pointer.x - box.x - box.w / 2, pointer.y - box.y - box.h / 2) <=
             plan.radius + 2,
         );
-        if (anchor >= 0) hovered = { id: plan.id, anchor, bounds: plan.layout.collapsed[anchor]! };
+        if (anchor !== -1) hovered = { id: plan.id, anchor, bounds: plan.layout.collapsed[anchor]! };
       }
     }
     this.hover = hovered;
@@ -256,11 +250,11 @@ export class ConditionLayer {
             y: stacked[0]!.y - announceTargets[0]!.y,
           },
         });
-      if (announced.length) this.animating = true;
+      if (announced.length > 0) this.animating = true;
       for (const [index, view] of plan.views.entries()) {
         const announceAt = announced.indexOf(view);
-        const open = expanded || announceAt >= 0;
-        const target = announceAt >= 0 ? announceTargets[announceAt]! : targets[index]!;
+        const open = expanded || announceAt !== -1;
+        const target = announceAt === -1 ? targets[index]! : announceTargets[announceAt]!;
         if (view.open !== open && !cameraChanged) {
           view.from = view.current;
           view.target = target;
@@ -270,11 +264,7 @@ export class ConditionLayer {
             (open && plan.id === hovered?.id
               ? Math.min(100, Math.abs(index - hovered.anchor) * 18)
               : 0);
-        } else if (view.open !== open) {
-          view.from = view.current = view.target = target;
-          view.open = open;
-          view.start = now - 320;
-        } else {
+        } else if (view.open === open) {
           const relocate = (box: Rect): Rect => ({
             x: box.x + target.x - view.target.x,
             y: box.y + target.y - view.target.y,
@@ -284,6 +274,10 @@ export class ConditionLayer {
           view.from = relocate(view.from);
           view.current = relocate(view.current);
           view.target = target;
+        } else {
+          view.from = view.current = view.target = target;
+          view.open = open;
+          view.start = now - 320;
         }
         const progress = still ? 1 : Math.min(1, Math.max(0, (now - view.start) / 320));
         const spring = hoverSpring(progress);
@@ -307,7 +301,7 @@ export class ConditionLayer {
             current.h,
             Math.min(open ? 4 : plan.radius, current.h / 2),
           );
-        const colour = plan.marks.pips[index]!.colour;
+        const {colour} = (plan.marks.pips[index]!);
         this.view.fill({ color: colour }).stroke({ color: INK, width: 1.5 });
         // A ring rings out from a condition as it's applied.
         const pulse = view.appliedAt === null ? 1 : (now - view.appliedAt) / PULSE_MS;
@@ -332,7 +326,7 @@ export class ConditionLayer {
         view.text.alpha = Math.min(1, Math.max(0, (scale - 0.4) / 0.6));
         view.text.visible = view.text.alpha > 0;
         view.text.position.set(current.x + 8, current.y + (current.h - view.text.height) / 2);
-        if (plan.id === hovered?.id || announceAt >= 0)
+        if (plan.id === hovered?.id || announceAt !== -1)
           this.texts.setChildIndex(view.text, this.texts.children.length - 1);
       }
       this.drawPinnedName(plan, centre, now, usedNames);

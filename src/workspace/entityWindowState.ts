@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { store } from "../lib/store";
-import type { LocalDoc, LocalValue } from "../data/localDoc";
+import { listOf   } from "../data/localDoc";
+import type {LocalDoc as LocalDocument, LocalValue} from "../data/localDoc";
+import { arrayOf, isString, objectOf, optional } from "../lib/guards";
 import type { Icon } from "../ui/icons";
 import type { MenuItem } from "../ui/ContextMenu";
 import type { Campaign } from "../campaign/campaign";
@@ -45,18 +47,15 @@ interface SavedEntityWindow {
   tags?: string[] | undefined;
 }
 
-function readSaved(stored: unknown): SavedEntityWindow[] {
-  if (stored === undefined) return [];
-  if (!Array.isArray(stored)) {
-    console.warn("Ignoring stored entity windows: not a list", stored);
-    return [];
-  }
-  return stored.filter((item: Partial<SavedEntityWindow> | null) => {
-    const ok = !!item?.id?.startsWith("entity:") && typeof item.title === "string";
-    if (!ok) console.warn("Leaving out a stored entity window that can't be read", item);
-    return ok;
-  }) as SavedEntityWindow[];
-}
+const isSavedEntityWindow = (v: unknown): v is SavedEntityWindow =>
+  objectOf({
+    id: isString,
+    title: isString,
+    text: optional(isString),
+    tags: optional(arrayOf(isString)),
+  })(v) && v.id.startsWith("entity:");
+
+const readSaved = listOf(isSavedEntityWindow, "entity windows");
 
 const ENTRY_PREFIX = "entity:entry:";
 
@@ -92,7 +91,7 @@ export class EntityWindows {
   readonly #stop: () => void;
 
   constructor(
-    local: LocalDoc,
+    local: LocalDocument,
     private readonly panels: PanelLayout,
   ) {
     this.#saved = local.value("entityWindows", readSaved);
@@ -107,7 +106,7 @@ export class EntityWindows {
       const now = this.records.value;
       const closed = new Set(entryKeysOf([...windowIds].filter((id) => !(id in now))));
       windowIds = new Set(Object.keys(now));
-      if (closed.size)
+      if (closed.size > 0)
         this.openEntries.value = this.openEntries.value.filter((k) => !closed.has(k));
     });
   }

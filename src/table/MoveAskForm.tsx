@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef  } from "react";
+import type {ReactNode} from "react";
 import { getCharacter, systemOf } from "../features/characters/api";
 import {
   canPayMove,
@@ -17,13 +18,14 @@ import { Button } from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
 import { useCampaign } from "../workspace/campaignContext";
 import { makeMove } from "../workspace/commands/characters";
+import { useDraft } from "./useDraft";
 
 type Ask = NonNullable<ReturnType<typeof needsChoice>>;
 type Check = NonNullable<ReturnType<typeof checkOf>>;
 type RollBonus = NonNullable<Check["rollBonuses"]>[number];
 
 /** Everything the form can ask, as typed. */
-type Draft = {
+interface Draft {
   stat: string;
   difficulty: string;
   counterMessageId: string;
@@ -32,12 +34,12 @@ type Draft = {
   yeses: string[];
   extra: number;
   variant: string;
-};
+}
 
-type DifficultySpec = { prompt: string; initial?: number | undefined; min?: number; max?: number };
+interface DifficultySpec { prompt: string; initial?: number | undefined; min?: number; max?: number }
 
 /** A formula without its labels, as the Roll button reads: 1d20+2[Prof] → 1d20+2. */
-const bare = (formula: string) => formula.replace(/\[[^\]]*\]/g, "");
+const bare = (formula: string) => formula.replaceAll(/\[[^\]]*]/g, "");
 
 /** Whether the move asks for a difficulty: its own, or when a target's defense isn't known. */
 function difficultyAsked(
@@ -60,7 +62,7 @@ function difficultyAsked(
 
 /** The difficulty typed, if it is a number the move accepts. */
 function chosenDifficulty(spec: DifficultySpec | undefined, typed: string) {
-  if (!spec || !typed.trim()) return undefined;
+  if (!spec || !typed.trim()) return;
   const value = Number(typed);
   return Number.isFinite(value) && value >= (spec.min ?? 0) && value <= (spec.max ?? 99)
     ? value
@@ -94,11 +96,6 @@ function choiceOf(
     rollBonuses: draft.rollBonuses,
     variant: draft.variant || undefined,
   };
-}
-
-function useDraft(initial: Draft) {
-  const [draft, setDraft] = useState(initial);
-  return [draft, (changes: Partial<Draft>) => setDraft((now) => ({ ...now, ...changes }))] as const;
 }
 
 function toggled(list: string[], id: string, on: boolean) {
@@ -142,19 +139,19 @@ export function AskStep({
       <VariantField
         variants={move.variants?.(c, derive(c, system))}
         value={draft.variant}
-        onChange={(variant) => patch({ variant })}
+        onChange={(variant) => { patch({ variant }); }}
       />
       <AskedField ask={ask} system={system} draft={draft} patch={patch} />
       <DifficultyField
         spec={difficultySpec}
         value={draft.difficulty}
-        onChange={(value) => patch({ difficulty: value })}
+        onChange={(value) => { patch({ difficulty: value }); }}
       />
       <CounterField
         spec={check?.counter}
         counters={counters}
         value={draft.counterMessageId}
-        onChange={(counterMessageId) => patch({ counterMessageId })}
+        onChange={(counterMessageId) => { patch({ counterMessageId }); }}
       />
       {(check?.rollBonuses ?? []).map((bonus) => (
         <RollBonusField
@@ -162,10 +159,10 @@ export function AskStep({
           bonus={bonus}
           character={c}
           selected={rollBonuses.has(bonus.id)}
-          onChange={(on) => patch({ rollBonuses: toggled(draft.rollBonuses, bonus.id, on) })}
+          onChange={(on) => { patch({ rollBonuses: toggled(draft.rollBonuses, bonus.id, on) }); }}
         />
       ))}
-      <ExtraBonusField shown={!!check} value={draft.extra} onChange={(extra) => patch({ extra })} />
+      <ExtraBonusField shown={!!check} value={draft.extra} onChange={(extra) => { patch({ extra }); }} />
       <RollActions
         modes={check ? rollModesFor(system, move) : undefined}
         defaultLabel={system.defaultRollLabel ?? "Roll"}
@@ -177,17 +174,17 @@ export function AskStep({
 }
 
 function useAskStep(campaign: Campaign, characterId: string, moveId: string) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const system = systemOf(campaign);
   const move = system.actions.find((m) => m.id === moveId)!;
   const c = getCharacter(campaign, characterId)!;
-  const request = campaign.moves.ask.value;
+  const request = campaign.moves.actor.getSnapshot().context.ask;
   const targets = request?.targets;
   const ask = needsChoice(move);
   const check = checkOf(move);
   const difficultySpec = difficultyAsked(campaign, system, move, targets);
   const counters = campaign.chat.messages.value.flatMap((m) => (m.kind === "counter" ? [m] : []));
-  const [draft, patch] = useDraft({
+  const [draft, patch] = useDraft<Draft>({
     stat: "",
     difficulty: String(difficultySpec?.initial ?? 10),
     counterMessageId: counters[0]?.id ?? "",
@@ -197,11 +194,11 @@ function useAskStep(campaign: Campaign, characterId: string, moveId: string) {
     extra: request?.choice?.extra ?? 0,
     variant: "",
   });
-  const formRef = useRef<HTMLFormElement>(null);
+  const formReference = useRef<HTMLFormElement>(null);
   // Enter rolls straight away.
   useEffect(
     () =>
-      formRef.current
+      formReference.current
         ?.querySelector<HTMLButtonElement>('button[type="submit"]')
         ?.focus({ preventScroll: true }),
     [],
@@ -222,8 +219,8 @@ function useAskStep(campaign: Campaign, characterId: string, moveId: string) {
   const go = (mode: string) => {
     if (!rollFor(mode).ready) return;
     const choice = choiceOf(ask, check, draft, difficulty, mode);
-    void ctx.execute(makeMove, { characterId: c.id, move, choice, targets });
-    campaign.moves.ask.set(null);
+    void context.execute(makeMove, { characterId: c.id, move, choice, targets });
+    campaign.moves.ask(null);
   };
   const rollBonuses = new Set(draft.rollBonuses);
   return {
@@ -236,7 +233,7 @@ function useAskStep(campaign: Campaign, characterId: string, moveId: string) {
     counters,
     draft,
     patch,
-    formRef,
+    formRef: formReference,
     rollBonuses,
     rollFor,
     go,
@@ -258,10 +255,10 @@ function VariantField({
       Casting or use
       <select
         value={value || variants[0]?.id || ""}
-        disabled={!variants.length}
-        onChange={(event) => onChange(event.currentTarget.value)}
+        disabled={variants.length === 0}
+        onChange={(event) => { onChange(event.currentTarget.value); }}
       >
-        {!variants.length && <option value="">No available uses</option>}
+        {variants.length === 0 && <option value="">No available uses</option>}
         {variants.map((entry) => (
           <option key={entry.id} value={entry.id}>
             {entry.label}
@@ -283,7 +280,7 @@ function NumberField({
   onChange,
 }: {
   label: ReactNode;
-  value: string | number;
+  value: number | string;
   min: number | undefined;
   max: number | undefined;
   required?: boolean;
@@ -299,7 +296,7 @@ function NumberField({
         min={min}
         max={max}
         value={value}
-        onInput={(e) => onChange(e.currentTarget.value)}
+        onInput={(e) => { onChange(e.currentTarget.value); }}
       />
     </label>
   );
@@ -325,7 +322,7 @@ function AskedField({
         label="Stat to roll"
         value={draft.stat}
         options={system.stats.map((s) => ({ id: s.id, label: s.abbr, title: s.name }))}
-        onChange={(stat) => patch({ stat })}
+        onChange={(stat) => { patch({ stat }); }}
       />
     );
   if (ask.kind === "number")
@@ -335,7 +332,7 @@ function AskedField({
         min={ask.min}
         max={ask.max}
         value={draft.askedNumber}
-        onChange={(value) => patch({ askedNumber: Number(value) || 0 })}
+        onChange={(value) => { patch({ askedNumber: Number(value) || 0 }); }}
       />
     );
   return (
@@ -346,8 +343,7 @@ function AskedField({
           <input
             type="checkbox"
             checked={yeses.has(question)}
-            onChange={(e) =>
-              patch({ yeses: toggled(draft.yeses, question, e.currentTarget.checked) })
+            onChange={(e) => { patch({ yeses: toggled(draft.yeses, question, e.currentTarget.checked) }); }
             }
           />
           {question}
@@ -398,7 +394,7 @@ function ExtraBonusField({
       max={10}
       value={value}
       required={false}
-      onChange={(typed) => onChange(Number(typed) || 0)}
+      onChange={(typed) => { onChange(Number(typed) || 0); }}
     />
   );
 }
@@ -421,18 +417,18 @@ function CounterField({
       {spec.prompt}
       <select
         value={value}
-        disabled={!counters.length}
-        onChange={(e) => onChange(e.currentTarget.value)}
+        disabled={counters.length === 0}
+        onChange={(e) => { onChange(e.currentTarget.value); }}
       >
         <option value="">Choose a counter</option>
         {counters.map((counter) => (
           <option key={counter.id} value={counter.id}>
             {counter.label} ({counter.start}
-            {counter.max !== undefined ? `/${counter.max}` : ""})
+            {counter.max === undefined ? "" : `/${counter.max}`})
           </option>
         ))}
       </select>
-      {!counters.length && (
+      {counters.length === 0 && (
         <span className="muted">Create a track with /clock or /count first.</span>
       )}
     </label>
@@ -452,7 +448,7 @@ function RollBonusField({
   onChange: (on: boolean) => void;
 }) {
   if (bonus.nameField && !String(character.data[bonus.nameField] ?? "").trim()) return null;
-  const cost = bonus.cost;
+  const {cost} = bonus;
   const unaffordable = !selected && !!cost && (character.resources[cost.resource] ?? 0) < cost.by;
   return (
     <label className="check-option">
@@ -460,7 +456,7 @@ function RollBonusField({
         type="checkbox"
         checked={selected}
         disabled={unaffordable}
-        onChange={(e) => onChange(e.currentTarget.checked)}
+        onChange={(e) => { onChange(e.currentTarget.checked); }}
       />
       {bonus.nameField ? character.data[bonus.nameField] : bonus.label} (+
       {Number(character.data[bonus.valueField] ?? 0)};{" "}
@@ -492,7 +488,7 @@ function RollActions({
         type={mode ? "button" : "submit"}
         disabled={!ready}
         title={ready ? bare(formula) : undefined}
-        onClick={mode ? () => onRoll(mode) : undefined}
+        onClick={mode ? () => { onRoll(mode); } : undefined}
       >
         {label}
       </Button>

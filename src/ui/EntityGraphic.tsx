@@ -1,6 +1,7 @@
 import type { EntityGraphic } from "../media/images";
 import { BlobImage } from "./BlobImage";
-import { ENTRY_ICONS, type EntryIconName } from "./entryIcons";
+import { ENTRY_ICONS  } from "./entryIcons";
+import type {EntryIconName} from "./entryIcons";
 
 const Fallback = ENTRY_ICONS.bag;
 
@@ -13,23 +14,23 @@ export function EntityGraphicView({
   size?: number;
   className?: string | undefined;
 }) {
-  const shown = graphic ?? { kind: "icon", name: "bag" as const };
   const classes = ["entity-graphic", className].filter(Boolean).join(" ");
-  if (shown.kind === "image") {
-    return (
-      <span className={classes} style={{ width: size, height: size }} aria-hidden="true">
-        <BlobImage
-          image={shown.image}
-          className="entity-graphic-image"
-          fallback={<Fallback size={size} />}
-        />
-      </span>
+  let content;
+  if (graphic?.kind === "image") {
+    content = (
+      <BlobImage
+        image={graphic.image}
+        className="entity-graphic-image"
+        fallback={<Fallback size={size} />}
+      />
     );
+  } else {
+    const Icon = ENTRY_ICONS[(graphic?.name ?? "bag") as EntryIconName] ?? Fallback;
+    content = <Icon size={size} />;
   }
-  const Icon = ENTRY_ICONS[shown.name as EntryIconName] ?? Fallback;
   return (
     <span className={classes} style={{ width: size, height: size }} aria-hidden="true">
-      <Icon size={size} />
+      {content}
     </span>
   );
 }

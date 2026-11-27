@@ -27,7 +27,7 @@
     background-color: var(--surface-sunken);
     border: 1px solid #fff1;
     /* Sunken: shaded at the top left, catching light on the bottom-right edge. */
-    border-image: linear-gradient(to bottom right, #ffffff05, #fff3) 1;
+    border-image: linear-gradient(to bottom right, #0000, var(--bronze)) 1;
     box-shadow: inset 1px 1px 1px 2px #000;
     background-clip: padding-box;
     color: var(--text);
@@ -100,6 +100,17 @@
   }
   .empty svg {
     color: var(--text-faint);
+  }
+  /* Rendered icons sit in a line like glyphs and fade with their control. */
+  .icon-art {
+    flex-shrink: 0;
+    vertical-align: middle;
+    user-select: none;
+  }
+  :disabled .icon-art,
+  [aria-disabled="true"] .icon-art {
+    opacity: 0.45;
+    filter: saturate(0.3);
   }
   /* The same message inside a list or menu, where a centred block is too much. */
   .empty-inline {
@@ -180,23 +191,56 @@
     display: grid;
     gap: var(--space-4);
   }
-  .form-title {
+  /* A section's title, centred between gilt rules that taper away from it. */
+  .form-title,
+  .dialog-heading {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
     margin: 0;
-    font-size: var(--text-md);
+    color: var(--title-ink);
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 600;
+    text-shadow: var(--title-shadow);
+    &::before,
+    &::after {
+      content: "";
+      flex: 1;
+      height: 8px;
+      background:
+        var(--lozenge) center / 8px 8px no-repeat,
+        linear-gradient(var(--gilt-lo), var(--gilt-lo)) center / 100% 1px no-repeat;
+    }
+    &::before {
+      mask: linear-gradient(to right, transparent, #000 60%);
+      background-position:
+        right center,
+        center;
+    }
+    &::after {
+      mask: linear-gradient(to left, transparent, #000 60%);
+      background-position:
+        left center,
+        center;
+    }
   }
   .form-section,
   .sheet-section {
     display: grid;
     gap: var(--space-3);
-    padding-top: var(--space-4);
-    border-top: 1px solid var(--hairline);
-    border-image: linear-gradient(to right, transparent, #fff3, transparent) 1;
+    padding-top: calc(var(--space-4) + 12px);
+    background: var(--rule-ornate);
   }
   .form-heading,
   .sheet-heading {
     margin: 0;
-    font-size: var(--text-sm);
-    font-weight: 700;
+    color: var(--title-ink);
+    font-family: var(--font-display);
+    font-size: var(--text-md);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-shadow: var(--title-shadow);
   }
   /* A section heading with actions aligned to the right. */
   .sheet-section-header {
@@ -215,7 +259,9 @@
   .form-subheading,
   .dialog-subheading {
     margin: 0;
-    font-size: var(--text-sm);
+    color: var(--title-ink);
+    font-family: var(--font-display);
+    font-size: var(--text-md);
     font-weight: 600;
   }
   .form-fields {

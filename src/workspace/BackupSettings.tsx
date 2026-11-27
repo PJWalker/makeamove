@@ -1,34 +1,39 @@
 import { useState } from "react";
+import { useSelector } from "@xstate/react";
 import { exportBackupFile } from "../campaign/backup";
 import type { Campaign } from "../campaign/campaign";
 import type { FolderBackupState } from "../campaign/folderBackup";
-import { useCampaign } from "./campaignContext";
 import { canUseFolders } from "../platform/files";
 import { Button } from "../ui/Button";
 import { IconBackupFolder, IconExport } from "../ui/icons";
-import { useQuery } from "../ui/useQuery";
+import { useCampaign } from "./campaignContext";
 
 const time = new Intl.DateTimeFormat(undefined, { timeStyle: "short" });
 
 function folderStatus(s: FolderBackupState): string {
   switch (s.state) {
-    case "off":
+    case "off": {
       return "Not backing up to a folder.";
-    case "paused":
+    }
+    case "paused": {
       return `Paused. ${s.folder} needs permission again.`;
-    case "saving":
+    }
+    case "saving": {
       return `Saving to ${s.folder}…`;
-    case "saved":
+    }
+    case "saved": {
       return `Saved to ${s.folder} at ${time.format(s.savedAt)}.`;
-    case "failed":
+    }
+    case "failed": {
       return `Couldn't save to ${s.folder}: ${s.error}`;
+    }
   }
 }
 
 /** Saving the campaign off this device: a one-off file, or a folder kept up to date. */
 export function BackupSettings({ campaign }: { campaign: Campaign }) {
   const { backup } = useCampaign();
-  const status = useQuery(backup.status);
+  const status = useSelector(backup.actor, (snapshot) => snapshot.context.state);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const run = (act: () => Promise<unknown>) => async () => {
@@ -36,8 +41,8 @@ export function BackupSettings({ campaign }: { campaign: Campaign }) {
     setBusy(true);
     try {
       await act();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+    } catch (error_) {
+      setError(error_ instanceof Error ? error_.message : String(error_));
     } finally {
       setBusy(false);
     }

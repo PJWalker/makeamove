@@ -8,11 +8,9 @@ import { TwoPane } from "../ui/TwoPane";
 import { usePaneLevel } from "../ui/paneLevel";
 import { GraphicPicker } from "../ui/GraphicPicker";
 import { getEntityGraphic } from "../workspace/entityGraphics";
-import { SceneSettingsFields } from "./SceneSettingsFields";
-import { FolderTree } from "./FolderTree";
-import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
+import { ContextMenu  } from "../ui/ContextMenu";
+import type {MenuItem} from "../ui/ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
-import { scenesLayout } from "./panelLayouts";
 import { useCampaign } from "../workspace/campaignContext";
 import { chooseGraphic } from "../workspace/commands/campaign";
 import {
@@ -23,6 +21,9 @@ import {
   updateScene,
 } from "../workspace/commands/scenes";
 import { can, menuFor } from "../workspace/commands/views";
+import { scenesLayout } from "./panelLayouts";
+import { FolderTree } from "./FolderTree";
+import { SceneSettingsFields } from "./SceneSettingsFields";
 
 /** How many players are in each scene; those not in a known scene count towards the first. */
 function usePlayerCounts(campaign: Campaign, scenes: SceneView[]) {
@@ -51,10 +52,9 @@ function SceneRow({
   playerCount: number;
   onOpen: () => void;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
-  const trigger = menuTrigger((x, y) =>
-    setMenu({ x, y, items: menuFor(ctx, { kind: "scene", id: scene.id }) }),
+  const trigger = menuTrigger((x, y) => { setMenu({ x, y, items: menuFor(context, { kind: "scene", id: scene.id }) }); },
   );
   return (
     <li className="scene-item" data-active={active} data-scene-id={scene.id}>
@@ -75,19 +75,19 @@ function SceneRow({
           <IconMembers size={16} /> {playerCount} here
         </span>
       )}
-      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
+      {menu && <ContextMenu {...menu} onClose={() => { setMenu(null); }} />}
     </li>
   );
 }
 
 /** The active scene's name, settings and graphic, for whoever may change them. */
 function SceneDetail({ campaign, active }: { campaign: Campaign; active: SceneView | undefined }) {
-  const ctx = useCampaign();
-  const commands = useQuery(ctx.canvas.canvasCommands);
+  const context = useCampaign();
+  const commands = useQuery(context.canvas.canvasCommands);
   const graphic = useQuery(campaign.entityGraphics, () =>
     active ? getEntityGraphic(campaign, "scene", active.id, "map") : undefined,
   );
-  if (!active || !can(ctx, updateScene, { id: active.id, patch: {} }))
+  if (!active || !can(context, updateScene, { id: active.id, patch: {} }))
     return <div className="panel-scroll scene-panel" />;
   const scene = commands?.sceneId === active.id ? commands.scene : null;
   return (
@@ -97,14 +97,14 @@ function SceneDetail({ campaign, active }: { campaign: Campaign; active: SceneVi
         value={active.name}
         aria-label="Scene name"
         onChange={(e) =>
-          ctx.execute(updateScene, {
+          context.execute(updateScene, {
             id: active.id,
             patch: { name: e.currentTarget.value || "Untitled scene" },
           })
         }
       />
-      <Button variant="secondary" onClick={() => ctx.execute(pullPlayers, { id: active.id })}>
-        <IconMembers size={22} /> Pull players here
+      <Button variant="secondary" onClick={() => context.execute(pullPlayers, { id: active.id })}>
+        <IconMembers size={22} /> Pull Players Here
       </Button>
       {scene ? (
         <SceneSettingsFields campaign={campaign} sceneId={active.id} scene={scene} />
@@ -115,9 +115,9 @@ function SceneDetail({ campaign, active }: { campaign: Campaign; active: SceneVi
         label="Scene graphic"
         graphic={graphic}
         onChange={(graphic) =>
-          ctx.execute(chooseGraphic, { kind: "scene", id: active.id, graphic })
+          context.execute(chooseGraphic, { kind: "scene", id: active.id, graphic })
         }
-        onReset={() => ctx.execute(chooseGraphic, { kind: "scene", id: active.id })}
+        onReset={() => context.execute(chooseGraphic, { kind: "scene", id: active.id })}
       />
     </div>
   );
@@ -125,7 +125,7 @@ function SceneDetail({ campaign, active }: { campaign: Campaign; active: SceneVi
 
 /** The scene list, and the active scene's settings. (Campaign actions are in the tool strip's menu.) */
 export function ScenePanel({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const scenes = useQuery(campaign.scenes, () => campaign.sceneViews());
   const folders = useQuery(campaign.sceneFolders, () => listSceneFolders(campaign.sceneFolders));
   const activeId =
@@ -140,7 +140,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
       level={level}
       title={active?.name ?? "Scenes"}
       backLabel="Back to the scene list"
-      onBack={() => go("list")}
+      onBack={() => { go("list"); }}
       resizeLabel="Resize the scene list"
       list={
         <FolderTree
@@ -156,18 +156,18 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
               active={s.id === activeId}
               playerCount={playerCounts.get(s.id) ?? 0}
               onOpen={() => {
-                ctx.execute(openScene, { id: s.id });
+                context.execute(openScene, { id: s.id });
                 go("detail");
               }}
             />
           )}
           renderActions={(newFolder) =>
-            can(ctx, newScene, {}) && (
+            can(context, newScene, {}) && (
               <>
                 <Button
                   variant="secondary"
                   icon={IconAdd}
-                  onClick={() => ctx.execute(newScene, {}) && go("detail")}
+                  onClick={() => context.execute(newScene, {}) && go("detail")}
                 >
                   New Scene
                 </Button>
@@ -181,7 +181,7 @@ export function ScenePanel({ campaign }: { campaign: Campaign }) {
           folderCommands={sceneFolders}
           showList={() => show("list")}
           emptyContent={
-            !scenes.length && !folders.length ? (
+            scenes.length === 0 && folders.length === 0 ? (
               <p className="empty-inline">No scenes yet.</p>
             ) : null
           }

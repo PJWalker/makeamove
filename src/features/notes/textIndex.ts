@@ -1,6 +1,8 @@
-import Fuse, { type FuseIndex, type IFuseOptions } from "fuse.js";
+import Fuse from "fuse.js";
+import type {FuseIndex, IFuseOptions} from "fuse.js";
 import { dataName } from "../../platform/dataEpoch";
 import { deleteValue, readValue, writeValue } from "../../platform/keyval";
+import { isString } from "../../lib/guards";
 import { LINK_NODE } from "./links";
 
 /*
@@ -13,12 +15,12 @@ import { LINK_NODE } from "./links";
  */
 
 /** A page as the editor serialises it (ProseMirror JSON). */
-export type NoteNode = {
+export interface NoteNode {
   type?: string;
   text?: string;
   attrs?: Record<string, unknown> | undefined;
   content?: NoteNode[] | undefined;
-};
+}
 
 /**
  * Where a stretch of the text starts and the editor position it starts at:
@@ -75,7 +77,7 @@ export function flattenNote(root: NoteNode): { text: string; runs: Run[] } {
     }
     if (node.type === LINK_NODE) {
       const label = node.attrs?.["text"] || node.attrs?.["label"] || node.attrs?.["id"];
-      if (typeof label === "string") append(`@${label}`, position, 1);
+      if (isString(label)) append(`@${label}`, position, 1);
       return 1;
     }
     if (node.type === "doc") {
@@ -85,7 +87,7 @@ export function flattenNote(root: NoteNode): { text: string; runs: Run[] } {
     }
     if (node.type && TEXT_BLOCKS.has(node.type) && textBlocks++) append("\n", -1, 1);
     const children = node.content ?? [];
-    if (!children.length) return 1;
+    if (children.length === 0) return 1;
     let next = position + 1;
     for (const child of children) next += walk(child, next);
     return next - position + 1;
@@ -139,11 +141,11 @@ function spans(text: string, ranges: [number, number][]) {
 function snippet(text: string, start: number, end: number) {
   const from = Math.max(0, start - 42);
   const to = Math.min(text.length, end + 42);
-  return `${from ? "…" : ""}${text.slice(from, to).replace(/\s+/g, " ")}${to < text.length ? "…" : ""}`;
+  return `${from ? "…" : ""}${text.slice(from, to).replaceAll(/\s+/g, " ")}${to < text.length ? "…" : ""}`;
 }
 
 export class NoteTextIndex {
-  private pages: Map<string, IndexedPage>;
+  private readonly pages: Map<string, IndexedPage>;
   private fuse: Fuse<IndexedPage> | null;
   private saveTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -227,7 +229,7 @@ export class NoteTextIndex {
   private changed() {
     this.fuse = null;
     clearTimeout(this.saveTimer);
-    this.saveTimer = setTimeout(() => this.flush(), SAVE_MS);
+    this.saveTimer = setTimeout(() => { this.flush(); }, SAVE_MS);
   }
 }
 

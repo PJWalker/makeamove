@@ -1,3 +1,4 @@
+import { isString } from "../lib/guards";
 import type { GameSystem } from "./types";
 import type { SystemExtension } from "./extensionTypes";
 import { dnd55eExtension } from "./dnd55e/extension";
@@ -23,4 +24,4 @@ const NONE: SystemExtension = {};
 
 /** What a system adds to the table; nothing for systems that add nothing. */
 export const extensionOf = (system: Pick<GameSystem, "id"> | string | undefined): SystemExtension =>
-  EXTENSIONS[typeof system === "string" ? system : (system?.id ?? "")] ?? NONE;
+  EXTENSIONS[isString(system) ? system : (system?.id ?? "")] ?? NONE;

@@ -1,17 +1,18 @@
-import { emptyRichText, plainText, type RichText } from "../data/richText";
-import { AskStep } from "./MoveAskForm";
-import { RichTextView } from "../workspace/RichTextView";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { arrow, autoUpdate, computePosition, flip, offset, shift } from "@floating-ui/dom";
-import { watch } from "../lib/store";
-import { getCharacter, systemOf } from "../features/characters/api";
-import { needsChoice } from "../features/characters/moves";
-import { inRange } from "../scene/measure";
-import type { Campaign } from "../campaign/campaign";
-import { collapsedInto, reducedMotion } from "../ui/bubble";
-import { Button } from "../ui/Button";
-import { IconClose } from "../ui/icons";
+import { useSelector } from "@xstate/react";
 import { lastPressed } from "../ui/pressed";
+import { IconClose } from "../ui/icons";
+import { Button } from "../ui/Button";
+import { reducedMotion } from "../ui/transition";
+import { growFrom, leave } from "../ui/morph";
+import type { Campaign } from "../campaign/campaign";
+import { inRange } from "../scene/measure";
+import { needsChoice } from "../features/characters/moves";
+import { getCharacter, systemOf } from "../features/characters/api";
+import { RichTextView } from "../workspace/RichTextView";
+import type {RichText} from "../data/richText";
+import { emptyRichText, plainText  } from "../data/richText";
 import { useQuery } from "../ui/useQuery";
 import type { ActionDef, AreaSpec } from "../systems/types";
 import type { MoveTarget } from "../features/chat/types";
@@ -19,6 +20,8 @@ import { useCampaign } from "../workspace/campaignContext";
 import type { CanvasState } from "../workspace/canvasState";
 import type { CampaignContext } from "../workspace/campaignContext";
 import { startMove } from "../workspace/commands/characters";
+import { onScreenRect } from "./onScreenRect";
+import { AskStep } from "./MoveAskForm";
 
 /*
  * What a move asks before it rolls, in a speech bubble beside the button that
@@ -30,9 +33,6 @@ import { startMove } from "../workspace/commands/characters";
  * sidebars slide; without one on screen it sits above the hotbar.
  */
 
-const ENTER_MS = 150;
-const LEAVE_MS = 110;
-const EASE = "cubic-bezier(0.2, 0.7, 0.2, 1)";
 /** Between the button and the bubble, room for the tail. */
 const GAP = 14;
 /** The closest the bubble comes to the window's edges. */
@@ -40,11 +40,11 @@ const MARGIN = 8;
 /** A button this close to the bottom (the hotbar) gets the bubble above it. */
 const BOTTOM_BAND = 120;
 
-type Request = { kind: "target" | "ask"; moveId: string; characterId: string };
+interface Request { kind: "ask" | "target"; moveId: string; characterId: string }
 
-const cancel = (ctx: CampaignContext) => {
-  ctx.campaign.moves.clear();
-  ctx.canvas.areaRequest.set(null);
+const cancel = (context: CampaignContext) => {
+  context.campaign.moves.clear();
+  context.canvas.areaRequest.set(null);
 };
 
 /** Start placing an action's area on the scene, or stop. */
@@ -52,17 +52,18 @@ const toggleAreaRequest = (canvas: CanvasState, area: AreaSpec, actor: string) =
   canvas.areaRequest.set(canvas.areaRequest.value ? null : { area, actor, n: Date.now() });
 };
 
-/** The anchor's box, if it's still on screen. */
-function anchorRect(el: Element | null): DOMRect | null {
-  const r = el?.isConnected ? el.getBoundingClientRect() : null;
-  return r &&
-    r.width > 0 &&
-    r.right > 0 &&
-    r.left < innerWidth &&
-    r.bottom > 0 &&
-    r.top < innerHeight
-    ? r
-    : null;
+/** Where the bubble goes: above a button near the bottom (the hotbar), else beside it, to the right where there's room. */
+function preferredSide(anchor: DOMRect, width: number): "left" | "right" | "top" {
+  if (anchor.top > innerHeight - BOTTOM_BAND) return "top";
+  const roomRight = innerWidth - anchor.right - GAP - MARGIN >= width;
+  return roomRight || anchor.left + anchor.width / 2 < innerWidth / 2 ? "right" : "left";
+}
+
+/** A placement as the bubble's `data-side` names it. */
+function sideName(placement: string | undefined) {
+  if (placement === "top") return "above";
+  if (placement === "bottom") return "below";
+  return placement;
 }
 
 export function MovePrompt({ campaign }: { campaign: Campaign }) {
@@ -80,7 +81,7 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
         <span className="eyebrow">
           {move.name} · {character.name}
         </span>
-        <Button variant="icon" label="Cancel" onClick={() => cancel(ctx)}>
+        <Button variant="icon" label="Cancel" onClick={() => { cancel(ctx); }}>
           <IconClose />
         </Button>
       </div>
@@ -106,26 +107,21 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
 }
 
 function useMovePrompt(campaign: Campaign) {
-  const ctx = useCampaign();
-  const target = useQuery(ctx.campaign.moves.targets);
-  const requestedMove = useQuery(ctx.campaign.moves.ask);
-  const live: Request | null = useMemo(
-    () =>
-      target
-        ? { kind: "target", ...target }
-        : requestedMove
-          ? { kind: "ask", ...requestedMove }
-          : null,
-    [target, requestedMove],
-  );
+  const context = useCampaign();
+  const target = useSelector(context.campaign.moves.actor, (snapshot) => snapshot.context.targets);
+  const requestedMove = useSelector(context.campaign.moves.actor, (snapshot) => snapshot.context.ask);
+  const live = useMemo((): Request | null => {
+    if (target) return { kind: "target", ...target };
+    if (requestedMove) return { kind: "ask", ...requestedMove };
+    return null;
+  }, [target, requestedMove]);
   const hasLive = live !== null;
   // What's on screen: the live request, or the last one while it shrinks away.
   const [last, setLast] = useState<Request | null>(null);
   if (live && live !== last) setLast(live);
   const shown = live ?? last;
-  const ref = useRef<HTMLDialogElement>(null);
+  const reference = useRef<HTMLDialogElement>(null);
   const anchor = useRef<Element | null>(null);
-  const leaving = useRef<Animation | null>(null);
 
   // Whether a request was on screen as of the last commit.
   const wasShown = useRef(false);
@@ -133,10 +129,8 @@ function useMovePrompt(campaign: Campaign) {
   useLayoutEffect(() => {
     if (!live) return;
     const pressed = lastPressed();
-    if (pressed && !ref.current?.contains(pressed)) anchor.current = pressed;
+    if (pressed && !reference.current?.contains(pressed)) anchor.current = pressed;
     else if (!wasShown.current) anchor.current = null;
-    leaving.current?.cancel();
-    leaving.current = null;
   }, [live]);
   useLayoutEffect(() => {
     wasShown.current = shown !== null;
@@ -145,29 +139,17 @@ function useMovePrompt(campaign: Campaign) {
   // Shrink back into the button once the request is done or cancelled.
   useLayoutEffect(() => {
     if (hasLive || !shown) return;
-    const el = ref.current;
-    if (!el || reducedMotion.matches) {
+    const element = reference.current;
+    if (!element || reducedMotion.matches) {
       setLast(null);
       return;
     }
-    const box = el.getBoundingClientRect();
-    const a = el.animate(
-      [
-        { transform: getComputedStyle(el).transform, opacity: 1 },
-        collapsedInto(box, anchorRect(anchor.current)),
-      ],
-      {
-        duration: LEAVE_MS,
-        easing: "ease-in",
-        fill: "forwards",
-      },
-    );
-    leaving.current = a;
-    a.finished.then(
+    void leave(
+      element,
       () => {
-        if (leaving.current === a) setLast(null);
+        if (shown) setLast(null);
       },
-      () => {},
+      null,
     );
   }, [hasLive, shown]);
 
@@ -175,52 +157,36 @@ function useMovePrompt(campaign: Campaign) {
   // Follow the button as its sidebar moves; use the hotbar fallback if it leaves the viewport.
   useLayoutEffect(() => {
     if (!open) return;
-    const el = ref.current;
-    if (!el) return;
+    const element = reference.current;
+    if (!element) return;
     let active = true;
     let revision = 0;
     let entered = false;
     const enter = () => {
       if (entered || reducedMotion.matches) return;
       entered = true;
-      const box = el.getBoundingClientRect();
-      el.animate(
-        [
-          collapsedInto(box, anchorRect(anchor.current)),
-          { opacity: 1, offset: 0.4 },
-          { transform: "none", opacity: 1 },
-        ],
-        {
-          duration: ENTER_MS,
-          easing: EASE,
-        },
-      );
+      const origin = onScreenRect(anchor.current);
+      if (origin) growFrom(element, origin);
     };
     const place = async () => {
       const currentRevision = ++revision;
       const source = anchor.current;
-      const a = anchorRect(source);
+      const a = onScreenRect(source);
       if (!a || !source) {
-        const w = el.offsetWidth;
-        const h = el.offsetHeight;
-        el.dataset["side"] = "none";
-        el.style.left = `${Math.round(Math.min(Math.max((innerWidth - w) / 2, MARGIN), innerWidth - w - MARGIN))}px`;
-        el.style.top = `${Math.round(Math.min(Math.max(innerHeight - h - 60, MARGIN), innerHeight - h - MARGIN))}px`;
-        el.style.setProperty("--tail", "0px");
+        const w = element.offsetWidth;
+        const h = element.offsetHeight;
+        element.dataset["side"] = "none";
+        element.style.left = `${Math.round(Math.min(Math.max((innerWidth - w) / 2, MARGIN), innerWidth - w - MARGIN))}px`;
+        element.style.top = `${Math.round(Math.min(Math.max(innerHeight - h - 60, MARGIN), innerHeight - h - MARGIN))}px`;
+        element.style.setProperty("--tail", "0px");
         enter();
         return;
       }
 
-      const side =
-        a.top > innerHeight - BOTTOM_BAND
-          ? "top"
-          : innerWidth - a.right - GAP - MARGIN >= el.offsetWidth ||
-              a.left + a.width / 2 < innerWidth / 2
-            ? "right"
-            : "left";
-      el.dataset["side"] = side === "top" ? "above" : side;
-      const tail = el.querySelector<HTMLElement>(".roll-prompt-tail");
-      const result = await computePosition(source, el, {
+      const side = preferredSide(a, element.offsetWidth);
+      element.dataset["side"] = sideName(side);
+      const tail = element.querySelector<HTMLElement>(".roll-prompt-tail");
+      const result = await computePosition(source, element, {
         strategy: "fixed",
         placement: side,
         middleware: [
@@ -232,19 +198,18 @@ function useMovePrompt(campaign: Campaign) {
       });
       if (!active || currentRevision !== revision) return;
       const placement = result.placement.split("-")[0];
-      el.dataset["side"] =
-        placement === "top" ? "above" : placement === "bottom" ? "below" : placement;
-      el.style.left = `${Math.round(result.x)}px`;
-      el.style.top = `${Math.round(result.y)}px`;
+      element.dataset["side"] = sideName(placement);
+      element.style.left = `${Math.round(result.x)}px`;
+      element.style.top = `${Math.round(result.y)}px`;
       const arrowOffset = result.middlewareData.arrow;
       const along = placement === "left" || placement === "right" ? arrowOffset?.y : arrowOffset?.x;
-      if (along !== undefined) el.style.setProperty("--tail", `${along + 12}px`);
+      if (along !== undefined) element.style.setProperty("--tail", `${along + 12}px`);
       enter();
     };
 
     const source = anchor.current;
     if (source) {
-      const cleanup = autoUpdate(source, el, () => void place(), { animationFrame: true });
+      const cleanup = autoUpdate(source, element, () => void place(), { animationFrame: true });
       return () => {
         active = false;
         cleanup();
@@ -260,19 +225,20 @@ function useMovePrompt(campaign: Campaign) {
   }, [open, live]);
 
   // Hand a targeting request to the scene, so clicks on tokens target it.
-  useEffect(
-    () =>
-      watch([ctx.campaign.moves.targets], () => {
-        const r = ctx.campaign.moves.targets.value;
-        const s = r && systemOf(campaign).actions.find((m) => m.id === r.moveId)?.target;
-        ctx.canvas.targetPick.set(
-          r && s ? { ...(s.max !== undefined ? { max: s.max } : {}), actor: r.characterId } : null,
-        );
-        if (r) ctx.tools.activeTool.set("select");
-      }),
-    [ctx, campaign],
-  );
-  useEffect(() => () => cancel(ctx), [ctx]);
+  useEffect(() => {
+    const syncTargets = () => {
+      const r = context.campaign.moves.actor.getSnapshot().context.targets;
+      const s = r && systemOf(campaign).actions.find((m) => m.id === r.moveId)?.target;
+      context.canvas.targetPick.set(
+        r && s ? { ...(s.max === undefined ? {} : { max: s.max }), actor: r.characterId } : null,
+      );
+      if (r) context.tools.activeTool.set("select");
+    };
+    syncTargets();
+    const stop = context.campaign.moves.actor.subscribe(syncTargets);
+    return () => { stop.unsubscribe(); };
+  }, [context, campaign]);
+  useEffect(() => () => { cancel(context); }, [context]);
 
   // Escape backs out, before the canvas uses it to clear the selection.
   useEffect(() => {
@@ -280,16 +246,16 @@ function useMovePrompt(campaign: Campaign) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || e.defaultPrevented) return;
       e.preventDefault();
-      cancel(ctx);
+      cancel(context);
     };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [ctx, hasLive]);
+    globalThis.addEventListener("keydown", onKey, true);
+    return () => { globalThis.removeEventListener("keydown", onKey, true); };
+  }, [context, hasLive]);
 
-  const req = shown;
-  const move = req ? systemOf(campaign).actions.find((m) => m.id === req.moveId) : undefined;
-  const character = req ? getCharacter(campaign, req.characterId) : undefined;
-  return { ctx, hasLive, ref, req, move, character };
+  const request = shown;
+  const move = request ? systemOf(campaign).actions.find((m) => m.id === request.moveId) : undefined;
+  const character = request ? getCharacter(campaign, request.characterId) : undefined;
+  return { ctx: context, hasLive, ref: reference, req: request, move, character };
 }
 
 /** Targets, picked by clicking tokens on the map. */
@@ -302,18 +268,13 @@ function TargetStep({
   characterId: string;
   moveId: string;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const move = systemOf(campaign).actions.find((m) => m.id === moveId)!;
   const spec = move.target!;
-  const targets = useQuery(ctx.canvas.chosenTargets);
+  const targets = useQuery(context.canvas.chosenTargets);
   const ready = targets.length >= spec.min;
-  const fmt = useQuery(ctx.canvas.sceneDistance);
-  const wanted =
-    spec.max === 1
-      ? "one target"
-      : spec.max
-        ? `up to ${spec.max} targets`
-        : "any number of targets";
+  const fmt = useQuery(context.canvas.sceneDistance);
+  const wanted = wantedTargets(spec.max);
   const reach = (d: number | null) =>
     spec.range && d !== null ? inRange(d, spec.range) : "normal";
   const blocked = targets.some((t) => reach(t.distance) === "out");
@@ -323,29 +284,25 @@ function TargetStep({
       id: t.id,
       name: t.name,
       ...(t.characterId ? { characterId: t.characterId } : {}),
-      ...(t.distance !== null ? { distance: fmt(t.distance) } : {}),
+      ...(t.distance === null ? {} : { distance: fmt(t.distance) }),
       ...(reach(t.distance) === "long" ? { long: true } : {}),
     }));
-    ctx.execute(startMove, { characterId, move: move.id, targets: picked });
+    context.execute(startMove, { characterId, move: move.id, targets: picked });
   };
-  const area = spec.area;
-  const request = useQuery(ctx.canvas.areaRequest);
-  const placed = useQuery(ctx.canvas.placedArea);
+  const {area} = spec;
+  const request = useQuery(context.canvas.areaRequest);
+  const placed = useQuery(context.canvas.placedArea);
   const placing = !!request;
-  const placeArea = () => toggleAreaRequest(ctx.canvas, area!, characterId);
+  const placeArea = () => { toggleAreaRequest(context.canvas, area!, characterId); };
   return (
     <div className="move-form">
       <p className="roll-prompt-text">{spec.prompt}</p>
       {area && (
         <Button variant={placed ? "ghost" : "secondary"} pressed={placing} onClick={placeArea}>
-          {placing
-            ? "Click the map to place it"
-            : placed
-              ? "Place the area again"
-              : `Place the ${areaName(fmt, area)}`}
+          {areaButtonLabel(placing, !!placed, areaName(fmt, area))}
         </Button>
       )}
-      {targets.length ? (
+      {targets.length > 0 ? (
         <span className="roll-prompt-targets">
           {targets.map((t) => {
             const r = reach(t.distance);
@@ -355,7 +312,7 @@ function TargetStep({
                 key={t.id}
                 className="target-chip"
                 data-out={out || undefined}
-                title={out ? "Out of range" : r === "long" ? "Long range" : undefined}
+                title={RANGE_TITLES[r]}
               >
                 {t.name}
                 {t.distance !== null && <span className="muted"> {fmt(t.distance)}</span>}
@@ -375,10 +332,27 @@ function TargetStep({
   );
 }
 
+/** How many targets a move wants, as the prompt asks for them. */
+function wantedTargets(max: number | undefined) {
+  if (max === 1) return "one target";
+  return max ? `up to ${max} targets` : "any number of targets";
+}
+
+function areaButtonLabel(placing: boolean, placed: boolean, name: string) {
+  if (placing) return "Click the map to place it";
+  return placed ? "Place the area again" : `Place the ${name}`;
+}
+
+/** A target chip's tooltip, for a target that isn't in normal range. */
+const RANGE_TITLES: Record<ReturnType<typeof inRange>, string | undefined> = {
+  normal: undefined,
+  long: "Long range",
+  out: "Out of range",
+};
+
 /** An area as the button names it: "20 ft sphere". */
 const areaName = (fmt: (d: number) => string, a: AreaSpec) => `${fmt(a.size)} ${a.shape}`;
 
-/** A move's text without the list of questions the prompt asks as checkboxes below it. */
 /** The move's text without the list items its form asks as questions. */
 function withoutAskedQuestions(move: ActionDef): RichText {
   const ask = needsChoice(move);
@@ -393,7 +367,7 @@ function withoutAskedQuestions(move: ActionDef): RichText {
       return kept ? [kept] : [];
     });
     const emptyList =
-      (node.type === "bulletList" || node.type === "orderedList") && !content.length;
+      (node.type === "bulletList" || node.type === "orderedList") && content.length === 0;
     return emptyList ? null : { ...node, content };
   };
   return prune(move.text) ?? emptyRichText();

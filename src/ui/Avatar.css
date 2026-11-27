@@ -10,5 +10,6 @@
     font-weight: 600;
     color: oklch(18% 0.03 var(--avatar-hue, 250));
     background: oklch(78% 0.11 var(--avatar-hue, 250));
+    box-shadow: var(--bronze-ring);
   }
 }

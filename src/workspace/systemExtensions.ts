@@ -10,6 +10,7 @@ type ExtensionLookup = (system: Pick<GameSystem, "id"> | string | undefined) => 
  * registry, which imports every system's UI, and so the parts those systems use.
  */
 export const SystemExtensions = createContext<ExtensionLookup>(() => ({}));
+SystemExtensions.displayName = "SystemExtensions";
 
 /** What a system adds to the table; nothing outside a table that provides extensions. */
 export const useExtension = (

@@ -2,7 +2,7 @@ import * as decoding from "lib0/decoding";
 import * as encoding from "lib0/encoding";
 import * as awarenessProtocol from "y-protocols/awareness";
 import * as syncProtocol from "y-protocols/sync";
-import * as Y from "yjs";
+import type * as Y from "yjs";
 import type { Transport } from "./transport";
 
 /*
@@ -34,16 +34,16 @@ interface AwarenessChange {
 
 export class SyncSession {
   readonly awareness: awarenessProtocol.Awareness;
-  private docs = new Map<string, Y.Doc>();
-  private cleanups = new Map<string, () => void>();
+  private readonly docs = new Map<string, Y.Doc>();
+  private readonly cleanups = new Map<string, () => void>();
   /** Awareness client ids each peer has told us about, by awareness, to clear them on leave. */
-  private clients = new Map<awarenessProtocol.Awareness, Map<string, Set<number>>>();
+  private readonly clients = new Map<awarenessProtocol.Awareness, Map<string, Set<number>>>();
   /** Subdocuments' own awareness (carets in notes), by guid. */
-  private docAwareness = new Map<
+  private readonly docAwareness = new Map<
     string,
     { awareness: awarenessProtocol.Awareness; stop: () => void; heard: Set<string> }
   >();
-  private stopRoot: () => void;
+  private readonly stopRoot: () => void;
   /** Called when peers connect or disconnect, or their presence changes. */
   onChange: (() => void) | null = null;
   /** Blob-channel traffic and new peers, for the blob exchange. */
@@ -52,7 +52,7 @@ export class SyncSession {
 
   constructor(
     readonly root: Y.Doc,
-    private transport: Transport,
+    private readonly transport: Transport,
   ) {
     this.awareness = new awarenessProtocol.Awareness(root);
     this.attach(root);
@@ -68,10 +68,7 @@ export class SyncSession {
     // provider emits 'sync', which IndexedDB persistence never does.
     for (const d of root.getSubdocs()) if (d.shouldLoad) this.attach(d);
 
-    const onAwareness = ({ added, updated, removed }: AwarenessChange, origin: unknown) => {
-      if (origin === REMOTE) return;
-      this.sendAwareness(this.awareness, root.guid, [...added, ...updated, ...removed]);
-    };
+    const onAwareness = this.relayAwareness(this.awareness, root.guid);
     this.awareness.on("update", onAwareness);
     const changed = () => this.onChange?.();
     this.awareness.on("change", changed);
@@ -107,25 +104,25 @@ export class SyncSession {
   }
 
   /** Begin syncing a document (the root, or a subdocument that just loaded). */
-  private attach(doc: Y.Doc) {
-    if (this.docs.has(doc.guid)) return;
-    this.docs.set(doc.guid, doc);
+  private attach(document: Y.Doc) {
+    if (this.docs.has(document.guid)) return;
+    this.docs.set(document.guid, document);
     const onUpdate = (update: Uint8Array, origin: unknown) => {
       if (origin === REMOTE) return;
-      const enc = this.header(doc.guid, SYNC);
+      const enc = this.header(document.guid, SYNC);
       syncProtocol.writeUpdate(enc, update);
       this.transport.send("sync", encoding.toUint8Array(enc));
     };
-    doc.on("update", onUpdate);
-    this.cleanups.set(doc.guid, () => doc.off("update", onUpdate));
-    for (const peer of this.transport.peers()) this.sendStep1(doc, peer);
+    document.on("update", onUpdate);
+    this.cleanups.set(document.guid, () => { document.off("update", onUpdate); });
+    for (const peer of this.transport.peers()) this.sendStep1(document, peer);
   }
 
-  private detach(doc: Y.Doc) {
-    this.cleanups.get(doc.guid)?.();
-    this.cleanups.delete(doc.guid);
-    this.docs.delete(doc.guid);
-    this.dropAwareness(doc.guid);
+  private detach(document: Y.Doc) {
+    this.cleanups.get(document.guid)?.();
+    this.cleanups.delete(document.guid);
+    this.docs.delete(document.guid);
+    this.dropAwareness(document.guid);
   }
 
   /**
@@ -133,22 +130,27 @@ export class SyncSession {
    * dropped when the document unloads. Peers who have the document open hear
    * this device's state; the root's awareness is `awareness`.
    */
-  awarenessFor(doc: Y.Doc): awarenessProtocol.Awareness {
-    if (doc === this.root) return this.awareness;
-    const known = this.docAwareness.get(doc.guid);
+  awarenessFor(document: Y.Doc): awarenessProtocol.Awareness {
+    if (document === this.root) return this.awareness;
+    const known = this.docAwareness.get(document.guid);
     if (known) return known.awareness;
-    const awareness = new awarenessProtocol.Awareness(doc);
-    const onUpdate = ({ added, updated, removed }: AwarenessChange, origin: unknown) => {
-      if (origin === REMOTE) return;
-      this.sendAwareness(awareness, doc.guid, [...added, ...updated, ...removed]);
-    };
+    const awareness = new awarenessProtocol.Awareness(document);
+    const onUpdate = this.relayAwareness(awareness, document.guid);
     awareness.on("update", onUpdate);
-    this.docAwareness.set(doc.guid, {
+    this.docAwareness.set(document.guid, {
       awareness,
       heard: new Set(),
-      stop: () => awareness.off("update", onUpdate),
+      stop: () => { awareness.off("update", onUpdate); },
     });
     return awareness;
+  }
+
+  /** A listener that sends this device's own changes to an awareness on to peers. */
+  private relayAwareness(awareness: awarenessProtocol.Awareness, guid: string) {
+    return ({ added, updated, removed }: AwarenessChange, origin: unknown) => {
+      if (origin === REMOTE) return;
+      this.sendAwareness(awareness, guid, [...added, ...updated, ...removed]);
+    };
   }
 
   private dropAwareness(guid: string) {
@@ -170,9 +172,9 @@ export class SyncSession {
     return enc;
   }
 
-  private sendStep1(doc: Y.Doc, peer: string) {
-    const enc = this.header(doc.guid, SYNC);
-    syncProtocol.writeSyncStep1(enc, doc);
+  private sendStep1(document: Y.Doc, peer: string) {
+    const enc = this.header(document.guid, SYNC);
+    syncProtocol.writeSyncStep1(enc, document);
     this.transport.send("sync", encoding.toUint8Array(enc), peer);
   }
 
@@ -192,7 +194,7 @@ export class SyncSession {
   }
 
   private greet(peer: string) {
-    for (const doc of this.docs.values()) this.sendStep1(doc, peer);
+    for (const document of this.docs.values()) this.sendStep1(document, peer);
     this.sendAwareness(this.awareness, this.root.guid, [this.root.clientID], peer);
     for (const [guid, a] of this.docAwareness)
       this.sendAwareness(a.awareness, guid, [a.awareness.clientID], peer);
@@ -213,7 +215,7 @@ export class SyncSession {
       const ids = byPeer.get(from) ?? new Set<number>();
       byPeer.set(from, ids);
       const track = ({ added, updated }: AwarenessChange) =>
-        [...added, ...updated].forEach((id) => ids.add(id));
+        { for (const id of [...added, ...updated]) ids.add(id) };
       awareness.on("update", track);
       awarenessProtocol.applyAwarenessUpdate(awareness, decoding.readVarUint8Array(dec), REMOTE);
       awareness.off("update", track);
@@ -225,12 +227,12 @@ export class SyncSession {
       return;
     }
 
-    const doc = this.docs.get(guid);
+    const document = this.docs.get(guid);
     // A scene this peer hasn't opened: it asks when it does.
-    if (!doc) return;
+    if (!document) return;
     const isStep1 = decoding.peekVarUint(dec) === syncProtocol.messageYjsSyncStep1;
     const reply = this.header(guid, SYNC);
-    syncProtocol.readSyncMessage(dec, reply, doc, REMOTE);
+    syncProtocol.readSyncMessage(dec, reply, document, REMOTE);
     if (isStep1) this.transport.send("sync", encoding.toUint8Array(reply), from);
   }
 

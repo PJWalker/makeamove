@@ -44,3 +44,6 @@ dist-ssr
 
 # Retained local analysis cache
 .vipr/
+
+# Generated dependency graph
+/.dependencygraph/

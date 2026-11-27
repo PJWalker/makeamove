@@ -1,10 +1,20 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
+import type * as Y from "yjs";
 import { copyText } from "../data/schema";
 import type { CharacterView } from "../features/characters/types";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
 import { mountRichText } from "./richText";
 import { useCampaign } from "./campaignContext";
+
+interface CharacterTextProperties {
+  campaign: Campaign;
+  c: CharacterView;
+  field: string;
+  label: string;
+  editable: boolean;
+  placeholder?: string;
+}
 
 /**
  * A long text field on a character sheet (notes, bonds, an NPC's moves),
@@ -19,60 +29,27 @@ export function CharacterText({
   label,
   editable,
   placeholder = "Type @ to link",
-}: {
-  campaign: Campaign;
-  c: CharacterView;
-  field: string;
-  label: string;
-  editable: boolean;
-  placeholder?: string;
-}) {
-  const ctx = useCampaign();
-  const hostRef = useRef<HTMLDivElement>(null);
+}: CharacterTextProperties) {
   const textOf = (id: string | undefined) =>
     id ? campaign.characters.get(id)?.get("texts")?.get(field) : undefined;
   const own = useQuery(campaign.characters, () => textOf(c.id));
   const inherited = useQuery(campaign.characters, () => textOf(c.base));
-  const shown = own ?? inherited;
-
-  // A field nobody has written in yet gets its text when someone can write.
-  useEffect(() => {
-    if (shown || !editable) return;
-    campaign.characters.get(c.id)?.ensure("texts").ensure(field);
-  }, [shown, editable, c.id, field, campaign.characters]);
-
-  useEffect(() => {
-    const host = hostRef.current;
-    if (!host || !shown) return;
-    const rich = mountRichText(host, {
-      ctx,
-      fragment: shown,
-      placeholder,
-      label,
-      // The template's text is read until the copy makes its own.
-      editable: editable && shown === own,
-      shared: true,
-    });
-    return () => rich.destroy();
-  }, [ctx, shown, editable, campaign, label, own, placeholder]);
-
-  /** A copy's first press: its own text, starting from the template's. */
-  const fork = () => {
-    if (!editable || own || !inherited) return;
-    const m = campaign.characters.get(c.id);
-    m?.transact(() => copyText(m.ensure("texts").ensure(field), inherited));
-  };
-
+  const makeOwn = () => campaign.characters.get(c.id)?.ensure("texts").ensure(field);
   return (
-    <div className="field">
-      {label}
-      <div
-        ref={hostRef}
-        className="rich-field input"
-        data-disabled={!editable || undefined}
-        onPointerDown={fork}
-      />
-    </div>
+    <TextField
+      fieldKey={`${c.id}/${field}`}
+      label={label}
+      placeholder={placeholder}
+      editable={editable}
+      own={own}
+      inherited={inherited}
+      shared
+      makeOwn={makeOwn}
+      fork={(from) => {
+        const m = campaign.characters.get(c.id);
+        m?.transact(() => { copyText(m.ensure("texts").ensure(field), from); });
+      }}
+    />
   );
 }
 
@@ -84,19 +61,11 @@ export function GMCharacterText({
   label,
   editable,
   placeholder = "Type @ to link",
-}: {
-  campaign: Campaign;
-  c: CharacterView;
-  field: string;
-  label: string;
-  editable: boolean;
-  placeholder?: string;
-}) {
+}: CharacterTextProperties) {
   const vault = useQuery(campaign.vault);
   return vault ? (
     <VaultCharacterText
       vault={vault}
-      campaign={campaign}
       c={c}
       field={field}
       label={label}
@@ -108,62 +77,101 @@ export function GMCharacterText({
 
 function VaultCharacterText({
   vault,
-  campaign,
   c,
   field,
   label,
   editable,
   placeholder,
-}: {
+}: Omit<CharacterTextProperties, "campaign" | "placeholder"> & {
   vault: NonNullable<Campaign["vault"]["value"]>;
-  campaign: Campaign;
-  c: CharacterView;
-  field: string;
-  label: string;
-  editable: boolean;
   placeholder: string;
 }) {
-  const ctx = useCampaign();
-  const hostRef = useRef<HTMLDivElement>(null);
+  const texts = vault.characterText;
   const key = `${c.id}/${field}`;
-  const own = useQuery(vault.characterText, () => vault.characterText.get(key));
-  const inherited = useQuery(vault.characterText, () =>
-    c.base ? vault.characterText.get(`${c.base}/${field}`) : undefined,
+  const own = useQuery(texts, () => texts.get(key));
+  const inherited = useQuery(texts, () => (c.base ? texts.get(`${c.base}/${field}`) : undefined));
+  return (
+    <TextField
+      fieldKey={key}
+      label={label}
+      placeholder={placeholder}
+      editable={editable}
+      own={own}
+      inherited={inherited}
+      shared={false}
+      makeOwn={() => texts.ensure(key)}
+      fork={(from) => { texts.transact(() => { copyText(texts.ensure(key), from); }); }}
+    />
   );
-  const shown = own ?? inherited;
+}
 
+/**
+ * The rich-text field itself: a character's own text, or else the text it
+ * inherits from its template, read-only until `fork` gives it its own.
+ */
+function TextField({
+  fieldKey,
+  label,
+  placeholder,
+  editable,
+  own,
+  inherited,
+  shared,
+  makeOwn,
+  fork,
+}: {
+  /** Which character's field this is; a new one may need its text made. */
+  fieldKey: string;
+  label: string;
+  placeholder: string;
+  editable: boolean;
+  own: Y.XmlFragment | undefined;
+  inherited: Y.XmlFragment | undefined;
+  shared: boolean;
+  /** Give the field its own (empty) text. */
+  makeOwn: () => void;
+  /** Give the field its own text, starting from `from`. */
+  fork: (from: Y.XmlFragment) => void;
+}) {
+  const context = useCampaign();
+  const hostReference = useRef<HTMLDivElement>(null);
+  const shown = own ?? inherited;
+  const makeOwnNow = useEffectEvent(makeOwn);
+
+  // A field nobody has written in yet gets its text when someone can write.
   useEffect(() => {
     if (shown || !editable) return;
-    vault.characterText.ensure(key);
-  }, [shown, editable, key, vault]);
+    makeOwnNow();
+  }, [shown, editable, fieldKey]);
 
   useEffect(() => {
-    const host = hostRef.current;
+    const host = hostReference.current;
     if (!host || !shown) return;
     const rich = mountRichText(host, {
-      ctx,
+      ctx: context,
       fragment: shown,
       placeholder,
       label,
+      // The template's text is read until the copy makes its own.
       editable: editable && shown === own,
-      shared: false,
+      shared,
     });
-    return () => rich.destroy();
-  }, [ctx, shown, editable, label, placeholder, campaign, own]);
+    return () => { rich.destroy(); };
+  }, [context, shown, editable, label, own, placeholder, shared]);
 
-  const fork = () => {
-    if (!editable || own || !inherited) return;
-    vault.characterText.transact(() => copyText(vault.characterText.ensure(key), inherited));
+  /** A copy's first press: its own text, starting from the template's. */
+  const onPress = () => {
+    if (editable && !own && inherited) fork(inherited);
   };
 
   return (
     <div className="field">
       {label}
       <div
-        ref={hostRef}
+        ref={hostReference}
         className="rich-field input"
         data-disabled={!editable || undefined}
-        onPointerDown={fork}
+        onPointerDown={onPress}
       />
     </div>
   );

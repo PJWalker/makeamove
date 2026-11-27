@@ -1,17 +1,20 @@
-import { lazy, Suspense, useState, type ComponentType } from "react";
+import { lazy, Suspense, useState  } from "react";
+import type {ComponentType} from "react";
 import { IconAllowBack, IconRemoveMember } from "../ui/icons";
 import type { Campaign, MemberView } from "../campaign/campaign";
+import type { Role } from "../campaign/types";
 import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
-import { PANELS, type PanelId } from "../workspace/panelLayout";
+import { PANELS  } from "../workspace/panelLayout";
+import type {PanelId} from "../workspace/panelLayout";
 import { playedCharacterId } from "../features/characters/api";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
-import { charactersLayout, notesLayout, scenesLayout } from "./panelLayouts";
 import { allowBack, removeMember } from "../workspace/commands/campaign";
 import { can } from "../workspace/commands/views";
 import { useCampaign } from "../workspace/campaignContext";
+import { charactersLayout, notesLayout, scenesLayout } from "./panelLayouts";
 
 const ScenePanel = lazy(() =>
   import("./ScenePanel").then((module) => ({ default: module.ScenePanel })),
@@ -77,10 +80,12 @@ export function PanelIcon({
   id,
   campaign,
   className,
+  size = 22,
 }: {
   id: PanelId;
   campaign: Campaign;
   className?: string;
+  size?: number;
 }) {
   const played = useQuery(campaign.members, () =>
     id === "pc" ? playedCharacterId(campaign) : undefined,
@@ -91,12 +96,12 @@ export function PanelIcon({
         campaign={campaign}
         kind="character"
         id={played}
-        size={22}
+        size={size}
         className={className}
       />
     );
   const { Icon } = PANELS[id];
-  return <Icon size={22} {...(className ? { className } : {})} />;
+  return <Icon size={size} {...(className ? { className } : {})} />;
 }
 
 /** Panels that are a list and a detail have a layout switch in their title bar. */
@@ -135,7 +140,7 @@ function Presence({ campaign }: { campaign: Campaign }) {
 }
 
 function MemberList({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const members = useQuery(campaign.members, () => campaign.memberViews());
   const revoked = useQuery(campaign.revoked, () => campaign.revokedViews());
   // Re-read as roles change.
@@ -149,11 +154,11 @@ function MemberList({ campaign }: { campaign: Campaign }) {
             key={m.id}
             campaign={campaign}
             m={m}
-            canRemove={can(ctx, removeMember, { id: m.id })}
+            canRemove={can(context, removeMember, { id: m.id })}
           />
         ))}
       </ul>
-      {revoked.length > 0 && can(ctx, allowBack, { id: revoked[0]!.id }) && (
+      {revoked.length > 0 && can(context, allowBack, { id: revoked[0]!.id }) && (
         <section className="member-section" aria-labelledby="removed-members">
           <h3 id="removed-members" className="eyebrow">
             Removed
@@ -165,8 +170,8 @@ function MemberList({ campaign }: { campaign: Campaign }) {
                 <span className="member-name">{r.name}</span>
                 <Button
                   variant="icon"
-                  label={`Let ${r.name} back in (they rejoin with the invite link)`}
-                  onClick={() => ctx.execute(allowBack, { id: r.id })}
+                  label={`Let ${r.name} Back In`}
+                  onClick={() => context.execute(allowBack, { id: r.id })}
                 >
                   <IconAllowBack size={22} />
                 </Button>
@@ -179,6 +184,8 @@ function MemberList({ campaign }: { campaign: Campaign }) {
   );
 }
 
+const ROLE_LABELS: Record<Role, string> = { gm: "GM", player: "Player", observer: "Observer" };
+
 /** One member, with the GM's remove control and its confirmation. */
 function MemberRow({
   campaign,
@@ -189,7 +196,7 @@ function MemberRow({
   m: MemberView;
   canRemove: boolean;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const me = useQuery(device).id;
   const online = useQuery(campaign.online);
   const [confirming, setConfirming] = useState(false);
@@ -197,10 +204,10 @@ function MemberRow({
     return (
       <li className="member member-confirm">
         <span className="member-name">Remove {m.name} from the campaign?</span>
-        <Button variant="ghost" onClick={() => setConfirming(false)}>
+        <Button variant="ghost" onClick={() => { setConfirming(false); }}>
           Cancel
         </Button>
-        <Button variant="danger" onClick={() => ctx.execute(removeMember, { id: m.id })}>
+        <Button variant="danger" onClick={() => context.execute(removeMember, { id: m.id })}>
           Remove
         </Button>
       </li>
@@ -214,10 +221,10 @@ function MemberRow({
         {m.id === me && <span className="muted"> (you)</span>}
       </span>
       <span className="role-badge" data-role={m.role}>
-        {m.role === "gm" ? "GM" : m.role === "observer" ? "Observer" : "Player"}
+        {ROLE_LABELS[m.role]}
       </span>
       {canRemove && (
-        <Button variant="icon" label={`Remove ${m.name}`} onClick={() => setConfirming(true)}>
+        <Button variant="icon" label={`Remove ${m.name}`} onClick={() => { setConfirming(true); }}>
           <IconRemoveMember size={22} />
         </Button>
       )}

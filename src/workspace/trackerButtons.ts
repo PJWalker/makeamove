@@ -5,9 +5,10 @@ import { trackerBlock } from "../features/characters/trackers";
 import {
   parseTrackerButton,
   TRACKER_NODE,
-  trackerToken,
-  type TrackerButton,
+  trackerToken
+  
 } from "../data/richText";
+import type {TrackerButton} from "../data/richText";
 import { pressTrackerButton } from "./commands/characters";
 import type { CampaignContext } from "./campaignContext";
 
@@ -18,8 +19,8 @@ import type { CampaignContext } from "./campaignContext";
  */
 
 /** A pressed button that can't act gives a small shake. */
-export function shake(el: Element) {
-  el.animate(
+export function shake(element: Element) {
+  element.animate(
     [{ translate: "0" }, { translate: "-3px" }, { translate: "3px" }, { translate: "0" }],
     { duration: 180 },
   );
@@ -36,10 +37,10 @@ export function trackerTip(
   return `${b.by > 0 ? "Add" : "Spend"} ${Math.abs(b.by)} ${b.name}`;
 }
 
-export function trackerButtonExtension(ctx: CampaignContext) {
-  const { campaign } = ctx;
-  const TOKEN = /\[\[\s*[+-]\d+\s+[^\]|]+?(?:\|[^\]]+?)?\]\]/;
-  const attrsOf = (raw: string) => {
+export function trackerButtonExtension(context: CampaignContext) {
+  const { campaign } = context;
+  const TOKEN = /\[\[\s*[+-]\d+\s+[^\]|]+?(?:\|[^\]]+?)?]]/;
+  const attributesOf = (raw: string) => {
     const b = parseTrackerButton(raw);
     return b ? { by: b.by, name: b.name, label: b.label } : null;
   };
@@ -51,11 +52,11 @@ export function trackerButtonExtension(ctx: CampaignContext) {
     selectable: true,
     addAttributes() {
       return {
-        by: { default: 1, parseHTML: (el: HTMLElement) => Number(el.dataset["by"] ?? 1) },
-        name: { default: "", parseHTML: (el: HTMLElement) => el.dataset["name"] ?? "" },
+        by: { default: 1, parseHTML: (element: HTMLElement) => Number(element.dataset["by"] ?? 1) },
+        name: { default: "", parseHTML: (element: HTMLElement) => element.dataset["name"] ?? "" },
         label: {
           default: "",
-          parseHTML: (el: HTMLElement) => el.dataset["label"] ?? el.textContent ?? "",
+          parseHTML: (element: HTMLElement) => element.dataset["label"] ?? element.textContent ?? "",
         },
       };
     },
@@ -87,8 +88,8 @@ export function trackerButtonExtension(ctx: CampaignContext) {
         new InputRule({
           find: new RegExp(`(${TOKEN.source})$`),
           handler: ({ state, range, match }) => {
-            const attrs = attrsOf(match[1] ?? "");
-            if (attrs) state.tr.replaceWith(range.from, range.to, this.type.create(attrs));
+            const attributes = attributesOf(match[1] ?? "");
+            if (attributes) state.tr.replaceWith(range.from, range.to, this.type.create(attributes));
           },
         }),
       ];
@@ -98,33 +99,33 @@ export function trackerButtonExtension(ctx: CampaignContext) {
         new PasteRule({
           find: new RegExp(TOKEN.source, "g"),
           handler: ({ state, range, match }) => {
-            const attrs = attrsOf(match[0]);
-            if (attrs) state.tr.replaceWith(range.from, range.to, this.type.create(attrs));
+            const attributes = attributesOf(match[0]);
+            if (attributes) state.tr.replaceWith(range.from, range.to, this.type.create(attributes));
           },
         }),
       ];
     },
     onCreate() {
-      const dom = this.editor.view.dom;
+      const {dom} = this.editor.view;
       const buttonAt = (e: Event) =>
         (e.target as Element).closest<HTMLElement>(`[data-type="${TRACKER_NODE}"]`);
-      const toButton = (el: HTMLElement): TrackerButton => ({
-        by: Number(el.dataset["by"] ?? 0),
-        name: el.dataset["name"] ?? "",
-        label: el.dataset["label"] ?? "",
+      const toButton = (element: HTMLElement): TrackerButton => ({
+        by: Number(element.dataset["by"] ?? 0),
+        name: element.dataset["name"] ?? "",
+        label: element.dataset["label"] ?? "",
       });
       // Hovering shows what pressing would do for the selected character, or why it can't.
       dom.addEventListener("pointerover", (e) => {
-        const el = buttonAt(e);
-        if (el) el.dataset["tip"] = trackerTip(campaign, actingCharacterId(campaign), toButton(el));
+        const element = buttonAt(e);
+        if (element) element.dataset["tip"] = trackerTip(campaign, actingCharacterId(campaign), toButton(element));
       });
       dom.addEventListener("click", (e) => {
-        const el = buttonAt(e);
-        if (!el) return;
+        const element = buttonAt(e);
+        if (!element) return;
         e.preventDefault();
         const id = actingCharacterId(campaign);
-        if (!id || !ctx.execute(pressTrackerButton, { characterId: id, button: toButton(el) }))
-          shake(el);
+        if (!id || !context.execute(pressTrackerButton, { characterId: id, button: toButton(element) }))
+          shake(element);
       });
     },
   });

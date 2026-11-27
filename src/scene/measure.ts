@@ -1,4 +1,5 @@
-import { type DiagonalRule, type Grid, type Point, hexAt, hexCentre } from "./grid";
+import {    hexAt, hexCentre } from "./grid";
+import type {DiagonalRule, Grid, Point} from "./grid";
 import type { Transform } from "./types";
 
 /*
@@ -27,9 +28,9 @@ export function cellAt(grid: Grid, p: Point): { i: number; j: number } {
   };
 }
 
-export const cellCentre = (grid: Grid, i: number, j: number): Point => ({
-  x: grid.offsetX + (i + 0.5) * grid.size,
-  y: grid.offsetY + (j + 0.5) * grid.size,
+export const cellCentre = (grid: Grid, index: number, index_: number): Point => ({
+  x: grid.offsetX + (index + 0.5) * grid.size,
+  y: grid.offsetY + (index_ + 0.5) * grid.size,
 });
 
 /** Hexes between two hexes in axial coordinates. */
@@ -51,11 +52,11 @@ export interface Measure {
 export function measure(grid: Grid, a: Point, b: Point): Measure {
   if (grid.type === "square") {
     const ca = cellAt(grid, a);
-    const cb = cellAt(grid, b);
+    const callback = cellAt(grid, b);
     return {
-      distance: steps(cb.i - ca.i, cb.j - ca.j, grid.diagonal) * grid.unit,
+      distance: steps(callback.i - ca.i, callback.j - ca.j, grid.diagonal) * grid.unit,
       a: cellCentre(grid, ca.i, ca.j),
-      b: cellCentre(grid, cb.i, cb.j),
+      b: cellCentre(grid, callback.i, callback.j),
     };
   }
   if (grid.type === "hex") {
@@ -67,7 +68,7 @@ export function measure(grid: Grid, a: Point, b: Point): Measure {
       b: hexCentre(grid, hb.q, hb.r),
     };
   }
-  return { distance: (Math.hypot(b.x - a.x, b.y - a.y) / grid.size) * grid.unit, a, b };
+  return { distance: toUnits(grid, Math.hypot(b.x - a.x, b.y - a.y)), a, b };
 }
 
 /**
@@ -82,9 +83,9 @@ export function tokenCells(grid: Grid, t: Transform) {
     const c = Math.floor((centre - offset) / grid.size);
     return [c, c] as const;
   };
-  const [i0, i1] = span(t.x, t.w, grid.offsetX);
-  const [j0, j1] = span(t.y, t.h, grid.offsetY);
-  return { i0, i1, j0, j1 };
+  const [index0, index1] = span(t.x, t.w, grid.offsetX);
+  const [index0_, index1_] = span(t.y, t.h, grid.offsetY);
+  return { i0: index0, i1: index1, j0: index0_, j1: index1_ };
 }
 
 /**
@@ -107,7 +108,12 @@ export function tokenDistance(grid: Grid, a: Transform, b: Transform): number {
     return Math.max(d, 0) * grid.unit;
   }
   const gap = Math.hypot(b.x - a.x, b.y - a.y) - Math.max(a.w, a.h) / 2 - Math.max(b.w, b.h) / 2;
-  return (Math.max(0, gap) / grid.size) * grid.unit;
+  return toUnits(grid, Math.max(0, gap));
+}
+
+/** A length in world px, in the scene's units. */
+export function toUnits(grid: Grid, px: number): number {
+  return (px / grid.size) * grid.unit;
 }
 
 /** "30 ft"; a decimal place only when the distance isn't whole. */
@@ -122,7 +128,7 @@ export interface Range {
 }
 
 /** Whether a distance is within a range, at long range, or out of it. */
-export function inRange(distance: number, range: Range): "normal" | "long" | "out" {
+export function inRange(distance: number, range: Range): "long" | "normal" | "out" {
   if (distance <= range.normal) return "normal";
   if (range.long !== undefined && distance <= range.long) return "long";
   return "out";

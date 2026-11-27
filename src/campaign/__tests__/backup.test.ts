@@ -2,22 +2,6 @@ import "fake-indexeddb/auto";
 import { describe, expect, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
 
-const blobs = vi.hoisted(() => new Map<string, Blob>());
-vi.mock("../../platform/blobs", () => ({
-  getBlob: (hash: string) => Promise.resolve(blobs.get(hash) ?? null),
-  putBlob: async (blob: Blob) => {
-    const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
-    const hash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-    blobs.set(hash, blob);
-    return hash;
-  },
-}));
-// The worker's tasks, run in-process.
-vi.mock("../backupWorker", async () => {
-  const { runBackupTask } = await import("../backupTasks");
-  return { runInBackupWorker: runBackupTask };
-});
-
 import { putBlob } from "../../platform/blobs";
 import { device } from "../../platform/device";
 import { SceneDoc } from "../../scene/sceneDoc";
@@ -33,6 +17,22 @@ import {
 } from "../backupFormat";
 import { Campaign, createCampaign, deleteLocalCampaign } from "../campaign";
 import { campaigns, summaryOf } from "../registry";
+
+const blobs = vi.hoisted(() => new Map<string, Blob>());
+vi.mock("../../platform/blobs", () => ({
+  getBlob: (hash: string) => Promise.resolve(blobs.get(hash) ?? null),
+  putBlob: async (blob: Blob) => {
+    const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+    const hash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+    blobs.set(hash, blob);
+    return hash;
+  },
+}));
+// The worker's tasks, run in-process.
+vi.mock("../backupWorker", async () => {
+  const { runBackupTask } = await import("../backupTasks");
+  return { runInBackupWorker: runBackupTask };
+});
 
 const image = async (text: string) => {
   const hash = await putBlob(new Blob([text], { type: "image/png" }));
@@ -82,7 +82,7 @@ const pageText = async (c: Campaign, title: string) => {
 describe("campaign backups", () => {
   it("restores everything a GM had, on a device that has lost it", async () => {
     const { c, tokenImage } = await setUp();
-    const id = c.id;
+    const {id} = c;
     const file = await backUpCampaign(id);
     c.destroy();
     await deleteLocalCampaign(id);

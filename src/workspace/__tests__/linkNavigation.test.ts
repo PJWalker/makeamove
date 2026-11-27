@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { Campaign } from "../../campaign/campaign";
 import type { PanelLayout } from "../panelLayout";
 
+import { LinkNavigation } from "../linkNavigation";
+import { LibraryView } from "../libraryView";
+
 const dependencies = vi.hoisted(() => ({
   linkLabel: vi.fn(),
   viewCharacter: vi.fn(),
@@ -13,9 +16,6 @@ vi.mock("../../features/characters/api", () => ({
   playedCharacterId: dependencies.playedCharacterId,
 }));
 vi.mock("../../features/notes/targets", () => ({ linkLabel: dependencies.linkLabel }));
-
-import { LinkNavigation } from "../linkNavigation";
-import { LibraryView } from "../libraryView";
 
 const labels: Record<string, string> = { sword: "Longsword", strike: "Strike" };
 

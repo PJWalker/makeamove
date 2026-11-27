@@ -1,13 +1,14 @@
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
-import { isString } from "../../data/guards";
-import { collection, lww, record, rootOf, text, type Root } from "../../data/schema";
+import { isString } from "../../lib/guards";
+import { collection, lww, record, rootOf, text  } from "../../data/schema";
+import type {Root} from "../../data/schema";
 import { newSecret } from "../../lib/ids";
-import { noteEntry } from "./schema";
 import { dataName } from "../../platform/dataEpoch";
 import { SyncSession } from "../../sync/session";
 import type { JoinRoom } from "../../sync/transport";
 import { joinPublicRoom } from "../../sync/publicRoom";
+import { noteEntry } from "./schema";
 
 /*
  * The GM vault: a document of its own for GM-only pages, kept apart from the
@@ -42,7 +43,7 @@ export class Vault {
   readonly meta: Root<typeof vaultShape>["meta"];
   readonly notes: Root<typeof vaultShape>["notes"];
   readonly characterText: Root<typeof vaultShape>["characterText"];
-  private persistence: IndexeddbPersistence;
+  private readonly persistence: IndexeddbPersistence;
   private session: SyncSession | null = null;
   private destroyed = false;
 

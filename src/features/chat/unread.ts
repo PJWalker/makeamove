@@ -13,17 +13,13 @@ import { visibilityOf } from "./types";
 
 const key = (campaignId: string) => dataName("chat-seen", campaignId);
 
-function load(campaignId: string): string {
-  return getStorageItem(key(campaignId)) ?? "";
-}
-
 const stamps = new Map<string, string>();
 /** Bumped when a stamp changes, so the unread count recomputes. */
 const version = store(0);
 
 /** The last stamp seen in a campaign. */
 function seenStamp(campaignId: string): string {
-  if (!stamps.has(campaignId)) stamps.set(campaignId, load(campaignId));
+  if (!stamps.has(campaignId)) stamps.set(campaignId, getStorageItem(key(campaignId)) ?? "");
   return stamps.get(campaignId)!;
 }
 

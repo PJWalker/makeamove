@@ -15,17 +15,17 @@ export const RECORDER = "shortcut-recorder";
  */
 
 /** The call a combo runs: the player's own binding, else a command's built-in key. */
-export function callForCombo(ctx: CampaignContext, combo: string): Action | undefined {
-  const own = actionForCombo(shortcuts(ctx.campaign), combo);
-  if (own) return findAction(ctx, own);
-  const bound = (ctx.commands.all() as AnyTableCommand[]).find((c) =>
+export function callForCombo(context: CampaignContext, combo: string): Action | undefined {
+  const own = actionForCombo(shortcuts(context.campaign), combo);
+  if (own) return findAction(context, own);
+  const bound = (context.commands.all() as AnyTableCommand[]).find((c) =>
     c.keys?.some((k) => platformCombo(k) === combo),
   );
-  if (bound) return findAction(ctx, bound.id);
-  return listActions(ctx).find((a) => a.keys?.includes(combo));
+  if (bound) return findAction(context, bound.id);
+  return listActions(context).find((a) => a.keys?.includes(combo));
 }
 
-export function useCommandKeys(ctx: CampaignContext) {
+export function useCommandKeys(context: CampaignContext) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as Element | null;
@@ -35,15 +35,15 @@ export function useCommandKeys(ctx: CampaignContext) {
       // Pop-ups are non-modal: keys aimed inside a dialog or field stay there.
       const typing = isTyping(e.target) || !!target?.closest?.("dialog");
       if (typing && !firesWhileTyping(combo)) return;
-      const a = callForCombo(ctx, combo);
+      const a = callForCombo(context, combo);
       if (a?.available !== true) return;
       e.preventDefault();
       e.stopPropagation();
-      ctx.table.closePalette();
-      ctx.recent.note(a.id);
-      invoke(ctx, a.command, a.params);
+      context.table.closePalette();
+      context.recent.note(a.id);
+      invoke(context, a.command, a.params);
     };
-    window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
-  }, [ctx]);
+    globalThis.addEventListener("keydown", onKey, true);
+    return () => { globalThis.removeEventListener("keydown", onKey, true); };
+  }, [context]);
 }

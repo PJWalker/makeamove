@@ -1,5 +1,7 @@
 import type * as React from "react";
 import { useEffect, useRef } from "react";
+import { createActor } from "xstate";
+import { throwMachine } from "./throwMachine";
 
 export interface ThrowOptions {
   /** Called when the element is let go at least THROW_DISTANCE from where it was picked up. */
@@ -13,6 +15,8 @@ export interface ThrowOptions {
    * picked up; returns what to do when it comes back, or is let go.
    */
   onAway?: ((element: HTMLElement, carrier: HTMLElement) => () => void) | undefined;
+  /** Called as the copy is picked up; returns what to do when it's let go. */
+  onLift?: ((element: HTMLElement, carrier: HTMLElement) => () => void) | undefined;
 }
 
 /** Inherited text styles a lifted copy loses when it leaves its panel. */
@@ -40,12 +44,12 @@ function lift(element: HTMLElement) {
   carrier.classList.add("throw-carrier");
   // A cloned canvas comes up blank; copy what each one shows.
   const canvases = element.querySelectorAll("canvas");
-  carrier.querySelectorAll("canvas").forEach((copy, index) => {
+  for (const [index, copy] of carrier.querySelectorAll("canvas").entries()) {
     const source = canvases[index]!;
     copy.width = source.width;
     copy.height = source.height;
     copy.getContext("2d")?.drawImage(source, 0, 0);
-  });
+  }
   for (const property of INHERITED)
     carrier.style.setProperty(property, computed.getPropertyValue(property));
   Object.assign(carrier.style, {
@@ -55,7 +59,7 @@ function lift(element: HTMLElement) {
     height: `${box.height}px`,
   });
   document.body.append(carrier);
-  const opacity = element.style.opacity;
+  const {opacity} = element.style;
   element.style.opacity = "0";
   return {
     carrier,
@@ -68,6 +72,8 @@ function lift(element: HTMLElement) {
 
 /** How far (CSS px) a picked-up element must be carried for letting go to throw it. */
 const THROW_DISTANCE = 128;
+/** How far (CSS px) a press may wander and still count as a tap. */
+const TAP_SLOP = 6;
 
 export function useThrow({
   onThrow,
@@ -75,7 +81,9 @@ export function useThrow({
   ignoreControls = false,
   onTap,
   onAway,
+  onLift,
 }: ThrowOptions) {
+  const actorInstance = useRef<ReturnType<typeof createActor<typeof throwMachine>> | null>(null);
   const gesture = useRef<{
     pointer: number;
     originX: number;
@@ -90,7 +98,7 @@ export function useThrow({
     back?: (() => void) | undefined;
   } | null>(null);
   const release = () => {
-    const current = gesture.current;
+    const {current} = gesture;
     if (!current) return;
     gesture.current = null;
     current.element.style.cursor = current.cursor;
@@ -101,13 +109,20 @@ export function useThrow({
     return current;
   };
   useEffect(() => {
+    const instance = createActor(throwMachine);
+    actorInstance.current = instance;
+    instance.start();
     const cancel = () => {
-      release();
+      instance.send({ type: "CANCEL" });
+      void release();
     };
     window.addEventListener("blur", cancel);
     return () => {
       window.removeEventListener("blur", cancel);
+      instance.send({ type: "CANCEL" });
       release();
+      instance.stop();
+      actorInstance.current = null;
     };
   }, []);
   return {
@@ -124,7 +139,13 @@ export function useThrow({
       const element = event.currentTarget;
       element.setPointerCapture(event.pointerId);
       element.focus({ preventScroll: true });
-      const { carrier, drop } = lift(element);
+      const { carrier, drop: dropCopy } = lift(element);
+      const letGo = onLift?.(element, carrier);
+      const drop = () => {
+        letGo?.();
+        dropCopy();
+      };
+      actorInstance.current?.send({ type: "GRAB" });
       gesture.current = {
         pointer: event.pointerId,
         originX: event.clientX,
@@ -140,14 +161,15 @@ export function useThrow({
       element.style.cursor = "grabbing";
     },
     onPointerMove(event: React.PointerEvent<HTMLElement>) {
-      const current = gesture.current;
+      const {current} = gesture;
       if (!current || current.pointer !== event.pointerId) return;
       const offsetX = event.clientX - current.originX;
       const offsetY = event.clientY - current.originY;
       current.carrier.style.translate = `${offsetX}px ${offsetY}px`;
       const distance = Math.hypot(offsetX, offsetY);
-      current.moved ||= distance >= 6;
+      current.moved ||= distance >= TAP_SLOP;
       const away = distance >= THROW_DISTANCE;
+      actorInstance.current?.send({ type: "MOVE", moved: current.moved, away });
       if (away && !current.back)
         current.back = onAway?.(current.element, current.carrier) ?? (() => {});
       else if (!away && current.back) {
@@ -156,18 +178,21 @@ export function useThrow({
       }
     },
     onPointerUp(event: React.PointerEvent<HTMLElement>) {
-      const current = gesture.current;
+      const {current} = gesture;
       if (!current || current.pointer !== event.pointerId) return;
       const distance = Math.hypot(event.clientX - current.originX, event.clientY - current.originY);
+      actorInstance.current?.send({ type: "UP" });
       release();
       event.stopPropagation();
       if (enabled && distance >= THROW_DISTANCE) onThrow();
-      else if (enabled && !current.moved && distance < 6) onTap?.();
+      else if (enabled && !current.moved && distance < TAP_SLOP) onTap?.();
     },
     onPointerCancel() {
+      actorInstance.current?.send({ type: "CANCEL" });
       release();
     },
     onLostPointerCapture() {
+      actorInstance.current?.send({ type: "CANCEL" });
       release();
     },
     onKeyDown(event: React.KeyboardEvent<HTMLElement>) {

@@ -6,10 +6,10 @@ import type { CharacterView } from "../../features/characters/types";
 import { characterLinkTargets } from "../../features/notes/targets";
 import { Button } from "../../ui/Button";
 import { useQuery } from "../../ui/useQuery";
-import { BONDS } from "./bonds";
-import { advanceBond, bondsFor, DW2_RELATIONSHIP_DEPTH, forgeBond } from "./bondStore";
 import { bumpData } from "../../workspace/commands/characters";
 import { useCampaign } from "../../workspace/campaignContext";
+import { BONDS } from "./bonds";
+import { advanceBond, bondsFor, DW2_RELATIONSHIP_DEPTH, forgeBond } from "./bondStore";
 
 const FULL = DW2_RELATIONSHIP_DEPTH.max;
 
@@ -80,9 +80,9 @@ export function Dw2Bonds({
                           {move.name}:{" "}
                           {move.starting
                             ? "Starting move"
-                            : advancedMoveIds.has(move.id)
+                            : (advancedMoveIds.has(move.id)
                               ? "Unlocked"
-                              : "Locked"}
+                              : "Locked")}
                         </li>
                       ))}
                     </ul>
@@ -116,7 +116,7 @@ function BondForgeForm({
   eligibleBondmates: ReturnType<typeof characterLinkTargets>;
   bonds: ReturnType<typeof bondsFor>;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [bondmateId, setBondmateId] = useState("");
   const [bondType, setBondType] = useState("");
   const [bondMoveId, setBondMoveId] = useState("");
@@ -140,7 +140,7 @@ function BondForgeForm({
           character.id,
           bondmateId,
           bondType,
-          (id, xp) => ctx.execute(bumpData, { id, key: "xp", by: xp }),
+          (id, xp) => context.execute(bumpData, { id, key: "xp", by: xp }),
         );
     if (changed) {
       setBondmateId("");
@@ -188,7 +188,7 @@ function BondForgeForm({
       {reinforcing && availableMoves.length > 0 && (
         <label>
           Advanced move
-          <select value={bondMoveId} onChange={(event) => setBondMoveId(event.currentTarget.value)}>
+          <select value={bondMoveId} onChange={(event) => { setBondMoveId(event.currentTarget.value); }}>
             <option value="">Choose a move</option>
             {availableMoves.map((move) => (
               <option key={move.id} value={move.id}>

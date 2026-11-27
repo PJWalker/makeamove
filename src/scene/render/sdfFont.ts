@@ -17,7 +17,7 @@ const PAGE_SIZE = 2048;
 export interface SdfFontSpec {
   family: string;
   weight: number;
-  style?: "normal" | "italic";
+  style?: "italic" | "normal";
 }
 
 /** The spec as a CSS font shorthand, at `size` px. */
@@ -101,9 +101,9 @@ export class SdfFont extends AbstractBitmapFont<SdfFont> {
     }
     if (!this.page || this.y + height > PAGE_SIZE) this.addPage();
     const { data, source } = this.page!;
-    for (let i = 0; i < width * height; i++) {
-      const at = ((this.y + Math.floor(i / width)) * PAGE_SIZE + this.x + (i % width)) * 4;
-      data.fill(glyph.data[i] ?? 0, at, at + 4);
+    for (let index = 0; index < width * height; index++) {
+      const at = ((this.y + Math.floor(index / width)) * PAGE_SIZE + this.x + (index % width)) * 4;
+      data.fill(glyph.data[index] ?? 0, at, at + 4);
     }
     this.chars[char].texture = new Texture({
       source,
@@ -135,7 +135,7 @@ export function sdfFont(spec: SdfFontSpec, haloRatio: number): string {
   if (!Cache.has(`${name}-bitmap`)) {
     const font = new SdfFont(spec, haloRatio * GLYPH_SIZE);
     Cache.set(`${name}-bitmap`, font);
-    font.once("destroy", () => Cache.remove(`${name}-bitmap`));
+    font.once("destroy", () => { Cache.remove(`${name}-bitmap`); });
   }
   return name;
 }

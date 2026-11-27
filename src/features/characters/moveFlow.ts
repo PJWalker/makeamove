@@ -4,7 +4,8 @@ import { device } from "../../platform/device";
 import type { ActionDef } from "../../systems/types";
 import { postRoll, myName } from "../chat/send";
 import type { MoveSuggestion, MoveTarget } from "../chat/types";
-import { asksFirst, performMove, type MoveChoice } from "./moves";
+import { asksFirst, performMove  } from "./moves";
+import type {MoveChoice} from "./moves";
 import { getCharacter, listCharacters } from "./queries";
 import { claimSessionMove, sessionMoveUsed } from "./sessionMoves";
 import { bumpData, setField, setModifier } from "./sheet";
@@ -29,20 +30,20 @@ export function startMove(
   if (sessionMoveUsed(campaign, characterId, move)) return;
   batch(() => {
     if (move.target && !targets) {
-      campaign.moves.ask.value = null;
-      campaign.moves.targets.value = { moveId: move.id, characterId };
+      campaign.moves.ask(null);
+      campaign.moves.targets({ moveId: move.id, characterId });
       return;
     }
-    campaign.moves.targets.value = null;
+    campaign.moves.targets(null);
     if (asksFirst(systemOf(campaign), move))
-      campaign.moves.ask.value = {
+      campaign.moves.ask({
         moveId: move.id,
         characterId,
         ...(targets ? { targets } : {}),
         ...(initialChoice ? { choice: initialChoice } : {}),
-      };
+      });
     else {
-      campaign.moves.ask.value = null;
+      campaign.moves.ask(null);
       void makeMove(campaign, characterId, move, {}, targets);
     }
   });

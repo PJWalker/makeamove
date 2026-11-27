@@ -2,16 +2,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useConstant } from "../ui/useConstant";
 import { entityContent } from "../features/chat/content";
 import type { Campaign } from "../campaign/campaign";
-import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
+import { ContextMenu  } from "../ui/ContextMenu";
+import type {MenuItem} from "../ui/ContextMenu";
 import { registerLinkDrop } from "../workspace/entityDrag";
-import { PinnedStrip } from "./ChatExtras";
-import { ChatComposer } from "./ChatComposer";
-import { ChatLog } from "./ChatLog";
-import { PinnedMessage } from "./ChatMessage";
 import { useCampaign } from "../workspace/campaignContext";
 import { useQuery } from "../ui/useQuery";
 import { say } from "../workspace/commands/chat";
 import { menuFor } from "../workspace/commands/views";
+import { PinnedStrip } from "./ChatExtras";
+import { ChatComposer } from "./ChatComposer";
+import { ChatLog } from "./ChatLog";
+import { PinnedMessage } from "./ChatMessage";
 
 /*
  * The chat panel: who's here, the log of chat and rolls, the message box
@@ -19,10 +20,10 @@ import { menuFor } from "../workspace/commands/views";
  */
 
 export function ChatPanel({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   /** Replies only this device sees: /help, and errors. */
-  const notes = useQuery(ctx.table.chatNotes);
-  const ref = useRef<HTMLDivElement>(null);
+  const notes = useQuery(context.table.chatNotes);
+  const reference = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const [quickRollMessage, setQuickRollMessage] = useState<string | null>(null);
   const rollOverlay = useConstant(() => {
@@ -30,29 +31,29 @@ export function ChatPanel({ campaign }: { campaign: Campaign }) {
     host.className = "chat-roll-overlay-host";
     return host;
   });
-  const closeMenu = useCallback(() => setMenu(null), []);
+  const closeMenu = useCallback(() => { setMenu(null); }, []);
   const openMenu = useCallback(
     (x: number, y: number, id: string) => {
-      const items = menuFor(ctx, { kind: "chatMessage", id });
-      if (items.length) setMenu({ x, y, items });
+      const items = menuFor(context, { kind: "chatMessage", id });
+      if (items.length > 0) setMenu({ x, y, items });
     },
-    [ctx],
+    [context],
   );
 
   // Something dragged onto the chat is sent as a link (into the message box, it joins the message instead).
   useEffect(() => {
-    if (!ref.current) return;
-    return registerLinkDrop(ref.current, (link) => {
-      ctx.execute(say, { content: entityContent(link.kind, link.id, link.label) });
+    if (!reference.current) return;
+    return registerLinkDrop(reference.current, (link) => {
+      context.execute(say, { content: entityContent(link.kind, link.id, link.label) });
     });
-  }, [ctx]);
+  }, [context]);
   useEffect(() => {
     document.body.append(rollOverlay);
-    return () => rollOverlay.remove();
+    return () => { rollOverlay.remove(); };
   }, [rollOverlay]);
 
   return (
-    <div className="chat" ref={ref}>
+    <div className="chat" ref={reference}>
       <PinnedStrip
         campaign={campaign}
         render={(m) => <PinnedMessage campaign={campaign} m={m} />}

@@ -1,9 +1,11 @@
+import type { Rect } from "../camera";
 import { bounds, contains } from "../geometry";
 import type { Point } from "../grid";
 import { moveSelection } from "./move";
 import { editRequest } from "./text";
 import { handleAt, handleCursor, startHandleDrag } from "./transform";
-import { dragged, type Gesture, type ToolContext, type ToolPress } from "./types";
+import { dragged    } from "./types";
+import type {Gesture, ToolContext, ToolPress} from "./types";
 
 /**
  * The Select tool (and the Lights tool's own): a press on a handle drags it,
@@ -56,6 +58,16 @@ export function hoverCursor(c: ToolContext, world: Point, screen: Point): string
   return c.hitTest(world) ? "move" : undefined;
 }
 
+/** The rectangle with corners at a and b. */
+function rectBetween(a: Point, b: Point): Rect {
+  return {
+    x: Math.min(a.x, b.x),
+    y: Math.min(a.y, b.y),
+    w: Math.abs(b.x - a.x),
+    h: Math.abs(b.y - a.y),
+  };
+}
+
 /**
  * Selecting everything inside a dragged rectangle, added to `base`. A press
  * on an unselected map (`pick`) that doesn't become a drag selects the map.
@@ -64,27 +76,17 @@ function marquee(c: ToolContext, start: Point, base: string[], pick: string | nu
   let moved = !pick;
   return {
     kind: "marquee",
-    marqueeRect: (hover) => ({
-      x: Math.min(start.x, hover.x),
-      y: Math.min(start.y, hover.y),
-      w: Math.abs(hover.x - start.x),
-      h: Math.abs(hover.y - start.y),
-    }),
+    marqueeRect: (hover) => rectBetween(start, hover),
     move(_e, world) {
       if (!moved) {
         if (!dragged(c, start, world)) return;
         moved = true;
       }
-      const rect = {
-        x: Math.min(start.x, world.x),
-        y: Math.min(start.y, world.y),
-        w: Math.abs(world.x - start.x),
-        h: Math.abs(world.y - start.y),
-      };
+      const rect = rectBetween(start, world);
       const inside = c
         .allElements()
-        .flatMap((el) =>
-          !el.locked && c.pickable(el) && contains(rect, bounds([el])!) ? [el.id] : [],
+        .flatMap((element) =>
+          !element.locked && c.pickable(element) && contains(rect, bounds([element])!) ? [element.id] : [],
         );
       c.selection.value = [...new Set([...base, ...inside])];
       c.updateOverlay();

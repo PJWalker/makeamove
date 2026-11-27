@@ -1,5 +1,5 @@
-import * as Y from "yjs";
-import { store, type Store } from "../lib/store";
+import type * as Y from "yjs";
+import { assign, createActor, setup } from "xstate";
 import { canWrite, pickFolder } from "../platform/files";
 import { deleteValue, readValue, writeValue } from "../platform/keyval";
 import { finishImport, openGuids, roleIn, thisDevice } from "./backup";
@@ -51,7 +51,8 @@ class FolderSync {
   constructor(
     private readonly campaign: Campaign,
     private readonly dir: FileSystemDirectoryHandle,
-    private readonly status: Store<FolderBackupState>,
+    private readonly status: () => FolderBackupState,
+    private readonly setStatus: (state: FolderBackupState) => void,
   ) {}
 
   start() {
@@ -68,25 +69,25 @@ class FolderSync {
         if (document.visibilityState === "hidden") this.flush();
       };
       document.addEventListener("visibilitychange", onHide);
-      this.stops.push(() => document.removeEventListener("visibilitychange", onHide));
+      this.stops.push(() => { document.removeEventListener("visibilitychange", onHide); });
     }
     void this.save();
   }
 
   /** Mark a document dirty on each change, and its subdocuments as they load. */
-  private watchDoc(doc: Y.Doc) {
+  private watchDoc(document: Y.Doc) {
     const watchOne = (d: Y.Doc) => {
-      const onUpdate = () => this.changed(d.guid);
+      const onUpdate = () => { this.changed(d.guid); };
       d.on("update", onUpdate);
-      this.stops.push(() => d.off("update", onUpdate));
+      this.stops.push(() => { d.off("update", onUpdate); });
     };
-    watchOne(doc);
-    for (const sub of doc.getSubdocs()) if (sub.shouldLoad) watchOne(sub);
+    watchOne(document);
+    for (const sub of document.getSubdocs()) if (sub.shouldLoad) watchOne(sub);
     const onSubdocs = ({ loaded }: { loaded: Set<Y.Doc> }) => {
       for (const sub of loaded) watchOne(sub);
     };
-    doc.on("subdocs", onSubdocs);
-    this.stops.push(() => doc.off("subdocs", onSubdocs));
+    document.on("subdocs", onSubdocs);
+    this.stops.push(() => { document.off("subdocs", onSubdocs); });
   }
 
   private changed(guid: string) {
@@ -109,23 +110,25 @@ class FolderSync {
       return this.saving;
     }
     const folder = this.dir.name;
-    const last = this.status.value;
-    this.status.value = {
+    const last = this.status();
+    this.setStatus({
       state: "saving",
       folder,
       ...("savedAt" in last && { savedAt: last.savedAt }),
-    };
+    });
     this.saving = this.write()
       .then(() => {
-        if (!this.stopped) this.status.value = { state: "saved", folder, savedAt: Date.now() };
+        if (!this.stopped) this.setStatus({ state: "saved", folder, savedAt: Date.now() });
       })
-      .catch((e: unknown) => {
+      .catch((error: unknown) => {
         if (this.stopped) return;
         // Permission can lapse while open; wait for a click.
-        const lost = e instanceof DOMException && e.name === "NotAllowedError";
-        this.status.value = lost
-          ? { state: "paused", folder }
-          : { state: "failed", folder, error: e instanceof Error ? e.message : String(e) };
+        const lost = error instanceof DOMException && error.name === "NotAllowedError";
+        this.setStatus(
+          lost
+            ? { state: "paused", folder }
+            : { state: "failed", folder, error: error instanceof Error ? error.message : String(error) },
+        );
       })
       .finally(() => {
         this.saving = null;
@@ -138,8 +141,8 @@ class FolderSync {
   }
 
   private async write() {
-    const dirty = this.dirty;
-    const everything = this.everything;
+    const {dirty} = this;
+    const {everything} = this;
     this.dirty = new Set();
     this.everything = false;
     try {
@@ -151,10 +154,10 @@ class FolderSync {
         role: roleIn(this.campaign.id),
         changed: everything ? "all" : [...dirty],
       });
-    } catch (e) {
+    } catch (error) {
       for (const guid of dirty) this.dirty.add(guid);
       this.everything ||= everything;
-      throw e;
+      throw error;
     }
   }
 
@@ -183,37 +186,59 @@ async function mergeFolder(dir: FileSystemDirectoryHandle, campaignId?: string) 
  * A campaign's backup to a folder on this device: kept up to date while the
  * campaign is open, once it's linked. One per open campaign; `dispose` stops it.
  */
+const folderBackupMachine = setup({
+  types: {
+    context: {} as { state: FolderBackupState },
+    events: {} as { type: "SET_STATE"; state: FolderBackupState },
+  },
+}).createMachine({
+  initial: "active",
+  context: { state: { state: "off" } },
+  states: { active: {} },
+  on: {
+    SET_STATE: {
+      actions: assign({ state: ({ event }) => event.state }),
+    },
+  },
+});
+
 export class FolderBackup {
-  readonly status = store<FolderBackupState>({ state: "off" });
+  readonly actor = createActor(folderBackupMachine);
   #running: FolderSync | null = null;
   #disposed = false;
 
   /** Start backing up to the campaign's linked folder, if it has one. */
   constructor(private readonly campaign: Campaign) {
+    this.actor.start();
     void (async () => {
       const dir = await readValue<FileSystemDirectoryHandle>(handleKey(campaign.id));
       if (this.#disposed || !dir) return;
       if (await canWrite(dir)) {
         if (!this.#disposed) this.#begin(dir);
-      } else if (!this.#disposed) this.status.value = { state: "paused", folder: dir.name };
+      } else if (!this.#disposed) this.setStatus({ state: "paused", folder: dir.name });
     })();
   }
 
   #begin(dir: FileSystemDirectoryHandle) {
     this.#running?.stop();
-    this.#running = new FolderSync(this.campaign, dir, this.status);
+    this.#running = new FolderSync(
+      this.campaign,
+      dir,
+      () => this.actor.getSnapshot().context.state,
+      (state) => { this.actor.send({ type: "SET_STATE", state }); },
+    );
     this.#running.start();
   }
 
   #stop() {
     this.#running?.stop();
     this.#running = null;
-    this.status.value = { state: "off" };
+    this.setStatus({ state: "off" });
   }
 
   /** Choose a folder and start backing the campaign up to it. False if the user cancels. */
   async link(): Promise<boolean> {
-    const id = this.campaign.id;
+    const {id} = this.campaign;
     const dir = await pickFolder(`backup-${id}`);
     if (!dir) return false;
     await mergeFolder(dir, id);
@@ -226,6 +251,10 @@ export class FolderBackup {
   async resume() {
     const dir = await readValue<FileSystemDirectoryHandle>(handleKey(this.campaign.id));
     if (dir && (await canWrite(dir, true))) this.#begin(dir);
+  }
+
+  private setStatus(state: FolderBackupState) {
+    this.actor.send({ type: "SET_STATE", state });
   }
 
   async unlink() {

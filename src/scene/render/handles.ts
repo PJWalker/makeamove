@@ -1,4 +1,5 @@
-import { type Camera, toScreen } from "../camera";
+import {  toScreen } from "../camera";
+import type {Camera} from "../camera";
 import { corners } from "../geometry";
 import type { Point } from "../grid";
 import type { Transform } from "../types";
@@ -7,7 +8,7 @@ import type { Transform } from "../types";
 export const ROTATE_HANDLE_GAP = 28;
 export const HANDLE_SIZE = 10;
 
-export type LightPart = "lamp" | "bright" | "dim";
+export type LightPart = "bright" | "dim" | "lamp";
 
 /**
  * A selected light's handles, in screen coordinates: one on the lamp's rim (its

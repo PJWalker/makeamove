@@ -4,7 +4,7 @@
  */
 export type TrayPick =
   | { kind: "die"; sides: number }
-  | { kind: "modifier"; value: 1 | -1 }
+  | { kind: "modifier"; value: -1 | 1 }
   | { kind: "stat"; stat: string; value: number };
 
 /** A number written with its sign, as a chip shows it: "+1", "−2". */
@@ -15,8 +15,19 @@ export const chipText = (value: number, label?: string) =>
   label ? `${label}\n${signed(value)}` : signed(value);
 
 /** How a pick reads on its tray button: "d6", "+1", "−1", "STR". */
-export const pickName = (pick: TrayPick) =>
-  pick.kind === "die" ? `d${pick.sides}` : pick.kind === "stat" ? pick.stat : signed(pick.value);
+export function pickName(pick: TrayPick): string {
+  switch (pick.kind) {
+    case "die": {
+      return `d${pick.sides}`;
+    }
+    case "stat": {
+      return pick.stat;
+    }
+    case "modifier": {
+      return signed(pick.value);
+    }
+  }
+}
 
 export const samePick = (a: TrayPick, b: TrayPick) => pickName(a) === pickName(b);
 

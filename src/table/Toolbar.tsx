@@ -1,13 +1,15 @@
 import type { PointerEvent as ReactPointerEvent, MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-// oxlint-disable-next-line react-doctor/no-flush-sync -- View transitions need the rendered tool settings in their capture callback.
+// eslint-disable-next-line react-doctor/no-flush-sync -- View transitions need the rendered tool settings in their capture callback.
 import { flushSync } from "react-dom";
+import { createPortal } from "react-dom";
 import type { Store } from "../lib/store";
 import { startReorder } from "../ui/reorder";
 import { scrollSideways } from "../ui/wheel";
-import { createPortal } from "react-dom";
-import { type LightToolMode, PEN_WIDTH_RANGE, type SelectKind, type ToolId } from "../scene/tools";
-import { AREA_COLOURS, SHAPES, type ShapeKind } from "../scene/types";
+import {  PEN_WIDTH_RANGE   } from "../scene/tools";
+import type {LightToolMode, SelectKind, ToolId} from "../scene/tools";
+import { AREA_COLOURS, SHAPES  } from "../scene/types";
+import type {ShapeKind} from "../scene/types";
 import { Button } from "../ui/Button";
 import { ColourPicker } from "../ui/ColourPicker";
 import { Segmented, ToggleGroup } from "../ui/Segmented";
@@ -21,28 +23,31 @@ import {
   IconText,
   IconToken,
   IconWall,
-  type Icon,
+  
+  PROMINENT_ICON_SIZE
 } from "../ui/icons";
+import type {Icon} from "../ui/icons";
 import { TOOLS } from "../workspace/tools";
-import { ContextMenu } from "../ui/ContextMenu";
+import { ContextMenu  } from "../ui/ContextMenu";
+import type {MenuItem} from "../ui/ContextMenu";
 import { useQuery } from "../ui/useQuery";
 import { withTransition } from "../ui/transition";
-import { EffectSightToggles } from "./effectOptions";
-import { EFFECT_OPTIONS } from "./effectOptionsData";
-import { TextStyleFields } from "./TextStyleFields";
 import { useCampaign } from "../workspace/campaignContext";
 import { selectTool } from "../workspace/commands/core";
 import { menuFor } from "../workspace/commands/views";
+import { EffectSightToggles } from "./effectOptions";
+import { EFFECT_OPTIONS } from "./effectOptionsData";
+import { TextStyleFields } from "./TextStyleFields";
 import { useDockStripLayout } from "./dockStrip";
 
 function measureToolbar(toolbar: HTMLElement) {
   const strip = toolbar.querySelector<HTMLElement>(".toolbar-tools")!;
   const style = getComputedStyle(toolbar);
-  const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-  const optionsWidth = parseFloat(style.getPropertyValue("--toolbar-options-width"));
+  const padding = Number.parseFloat(style.paddingLeft) + Number.parseFloat(style.paddingRight);
+  const optionsWidth = Number.parseFloat(style.getPropertyValue("--toolbar-options-width"));
   const optionsInset =
-    parseFloat(style.getPropertyValue("--space-3")) +
-    parseFloat(style.getPropertyValue("--space-2")) +
+    Number.parseFloat(style.getPropertyValue("--space-3")) +
+    Number.parseFloat(style.getPropertyValue("--space-2")) +
     1;
   return {
     width: strip.scrollWidth + padding + optionsWidth + optionsInset,
@@ -57,7 +62,7 @@ function inOrder(tools: typeof TOOLS, order: ToolId[]) {
   return [...tools].sort((a, b) => rank(a.id) - rank(b.id));
 }
 
-const TOOL_OPTIONS: Partial<Record<ToolId, "select" | "pen" | "light" | "effect">> = {
+const TOOL_OPTIONS: Partial<Record<ToolId, "effect" | "light" | "pen" | "select">> = {
   select: "select",
   draw: "pen",
   shape: "pen",
@@ -72,12 +77,12 @@ function useShownTool(activeTool: Store<ToolId>): ToolId {
   useEffect(
     () =>
       activeTool.subscribe(() => {
-        const prev = shown.current;
+        const previous = shown.current;
         const next = activeTool.value;
-        if (prev === next) return;
+        if (previous === next) return;
         shown.current = next;
-        const show = () => flushSync(() => setTool(next));
-        if (!TOOL_OPTIONS[prev] && !TOOL_OPTIONS[next]) return show();
+        const show = () => { flushSync(() => { setTool(next); }); };
+        if (!TOOL_OPTIONS[previous] && !TOOL_OPTIONS[next]) { show(); return; }
         void withTransition(show, { rootClass: "vt-tool" });
       }),
     [activeTool],
@@ -86,18 +91,18 @@ function useShownTool(activeTool: Store<ToolId>): ToolId {
 }
 
 export function Toolbar({ isGm }: { isGm: boolean }) {
-  const ctx = useCampaign();
-  const order = useQuery(ctx.tools.toolOrder);
-  const tool = useShownTool(ctx.tools.activeTool);
-  const toolbarRef = useRef<HTMLDivElement>(null);
-  useDockStripLayout(toolbarRef, "top", measureToolbar);
+  const context = useCampaign();
+  const order = useQuery(context.tools.toolOrder);
+  const tool = useShownTool(context.tools.activeTool);
+  const toolbarReference = useRef<HTMLDivElement>(null);
+  useDockStripLayout(toolbarReference, "top", measureToolbar);
   const tools = useMemo(
     () =>
       inOrder(
-        TOOLS.filter((t) => ctx.commands.permits(selectTool, { tool: t.id }) === true),
+        TOOLS.filter((t) => context.commands.permits(selectTool, { tool: t.id }) === true),
         order,
       ),
-    [ctx, order],
+    [context, order],
   );
 
   function dragTool(id: ToolId, e: ReactPointerEvent) {
@@ -113,13 +118,13 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
         // Hidden (GM-only) tools keep their place among the rest.
         const ordered = new Set(ids);
         const hidden = TOOLS.flatMap((t) => (ordered.has(t.id) ? [] : [t.id]));
-        ctx.tools.toolOrder.set([...ids, ...hidden]);
+        context.tools.toolOrder.set([...ids, ...hidden]);
       },
     });
   }
 
   return (
-    <div ref={toolbarRef} className="dock-strip toolbar dock-top">
+    <div ref={toolbarReference} className="dock-strip toolbar dock-top">
       <nav className="toolbar-tools" aria-label="Canvas tools" onWheel={scrollSideways}>
         <CampaignMenu />
         {tools.map(({ id, label, key, Icon }) => (
@@ -129,10 +134,10 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
             label={`${label} (${key})`}
             pressed={tool === id}
             data-tool={id}
-            onPointerDown={(e) => dragTool(id, e)}
-            onClick={() => ctx.execute(selectTool, { tool: id })}
+            onPointerDown={(e) => { dragTool(id, e); }}
+            onClick={() => context.execute(selectTool, { tool: id })}
           >
-            <Icon size={22} />
+            <Icon size={PROMINENT_ICON_SIZE} />
           </Button>
         ))}
       </nav>
@@ -152,25 +157,28 @@ export function Toolbar({ isGm }: { isGm: boolean }) {
  * press, move to an item and release chooses it.
  */
 function CampaignMenu() {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [menu, setMenu] = useState<{
     x: number;
     y: number;
+    items: MenuItem[];
     press?: { x: number; y: number };
   } | null>(null);
-  // Re-read as panels open and close, so their ticks are current.
-  useQuery(ctx.panels.layout);
-  useQuery(ctx.panels.unavailablePanels);
-  const items = menuFor(ctx, { kind: "campaign" });
-  const openBelow = (el: HTMLElement, press?: { x: number; y: number }) => {
-    const r = el.getBoundingClientRect();
-    setMenu({ x: r.left, y: r.bottom + 6, ...(press ? { press } : {}) });
+  // Built as it opens, like every menu, so its ticks show the table as it is now.
+  const openBelow = (element: HTMLElement, press?: { x: number; y: number }) => {
+    const r = element.getBoundingClientRect();
+    setMenu({
+      x: r.left,
+      y: r.bottom + 6,
+      items: menuFor(context, { kind: "campaign" }),
+      ...(press ? { press } : {}),
+    });
   };
   return (
     <>
       <Button
         variant="icon"
-        label="Campaign menu"
+        label="Campaign Menu"
         className="toolbar-menu"
         pressed={!!menu}
         aria-haspopup="menu"
@@ -191,16 +199,15 @@ function CampaignMenu() {
           if (e.detail === 0 && !menu) openBelow(e.currentTarget as HTMLElement);
         }}
       >
-        <IconMenu size={22} />
+        <IconMenu size={PROMINENT_ICON_SIZE} />
       </Button>
       {/* Out of the strip, which would clip it. */}
       {menu &&
         createPortal(
           <ContextMenu
             {...menu}
-            items={items}
             label="Campaign menu"
-            onClose={() => setMenu(null)}
+            onClose={() => { setMenu(null); }}
           />,
           document.body,
         )}
@@ -213,11 +220,11 @@ function CampaignMenu() {
  * has the shape to draw and its outline and fill instead of the pen's colour.
  */
 function PenOptions({ tool }: { tool: ToolId }) {
-  const ctx = useCampaign();
-  const { colour, width, layer } = useQuery(ctx.tools.pen);
-  const shape = useQuery(ctx.tools.shapeTool);
-  const paint = useQuery(ctx.tools.shapePaint);
-  const textStyle = useQuery(ctx.tools.textStyle);
+  const context = useCampaign();
+  const { colour, width, layer } = useQuery(context.tools.pen);
+  const shape = useQuery(context.tools.shapeTool);
+  const paint = useQuery(context.tools.shapePaint);
+  const textStyle = useQuery(context.tools.textStyle);
   return (
     <fieldset className="tool-settings" aria-label="Pen">
       {tool === "shape" ? (
@@ -226,19 +233,19 @@ function PenOptions({ tool }: { tool: ToolId }) {
             label="Shape"
             value={shape}
             options={SHAPE_OPTIONS}
-            onChange={(shape) => ctx.tools.shapeTool.set(shape)}
+            onChange={(shape) => { context.tools.shapeTool.set(shape); }}
           />
           <ColourPicker
             label="Outline Colour"
             alpha
             value={paint.stroke}
-            onChange={(stroke) => ctx.tools.setShapePaint({ stroke })}
+            onChange={(stroke) => { context.tools.setShapePaint({ stroke }); }}
           />
           <ColourPicker
             label="Fill Colour"
             alpha
             value={paint.fill}
-            onChange={(fill) => ctx.tools.setShapePaint({ fill })}
+            onChange={(fill) => { context.tools.setShapePaint({ fill }); }}
           />
         </>
       ) : (
@@ -246,11 +253,11 @@ function PenOptions({ tool }: { tool: ToolId }) {
           label="Pen Colour"
           alpha
           value={colour}
-          onChange={(c) => ctx.tools.setPen({ colour: c })}
+          onChange={(c) => { context.tools.setPen({ colour: c }); }}
         />
       )}
       {tool === "text" && (
-        <TextStyleFields value={textStyle} onChange={(patch) => ctx.tools.setTextStyle(patch)} />
+        <TextStyleFields value={textStyle} onChange={(patch) => { context.tools.setTextStyle(patch); }} />
       )}
       {tool === "draw" && (
         <label className="pen-width" data-tip="Pen width">
@@ -266,7 +273,7 @@ function PenOptions({ tool }: { tool: ToolId }) {
             max={PEN_WIDTH_RANGE.max}
             value={width}
             aria-label="Pen width"
-            onChange={(e) => ctx.tools.setPen({ width: Number(e.currentTarget.value) })}
+            onChange={(e) => { context.tools.setPen({ width: Number(e.currentTarget.value) }); }}
           />
         </label>
       )}
@@ -277,7 +284,7 @@ function PenOptions({ tool }: { tool: ToolId }) {
           { id: "over", label: "Over Tokens" },
           { id: "under", label: "Under Tokens" },
         ]}
-        onChange={(l) => ctx.tools.setPen({ layer: l })}
+        onChange={(l) => { context.tools.setPen({ layer: l }); }}
       />
     </fieldset>
   );
@@ -297,8 +304,8 @@ const SELECT_KINDS: { id: SelectKind; label: string; Icon: Icon; gmOnly?: boolea
 
 /** Which sorts of things the Select tool picks. */
 function SelectOptions({ isGm }: { isGm: boolean }) {
-  const ctx = useCampaign();
-  const kinds = useQuery(ctx.tools.selectable);
+  const context = useCampaign();
+  const kinds = useQuery(context.tools.selectable);
   const options = SELECT_KINDS.filter((k) => isGm || !k.gmOnly);
   const shown = new Set(options.map((k) => k.id));
   return (
@@ -312,8 +319,7 @@ function SelectOptions({ isGm }: { isGm: boolean }) {
           icon: <Icon size={22} />,
         }))}
         // Sorts not offered here (the GM's, for a player) stay as they were.
-        onChange={(next) =>
-          ctx.tools.selectable.set([...next, ...kinds.filter((k) => !shown.has(k))])
+        onChange={(next) => { context.tools.selectable.set([...next, ...kinds.filter((k) => !shown.has(k))]); }
         }
       />
     </fieldset>
@@ -328,15 +334,15 @@ const LIGHT_MODES: { id: LightToolMode; label: string }[] = [
 
 /** What the Lights tool places. */
 function LightOptions() {
-  const ctx = useCampaign();
-  const mode = useQuery(ctx.tools.lightTool);
+  const context = useCampaign();
+  const mode = useQuery(context.tools.lightTool);
   return (
     <fieldset className="tool-settings" aria-label="Lights">
       <Segmented
         label="Place"
         value={mode}
         options={LIGHT_MODES.map((m) => ({ ...m, icon: <LightGlyph mode={m.id} /> }))}
-        onChange={(mode) => ctx.tools.lightTool.set(mode)}
+        onChange={(mode) => { context.tools.lightTool.set(mode); }}
       />
     </fieldset>
   );
@@ -344,31 +350,31 @@ function LightOptions() {
 
 /** What the Effects tool puts down: the effect, its colour, light and sight, and the shape of its zone. */
 function EffectOptions() {
-  const ctx = useCampaign();
-  const { effect, colour, glow, obscures, shape } = useQuery(ctx.tools.effectTool);
+  const context = useCampaign();
+  const { effect, colour, glow, obscures, shape } = useQuery(context.tools.effectTool);
   return (
     <fieldset className="tool-settings" aria-label="Effects">
       <Segmented
         label="Effect"
         value={effect}
         options={EFFECT_OPTIONS}
-        onChange={(effect) => ctx.tools.setEffectTool({ effect })}
+        onChange={(effect) => { context.tools.setEffectTool({ effect }); }}
       />
       <ColourPicker
         label="Effect Colour"
         alpha
         value={colour}
-        onChange={(colour) => ctx.tools.setEffectTool({ colour })}
+        onChange={(colour) => { context.tools.setEffectTool({ colour }); }}
       />
       <EffectSightToggles
         value={{ glow, obscures }}
-        onChange={(sight) => ctx.tools.setEffectTool(sight)}
+        onChange={(sight) => { context.tools.setEffectTool(sight); }}
       />
       <Segmented
         label="Shape"
         value={shape}
         options={SHAPE_OPTIONS}
-        onChange={(shape) => ctx.tools.setEffectTool({ shape })}
+        onChange={(shape) => { context.tools.setEffectTool({ shape }); }}
       />
     </fieldset>
   );

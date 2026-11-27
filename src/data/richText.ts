@@ -1,4 +1,5 @@
 import type { JSONContent } from "@tiptap/core";
+import { isString } from "../lib/guards";
 
 /*
  * Formatted text, in the one shape the app uses everywhere: a Tiptap "doc"
@@ -13,7 +14,7 @@ export type RichText = JSONContent;
 export const TRACKER_NODE = "trackerButton";
 
 /** [[±N name]] or [[±N name|label]]: how a tracker button is typed. */
-export const TRACKER_TOKEN = /\[\[\s*([+-]\d+)\s+([^\]|]+?)\s*(?:\|\s*([^\]]+?)\s*)?\]\]/g;
+export const TRACKER_TOKEN = /\[\[\s*([+-]\d+)\s+([^\]|]+?)\s*(?:\|\s*([^\]]+?)\s*)?]]/g;
 
 export interface TrackerButton {
   by: number;
@@ -22,29 +23,34 @@ export interface TrackerButton {
   label: string;
 }
 
+/** "+1 XP": a button's change and number, its label when it has none of its own. */
+const changeText = (by: number, name: string) => `${by > 0 ? "+" : ""}${by} ${name}`;
+
 export function parseTrackerButton(raw: string): TrackerButton | null {
   const m = new RegExp(TRACKER_TOKEN.source).exec(raw);
   if (!m) return null;
   const by = Number(m[1]);
   const name = m[2]!;
-  return { by, name, label: m[3] ?? `${by > 0 ? "+" : ""}${by} ${name}` };
+  return { by, name, label: m[3] ?? changeText(by, name) };
 }
 
 /** The token for a button: what the editor writes back as text. */
-export const trackerToken = (b: TrackerButton) =>
-  `[[${b.by > 0 ? "+" : ""}${b.by} ${b.name}${b.label !== `${b.by > 0 ? "+" : ""}${b.by} ${b.name}` ? `|${b.label}` : ""}]]`;
+export function trackerToken(b: TrackerButton): string {
+  const change = changeText(b.by, b.name);
+  return `[[${change}${b.label === change ? "" : `|${b.label}`}]]`;
+}
 
 /** Rich text with nothing in it. */
 export const emptyRichText = (): RichText => ({ type: "doc", content: [] });
 
 /** A paragraph of plain text, its line breaks kept. */
-function plainParagraph(text: string): JSONContent {
+export function plainParagraph(text: string): JSONContent {
   const content: JSONContent[] = [];
   for (const [index, line] of text.split("\n").entries()) {
     if (index) content.push({ type: "hardBreak" });
     if (line) content.push({ type: "text", text: line });
   }
-  return { type: "paragraph", ...(content.length ? { content } : {}) };
+  return { type: "paragraph", ...(content.length > 0 ? { content } : {}) };
 }
 
 /**
@@ -64,7 +70,7 @@ export function richTextFromPlain(text: string): RichText {
  */
 export function asRichText(value: RichText | string | undefined): RichText {
   if (value === undefined) return emptyRichText();
-  return typeof value === "string" ? richTextFromPlain(value) : value;
+  return isString(value) ? richTextFromPlain(value) : value;
 }
 
 /** Whether two rich texts say the same thing in the same way. */
@@ -78,7 +84,7 @@ const BLOCKS = new Set(["paragraph", "heading", "codeBlock"]);
  * `atomText` names an inline atom (a link) it doesn't know itself.
  */
 export function plainText(
-  doc: RichText | undefined,
+  document: RichText | undefined,
   atomText: (node: JSONContent) => string | null = () => null,
 ): string {
   const lines: string[] = [];
@@ -89,22 +95,22 @@ export function plainText(
     if (!node.content) {
       const named = atomText(node);
       if (named !== null) return named;
-      const attrs = node.attrs ?? {};
-      return String(attrs["text"] || attrs["label"] || "");
+      const attributes = node.attrs ?? {};
+      return String(attributes["text"] || attributes["label"] || "");
     }
     return node.content.map(inline).join("");
   };
   const block = (node: JSONContent, bullet = "") => {
     if (node.type === "listItem") {
-      node.content?.forEach((child, i) => block(child, i ? "" : "• "));
+      if (node.content) for (const [index, child] of node.content.entries()) block(child, index ? "" : "• ");
       return;
     }
     if (BLOCKS.has(node.type ?? "")) {
       lines.push(bullet + (node.content ?? []).map(inline).join(""));
       return;
     }
-    node.content?.forEach((child) => block(child));
+    if (node.content) for (const child of node.content) block(child);
   };
-  block(doc ?? {});
+  block(document ?? {});
   return lines.join("\n");
 }

@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { SheetFrame, SheetSectionView, type SheetProps } from "../../workspace/DeclarativeSheet";
+import { SheetFrame, SheetSectionView  } from "../../workspace/DeclarativeSheet";
+import type {SheetProps as SheetProperties} from "../../workspace/DeclarativeSheet";
 import { useSheet } from "../../workspace/sheetModel";
 import { Counter } from "../../workspace/sheetParts";
 import { Button } from "../../ui/Button";
 import { IconRoll } from "../../ui/icons";
-import { ATTRIBUTES, TRAUMAS } from "./index";
 import { commaListOf } from "../../lib/list";
 import { parseInputNumber } from "../../lib/number";
 import { systemCampaignData } from "../../campaign/campaign";
@@ -17,6 +17,7 @@ import {
 } from "../../workspace/commands/characters";
 import { useCampaign } from "../../workspace/campaignContext";
 import { advanceAction } from "./commands";
+import { ATTRIBUTES, TRAUMAS } from "./index";
 
 function AttributeAdvance({
   sheet,
@@ -41,7 +42,7 @@ function AttributeAdvanceControl({
   attribute: (typeof ATTRIBUTES)[number];
   eligible: string[];
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const { c } = sheet;
   const [selected, setSelected] = useState(attribute.actions[0] ?? "");
   const chosen = eligible.includes(selected) ? selected : (eligible[0] ?? "");
@@ -50,7 +51,7 @@ function AttributeAdvanceControl({
       <select
         aria-label={`${attribute.name} advancement action`}
         value={chosen}
-        onChange={(event) => setSelected(event.currentTarget.value)}
+        onChange={(event) => { setSelected(event.currentTarget.value); }}
       >
         {eligible.map((id) => (
           <option key={id} value={id}>
@@ -61,7 +62,7 @@ function AttributeAdvanceControl({
       <Button
         disabled={!chosen}
         onClick={() =>
-          ctx.execute(advanceAction, { characterId: c.id, attribute: attribute.id, action: chosen })
+          context.execute(advanceAction, { characterId: c.id, attribute: attribute.id, action: chosen })
         }
       >
         Advance {attribute.name}
@@ -70,8 +71,8 @@ function AttributeAdvanceControl({
   );
 }
 
-export function BladesSheet(props: SheetProps) {
-  const sheet = useSheet(props);
+export function BladesSheet(properties: SheetProperties) {
+  const sheet = useSheet(properties);
   return (
     <SheetFrame {...sheet}>
       <SheetSectionView {...sheet} section={{ kind: "header" }} />
@@ -129,7 +130,7 @@ export function BladesSheet(props: SheetProps) {
 }
 
 function TraumaSection({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const { c, d, editable } = sheet;
   const conditionIds = new Set(c.conditions);
   return (
@@ -144,7 +145,7 @@ function TraumaSection({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
               type="checkbox"
               checked={conditionIds.has(id)}
               disabled={!editable}
-              onChange={() => ctx.execute(toggleCondition, { id: c.id, condition: id })}
+              onChange={() => context.execute(toggleCondition, { id: c.id, condition: id })}
             />
             {name}
           </label>
@@ -161,11 +162,11 @@ function AttributeSection({
   sheet: ReturnType<typeof useSheet>;
   attribute: (typeof ATTRIBUTES)[number];
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const { system, c, d, editable } = sheet;
   const use = (id: string) => {
     const action = system.actions.find((entry) => entry.id === id);
-    if (action) ctx.execute(startMove, { characterId: c.id, move: action.id });
+    if (action) context.execute(startMove, { characterId: c.id, move: action.id });
   };
   return (
     <section className="form-section sheet-section" aria-label={attribute.name}>
@@ -175,7 +176,7 @@ function AttributeSection({
           variant="secondary"
           label={`Resist with ${attribute.name}`}
           aria-label={`Resist with ${attribute.name}`}
-          onClick={() => use(`resist-${attribute.id}`)}
+          onClick={() => { use(`resist-${attribute.id}`); }}
         >
           <IconRoll size={18} /> {d.values[attribute.id]}d
         </Button>
@@ -190,7 +191,7 @@ function AttributeSection({
                 variant="secondary"
                 label={`Roll ${stat.name}`}
                 aria-label={`Roll ${stat.name}`}
-                onClick={() => use(actionId)}
+                onClick={() => { use(actionId); }}
               >
                 <IconRoll size={18} /> {stat.name}
               </Button>
@@ -210,7 +211,7 @@ function AttributeSection({
                     value >= (stat.min ?? 0) &&
                     value <= (stat.max ?? 4)
                   )
-                    ctx.execute(setScore, { id: c.id, stat: actionId, score: value });
+                    context.execute(setScore, { id: c.id, stat: actionId, score: value });
                 }}
               />
             </div>
@@ -222,7 +223,7 @@ function AttributeSection({
         value={Number(c.data[`${attribute.id}Xp`] ?? 0)}
         max={d.values["maxAttributeXp"]}
         disabled={!editable}
-        onChange={(by) => ctx.execute(bumpData, { id: c.id, key: `${attribute.id}Xp`, by })}
+        onChange={(by) => context.execute(bumpData, { id: c.id, key: `${attribute.id}Xp`, by })}
       />
       <AttributeAdvance sheet={sheet} attribute={attribute} />
     </section>
@@ -230,7 +231,7 @@ function AttributeSection({
 }
 
 function HarmRecoverySection({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const { system, c, d, editable } = sheet;
   const conditionIds = new Set(c.conditions);
   return (
@@ -246,7 +247,7 @@ function HarmRecoverySection({ sheet }: { sheet: ReturnType<typeof useSheet> }) 
                     checked={conditionIds.has(condition.id)}
                     disabled={!editable}
                     onChange={() =>
-                      ctx.execute(toggleCondition, { id: c.id, condition: condition.id })
+                      context.execute(toggleCondition, { id: c.id, condition: condition.id })
                     }
                   />
                   {condition.name}
@@ -264,7 +265,7 @@ function HarmRecoverySection({ sheet }: { sheet: ReturnType<typeof useSheet> }) 
         value={Number(c.data["healing"] ?? 0)}
         max={d.values["maxHealing"]}
         disabled={!editable}
-        onChange={(by) => ctx.execute(bumpData, { id: c.id, key: "healing", by })}
+        onChange={(by) => context.execute(bumpData, { id: c.id, key: "healing", by })}
       />
       <div className="blades-toggles">
         {(
@@ -280,7 +281,7 @@ function HarmRecoverySection({ sheet }: { sheet: ReturnType<typeof useSheet> }) 
               checked={Number(c.data[field] ?? 0) > 0}
               disabled={!editable}
               onChange={(event) =>
-                ctx.execute(setData, {
+                context.execute(setData, {
                   id: c.id,
                   key: field,
                   value: event.currentTarget.checked ? 1 : 0,
@@ -296,7 +297,7 @@ function HarmRecoverySection({ sheet }: { sheet: ReturnType<typeof useSheet> }) 
 }
 
 function LoadSection({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const { c, editable } = sheet;
   return (
     <section className="form-section sheet-section" aria-label="Load">
@@ -307,7 +308,7 @@ function LoadSection({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
           value={String(c.data["load"] ?? 5)}
           disabled={!editable}
           onChange={(event) =>
-            ctx.execute(setData, {
+            context.execute(setData, {
               id: c.id,
               key: "load",
               value: Number(event.currentTarget.value),
@@ -330,8 +331,8 @@ function LoadSection({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
   );
 }
 
-export function BladesNpcSheet(props: SheetProps) {
-  const sheet = useSheet(props);
+export function BladesNpcSheet(properties: SheetProperties) {
+  const sheet = useSheet(properties);
   return (
     <SheetFrame {...sheet}>
       <SheetSectionView {...sheet} section={{ kind: "header" }} />

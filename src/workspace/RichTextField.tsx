@@ -24,8 +24,8 @@ export function RichTextField({
   onChange: (value: RichText) => void;
   placeholder?: string;
 }) {
-  const ctx = useCampaign();
-  const hostRef = useRef<HTMLDivElement>(null);
+  const context = useCampaign();
+  const hostReference = useRef<HTMLDivElement>(null);
   const initial = useRef(value);
   // The editor reads the latest callback.
   const change = useRef(onChange);
@@ -34,22 +34,22 @@ export function RichTextField({
   });
 
   useEffect(() => {
-    const host = hostRef.current;
+    const host = hostReference.current;
     if (!host) return;
     const editor = new Editor({
       element: host,
-      extensions: [...ruleTextExtensions(ctx), Placeholder.configure({ placeholder })],
+      extensions: [...ruleTextExtensions(context), Placeholder.configure({ placeholder })],
       ...(initial.current ? { content: initial.current } : {}),
       editorProps: { attributes: { class: "note-body", "aria-label": label } },
-      onUpdate: ({ editor: ed }) => change.current(ed.getJSON()),
+      onUpdate: ({ editor: ed }) => { change.current(ed.getJSON()); },
     });
-    return () => editor.destroy();
-  }, [campaign, ctx, label, placeholder]);
+    return () => { editor.destroy(); };
+  }, [campaign, context, label, placeholder]);
 
   return (
     <div className="field">
       {label}
-      <div ref={hostRef} className="rich-field input" />
+      <div ref={hostReference} className="rich-field input" />
     </div>
   );
 }

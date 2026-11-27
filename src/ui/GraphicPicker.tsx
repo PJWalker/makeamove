@@ -4,7 +4,8 @@ import type { EntityGraphic } from "../media/images";
 import { Button } from "./Button";
 import { EntityGraphicView } from "./EntityGraphic";
 import { ENTRY_ICONS } from "./entryIcons";
-import { FilterableMenu, type FilterableMenuOption } from "./FilterableMenu";
+import { FilterableMenu  } from "./FilterableMenu";
+import type {FilterableMenuOption} from "./FilterableMenu";
 import { IconImage, IconSearch } from "./icons";
 
 const iconNames = (Object.keys(ENTRY_ICONS) as (keyof typeof ENTRY_ICONS)[]).filter(
@@ -14,13 +15,14 @@ const iconNames = (Object.keys(ENTRY_ICONS) as (keyof typeof ENTRY_ICONS)[]).fil
 
 const iconOptions: FilterableMenuOption[] = iconNames.map((name) => {
   const Icon = ENTRY_ICONS[name];
+  const label = name.replaceAll("-", " ");
   return {
     id: name,
-    label: name.replaceAll("-", " "),
+    label,
     content: (
       <>
         <Icon size={22} />
-        <span>{name.replaceAll("-", " ")}</span>
+        <span>{label}</span>
       </>
     ),
   };
@@ -40,6 +42,11 @@ export function GraphicPicker({
   const file = useRef<HTMLInputElement>(null);
   const importVersion = useRef(0);
   const [error, setError] = useState(false);
+  /** Forget any image still being imported: what's chosen now wins. */
+  const dropImport = () => {
+    importVersion.current++;
+    setError(false);
+  };
   useEffect(
     () => () => {
       importVersion.current++;
@@ -52,7 +59,7 @@ export function GraphicPicker({
       <div className="graphic-picker-row">
         <EntityGraphicView graphic={graphic} size={32} className="graphic-picker-preview" />
         <Button onClick={() => file.current?.click()}>
-          <IconImage size={22} /> Choose image…
+          <IconImage size={22} /> Choose Image…
         </Button>
         <FilterableMenu
           label="Built-in icons"
@@ -66,8 +73,7 @@ export function GraphicPicker({
           options={iconOptions}
           selected={graphic?.kind === "icon" ? graphic.name : undefined}
           onSelect={(name) => {
-            importVersion.current++;
-            setError(false);
+            dropImport();
             onChange({ kind: "icon", name });
           }}
         />
@@ -75,12 +81,11 @@ export function GraphicPicker({
           <Button
             variant="ghost"
             onClick={() => {
-              importVersion.current++;
-              setError(false);
+              dropImport();
               onReset();
             }}
           >
-            Use default
+            Use Default
           </Button>
         )}
       </div>

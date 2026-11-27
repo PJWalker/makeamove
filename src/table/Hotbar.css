@@ -2,7 +2,6 @@
   .hotbar {
     display: flex;
     pointer-events: auto;
-    background: var(--toolbar);
   }
   .hotbar-slot {
     flex: none;

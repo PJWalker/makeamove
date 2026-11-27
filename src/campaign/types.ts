@@ -1,8 +1,8 @@
 import type { GridType } from "../scene/grid";
 import type { TokenStyle } from "../scene/types";
 
-export type Role = "gm" | "player" | "observer";
-export type Visibility = "everyone" | "owners" | "gm";
+export type Role = "gm" | "observer" | "player";
+export type Visibility = "everyone" | "gm" | "owners";
 
 export interface RevokedView {
   id: string;

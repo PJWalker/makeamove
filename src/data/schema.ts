@@ -1,4 +1,6 @@
 import * as Y from "yjs";
+import type { Guard } from "../lib/guards";
+import { isString } from "../lib/guards";
 
 /*
  * The typed data layer (design.md#documents). Shared state is declared once,
@@ -21,9 +23,6 @@ import * as Y from "yjs";
  */
 
 // Fields
-
-/** Whether a stored value is a T. */
-export type Guard<T> = (value: unknown) => value is T;
 
 const NO_VALUE: unique symbol = Symbol("no value");
 
@@ -71,7 +70,7 @@ export interface CollectionField<I extends Field, T = Item<I>> {
   readonly kind: "collection";
   readonly item: I;
   /** See `collection`. A method, so a collection of any item is a Field. */
-  parse?(item: Item<I>, id: string): T | Invalid;
+  parse?(item: Item<I>, id: string): Invalid | T;
   readonly label: string;
 }
 
@@ -80,19 +79,12 @@ export interface SubdocField {
 }
 
 export type Field =
-  | LwwField<unknown, boolean>
-  | CounterField
-  | TextField
-  | ListField<unknown>
-  | RecordField<Shape>
-  | VariantField<string, Shape, Record<string, Shape>>
-  | CollectionField<Field, unknown>
-  | SubdocField;
+  CollectionField<Field, unknown> | CounterField | ListField<unknown> | LwwField<unknown, boolean> | RecordField<Shape> | SubdocField | TextField | VariantField<string, Shape, Record<string, Shape>>;
 
-export type Shape = { readonly [key: string]: Field };
+export interface Shape { readonly [key: string]: Field }
 
 /** Checks a collection item as it's read: its value, or why it can't be used. */
-export type Parse<I extends Field, T> = (item: Item<I>, id: string) => T | Invalid;
+export type Parse<I extends Field, T> = (item: Item<I>, id: string) => Invalid | T;
 
 /** Why a stored item can't be used. */
 export class Invalid {
@@ -157,7 +149,7 @@ export function collection<I extends Field, T>(
 // Types derived from fields
 
 /** What a present value of a field reads as. */
-export type Item<F> = 0 extends 1 & F
+export type Item<F> = 0 extends F & 1
   ? unknown
   : F extends LwwField<infer T, boolean>
     ? T
@@ -178,7 +170,7 @@ export type Item<F> = 0 extends 1 & F
                   : never;
 
 /** What a field in a record reads as: missing values are undefined unless the field has a fallback. */
-export type Got<F> = 0 extends 1 & F
+export type Got<F> = 0 extends F & 1
   ? unknown
   : F extends LwwField<infer T, infer Has>
     ? Has extends true
@@ -189,7 +181,7 @@ export type Got<F> = 0 extends 1 & F
       : Item<F> | undefined;
 
 /** What a field is written from. */
-export type Init<F> = 0 extends 1 & F
+export type Init<F> = 0 extends F & 1
   ? unknown
   : F extends LwwField<infer T, boolean>
     ? T
@@ -210,12 +202,12 @@ export type Init<F> = 0 extends 1 & F
 type InitKeys<S extends Shape> = { [K in keyof S]: S[K] extends TextField ? never : K }[keyof S];
 export type InitRec<S extends Shape> = { [K in InitKeys<S>]?: Init<S[K]> };
 type InitVariant<Tag extends string, B extends Shape, C extends Record<string, Shape>> = {
-  [K in keyof C & string]: InitRec<B> & InitRec<C[K]> & { [T in Tag]: K };
-}[keyof C & string];
+  [K in string & keyof C]: InitRec<B> & InitRec<C[K]> & Record<Tag, K>;
+}[string & keyof C];
 
 /** The fields that hold a single value, set and read in place. */
 type ValueKeys<S extends Shape> = {
-  [K in keyof S]: S[K] extends LwwField<unknown, boolean> | CounterField ? K : never;
+  [K in keyof S]: S[K] extends CounterField | LwwField<unknown, boolean> ? K : never;
 }[keyof S];
 /** The fields that hold a Yjs type of their own. */
 type ContainerKeys<S extends Shape> = Exclude<keyof S, ValueKeys<S>>;
@@ -228,7 +220,7 @@ type CounterKeys<S extends Shape> = {
 }[keyof S];
 
 /** A plain copy of a field's value: for backups, tests and views. */
-export type Plain<F> = 0 extends 1 & F
+export type Plain<F> = 0 extends F & 1
   ? unknown
   : F extends LwwField<infer T, boolean>
     ? T
@@ -245,20 +237,20 @@ export type Plain<F> = 0 extends 1 & F
               : never;
 
 type PlainKeys<S extends Shape> = {
-  [K in keyof S]: S[K] extends TextField | SubdocField ? never : K;
+  [K in keyof S]: S[K] extends SubdocField | TextField ? never : K;
 }[keyof S];
 type OptionalKeys<S extends Shape> = {
-  [K in keyof S]: S[K] extends LwwField<unknown, false> ? K : never;
+  [K in keyof S]: S[K] extends LwwField<unknown> ? K : never;
 }[keyof S];
 type Flatten<T> = { [K in keyof T]: T[K] };
 export type PlainRec<S extends Shape> = Flatten<
-  { [K in Exclude<PlainKeys<S>, OptionalKeys<S>>]: Plain<S[K]> } & {
+  {
     [K in OptionalKeys<S>]?: Plain<S[K]>;
-  }
+  } & { [K in Exclude<PlainKeys<S>, OptionalKeys<S>>]: Plain<S[K]> }
 >;
 export type PlainVariant<Tag extends string, B extends Shape, C extends Record<string, Shape>> = {
-  [K in keyof C & string]: Flatten<PlainRec<B> & PlainRec<C[K]> & { [T in Tag]: K }>;
-}[keyof C & string];
+  [K in string & keyof C]: Flatten<PlainRec<B> & PlainRec<C[K]> & Record<Tag, K>>;
+}[string & keyof C];
 
 // Logging what can't be read
 
@@ -289,45 +281,56 @@ function readSlot(field: Field, map: Slot, key: string): unknown {
       }
       return raw;
     }
-    case "counter":
+    case "counter": {
       return raw instanceof Y.Map ? counterTotal(raw as Y.Map<number>) : 0;
-    case "text":
+    }
+    case "text": {
       return raw instanceof Y.XmlFragment ? raw : undefined;
-    case "subdoc":
+    }
+    case "subdoc": {
       return raw instanceof Y.Doc ? raw : undefined;
-    case "list":
+    }
+    case "list": {
       return raw instanceof Y.Array ? listOf(raw) : undefined;
-    case "record":
+    }
+    case "record": {
       return raw instanceof Y.Map ? recOf(raw as Slot, field.shape) : undefined;
-    case "variant":
+    }
+    case "variant": {
       return raw instanceof Y.Map ? variantOf(raw as Slot, field) : undefined;
-    case "collection":
+    }
+    case "collection": {
       return raw instanceof Y.Map ? collOf(raw as Slot, field) : undefined;
+    }
   }
 }
 
 /** What to store for a field, made from a plain value. */
 function toStored(field: Field, init: unknown): unknown {
   switch (field.kind) {
-    case "lww":
+    case "lww": {
       return init;
+    }
     case "counter": {
       const m = new Y.Map<number>();
       // Set once the map is in a document, when it has a client id.
       pendingCounts.set(m, init as number);
       return m;
     }
-    case "text":
+    case "text": {
       return new Y.XmlFragment();
-    case "subdoc":
+    }
+    case "subdoc": {
       return init;
+    }
     case "list": {
       const a = new Y.Array<unknown>();
       a.push([...(init as readonly unknown[])]);
       return a;
     }
-    case "record":
+    case "record": {
       return fill(new Y.Map(), field.shape, init as Record<string, unknown>);
+    }
     case "variant": {
       const values = init as Record<string, unknown>;
       const tag = values[field.tag] as string;
@@ -355,18 +358,22 @@ function fill(m: Slot, shape: Shape, values: Record<string, unknown>): Slot {
 /** A fresh, empty container for a field: an empty map, list or text. */
 function emptyStored(field: Field): unknown {
   switch (field.kind) {
-    case "text":
+    case "text": {
       return new Y.XmlFragment();
-    case "list":
+    }
+    case "list": {
       return new Y.Array();
+    }
     case "counter":
     case "record":
     case "variant":
-    case "collection":
+    case "collection": {
       return new Y.Map();
+    }
     case "lww":
-    case "subdoc":
+    case "subdoc": {
       throw new Error(`A ${field.kind} field has no empty value`);
+    }
   }
 }
 
@@ -384,18 +391,23 @@ function plainOf(field: Field, value: unknown): unknown {
   if (value === undefined) return undefined;
   switch (field.kind) {
     case "lww":
-    case "counter":
+    case "counter": {
       return value;
-    case "list":
+    }
+    case "list": {
       return (value as List<unknown>).toArray();
+    }
     case "record":
-    case "collection":
+    case "collection": {
       return (value as { read(): unknown }).read();
-    case "variant":
+    }
+    case "variant": {
       return (value as { readCase(): unknown }).readCase();
+    }
     case "text":
-    case "subdoc":
+    case "subdoc": {
       return undefined;
+    }
   }
 }
 
@@ -435,11 +447,54 @@ function settleCounts(m: Slot) {
   for (const v of m.values()) if (v instanceof Y.Map) settleCounts(v as Slot);
 }
 
+/** Add to the counter in a slot, making it if it isn't there yet. */
+function addToSlot(field: Field, map: Slot, key: string, by: number) {
+  const m = map.get(key);
+  if (m instanceof Y.Map) addToCounter(m as Y.Map<number>, by);
+  else setSlot(field, map, key, by);
+}
+
+// Whole maps of fields
+
+/** Each of a shape's fields stored in `map`, as plain values, into `out`. */
+function readPlain(map: Slot, shape: Shape, out: Record<string, unknown>) {
+  for (const [key, field] of Object.entries(shape)) {
+    const v = plainOf(field, readSlot(field, map, key));
+    if (v !== undefined) out[key] = v;
+  }
+  return out;
+}
+
+/** Set the given fields of a shape; `undefined` removes one. Unchanged values aren't rewritten. */
+function patchSlots(
+  map: Slot,
+  shape: Shape,
+  values: Readonly<Record<string, unknown>>,
+  skip?: string,
+) {
+  for (const [key, value] of Object.entries(values)) {
+    const field = shape[key];
+    if (!field || key === skip) continue;
+    if (value === undefined) map.delete(key);
+    else if (map.get(key) !== value) setSlot(field, map, key, value);
+  }
+}
+
+function transactOn(y: Slot, function_: () => void) {
+  if (y.doc) y.doc.transact(function_);
+  else function_();
+}
+
+function observeDeep(y: Slot, function_: () => void): () => void {
+  y.observeDeep(function_);
+  return () => { y.unobserveDeep(function_); };
+}
+
 // Handles
 
 /** Anything with a Yjs type behind it, for useQuery to watch. */
 export interface Observable {
-  readonly y: Y.AbstractType<any>; // oxlint-disable-line @typescript-eslint/no-explicit-any
+  readonly y: Y.AbstractType<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 /** The handle for a Yjs type, made once so it can be compared and cached. */
@@ -459,17 +514,17 @@ export class Rec<S extends Shape> implements Observable {
     readonly shape: S,
   ) {}
 
-  get<K extends keyof S & string>(key: K): Got<S[K]> {
+  get<K extends string & keyof S>(key: K): Got<S[K]> {
     return readSlot(this.shape[key]!, this.y, key) as Got<S[K]>;
   }
 
   /** Whether the field is stored here (a copy reads what it lacks from its template). */
-  has(key: keyof S & string): boolean {
+  has(key: string & keyof S): boolean {
     return this.y.has(key);
   }
 
   /** The fields stored here. */
-  keys(): (keyof S & string)[] {
+  keys(): (string & keyof S)[] {
     return [...this.y.keys()].filter((k) => k in this.shape);
   }
 
@@ -477,25 +532,18 @@ export class Rec<S extends Shape> implements Observable {
     setSlot(this.shape[key]!, this.y, key, value);
   }
 
-  delete(key: keyof S & string) {
+  delete(key: string & keyof S) {
     this.y.delete(key);
   }
 
   /** Set several value fields at once; `undefined` removes one. Unchanged values aren't rewritten. */
   patch(values: Patch<S>) {
-    this.transact(() => {
-      for (const [key, value] of Object.entries(values)) {
-        if (value === undefined) this.y.delete(key);
-        else if (this.y.get(key) !== value) setSlot(this.shape[key]!, this.y, key, value);
-      }
-    });
+    this.transact(() => { patchSlots(this.y, this.shape, values); });
   }
 
   /** Add to a counter. */
   add(key: CounterKeys<S> & string, by: number) {
-    const m = this.y.get(key);
-    if (m instanceof Y.Map) addToCounter(m as Y.Map<number>, by);
-    else setSlot(this.shape[key]!, this.y, key, by);
+    addToSlot(this.shape[key]!, this.y, key, by);
   }
 
   /** A container field, made empty if it isn't there yet. */
@@ -508,7 +556,7 @@ export class Rec<S extends Shape> implements Observable {
   }
 
   /** The field's subdocument, made with this guid if it has none. */
-  subdoc(key: keyof S & string, guid: string): Y.Doc {
+  subdoc(key: string & keyof S, guid: string): Y.Doc {
     const existing = this.y.get(key);
     if (existing instanceof Y.Doc) return existing;
     const created = new Y.Doc({ guid });
@@ -517,24 +565,17 @@ export class Rec<S extends Shape> implements Observable {
   }
 
   /** Call `fn` on any change to it or anything inside it. Returns a function that stops it. */
-  observe(fn: () => void): () => void {
-    this.y.observeDeep(fn);
-    return () => this.y.unobserveDeep(fn);
+  observe(function_: () => void): () => void {
+    return observeDeep(this.y, function_);
   }
 
   /** Every field as plain values, with fallbacks; text and subdocuments are left out. */
   read(): PlainRec<S> {
-    const out: Record<string, unknown> = {};
-    for (const [key, field] of Object.entries(this.shape)) {
-      const v = plainOf(field, readSlot(field, this.y, key));
-      if (v !== undefined) out[key] = v;
-    }
-    return out as PlainRec<S>;
+    return readPlain(this.y, this.shape, {}) as PlainRec<S>;
   }
 
-  transact(fn: () => void) {
-    if (this.y.doc) this.y.doc.transact(fn);
-    else fn();
+  transact(function_: () => void) {
+    transactOn(this.y, function_);
   }
 }
 
@@ -552,40 +593,28 @@ export class VariantRec<
   }
 
   /** Its tag, if it's one this build knows. */
-  get tag(): (keyof C & string) | undefined {
+  get tag(): (string & keyof C) | undefined {
     const tag = this.y.get(this.variant.tag);
-    return typeof tag === "string" && tag in this.variant.cases ? tag : undefined;
+    return isString(tag) && tag in this.variant.cases ? tag : undefined;
   }
 
   /** The fields of its case beside the base ones. */
   private fields(): Shape {
-    const tag = this.tag;
+    const {tag} = this;
     return tag === undefined ? this.shape : { ...this.shape, ...this.variant.cases[tag] };
   }
 
   /** Every field of its case as plain values, its tag included; undefined for an unknown tag. */
   readCase(): PlainVariant<Tag, B, C> | undefined {
-    const tag = this.tag;
+    const {tag} = this;
     if (tag === undefined) return undefined;
-    const out: Record<string, unknown> = { [this.variant.tag]: tag };
-    for (const [key, field] of Object.entries(this.fields())) {
-      const v = plainOf(field, readSlot(field, this.y, key));
-      if (v !== undefined) out[key] = v;
-    }
-    return out as PlainVariant<Tag, B, C>;
+    return readPlain(this.y, this.fields(), { [this.variant.tag]: tag }) as PlainVariant<Tag, B, C>;
   }
 
   /** Set any of its base or case fields; `undefined` removes one, and others are ignored. */
   patchCase(values: Readonly<Record<string, unknown>>) {
     const shape = this.fields();
-    this.transact(() => {
-      for (const [key, value] of Object.entries(values)) {
-        const field = shape[key];
-        if (!field || key === this.variant.tag) continue;
-        if (value === undefined) this.y.delete(key);
-        else if (this.y.get(key) !== value) setSlot(field, this.y, key, value);
-      }
-    });
+    this.transact(() => { patchSlots(this.y, shape, values, this.variant.tag); });
   }
 }
 
@@ -672,9 +701,7 @@ export class Coll<I extends Field, T = Item<I>> implements Observable {
 
   /** Add to a counter item. */
   add(this: Coll<CounterField>, id: string, by: number) {
-    const m = this.y.get(id);
-    if (m instanceof Y.Map) addToCounter(m as Y.Map<number>, by);
-    else setSlot(this.field.item, this.y, id, by);
+    addToSlot(this.field.item, this.y, id, by);
   }
 
   /** A container item, made empty if it isn't there yet. */
@@ -690,13 +717,12 @@ export class Coll<I extends Field, T = Item<I>> implements Observable {
   }
 
   clear() {
-    this.transact(() => this.y.clear());
+    this.transact(() => { this.y.clear(); });
   }
 
   /** Call `fn` on any change to it or anything inside it. Returns a function that stops it. */
-  observe(fn: () => void): () => void {
-    this.y.observeDeep(fn);
-    return () => this.y.unobserveDeep(fn);
+  observe(function_: () => void): () => void {
+    return observeDeep(this.y, function_);
   }
 
   /** Every item as plain values. */
@@ -706,9 +732,8 @@ export class Coll<I extends Field, T = Item<I>> implements Observable {
     return out;
   }
 
-  transact(fn: () => void) {
-    if (this.y.doc) this.y.doc.transact(fn);
-    else fn();
+  transact(function_: () => void) {
+    transactOn(this.y, function_);
   }
 }
 
@@ -740,9 +765,9 @@ export class List<T> implements Observable {
     this.y.delete(index, count);
   }
 
-  observe(fn: () => void): () => void {
-    this.y.observe(fn);
-    return () => this.y.unobserve(fn);
+  observe(function_: () => void): () => void {
+    this.y.observe(function_);
+    return () => { this.y.unobserve(function_); };
   }
 }
 
@@ -769,25 +794,30 @@ export function copyText(into: Y.XmlFragment, from: Y.XmlFragment) {
 export type Root<S extends Shape> = { readonly [K in keyof S]: Item<S[K]> };
 
 /** Typed handles for a document's top-level fields, each a shared type of its own. */
-export function rootOf<S extends Shape>(doc: Y.Doc, shape: S): Root<S> {
-  return cached(shape, doc, () => {
+export function rootOf<S extends Shape>(document: Y.Doc, shape: S): Root<S> {
+  return cached(shape, document, () => {
     const out: Record<string, unknown> = {};
     for (const [key, field] of Object.entries(shape)) {
       switch (field.kind) {
-        case "record":
-          out[key] = recOf(doc.getMap(key), field.shape);
+        case "record": {
+          out[key] = recOf(document.getMap(key), field.shape);
           break;
-        case "collection":
-          out[key] = collOf(doc.getMap(key), field);
+        }
+        case "collection": {
+          out[key] = collOf(document.getMap(key), field);
           break;
-        case "list":
-          out[key] = listOf(doc.getArray(key));
+        }
+        case "list": {
+          out[key] = listOf(document.getArray(key));
           break;
-        case "text":
-          out[key] = doc.getXmlFragment(key);
+        }
+        case "text": {
+          out[key] = document.getXmlFragment(key);
           break;
-        default:
+        }
+        default: {
           throw new Error(`A document can't hold a ${field.kind} at its top level`);
+        }
       }
     }
     return out as Root<S>;

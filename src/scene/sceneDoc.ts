@@ -4,9 +4,11 @@ import { IndexeddbPersistence } from "y-indexeddb";
 import { newId } from "../lib/ids";
 import { dataName } from "../platform/dataEpoch";
 import { device } from "../platform/device";
+import { rootOf   } from "../data/schema";
+import type {Patch, Root} from "../data/schema";
 import type { Grid } from "./grid";
-import { LAYERS, type Layer, type NewElement, type SceneElement } from "./types";
-import { rootOf, type Patch, type Root } from "../data/schema";
+import { LAYERS    } from "./types";
+import type {Layer, NewElement, SceneElement} from "./types";
 import { sceneShape } from "./schema";
 
 /* A scene subdocument and how it's edited; its layout is declared in schema.ts. */
@@ -31,7 +33,7 @@ const GRID_KEYS = {
   diagonal: "gridDiagonal",
 } as const satisfies Record<keyof Grid, string>;
 
-const byOrder = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+const byOrder = (a: string, b: string) => (a < b ? -1 : (a > b ? 1 : 0));
 
 /** Fields to set on an element; `undefined` removes one. */
 export type ElementPatch = Unset<SceneElement>;
@@ -45,14 +47,14 @@ export class SceneDoc {
   readonly undo: Y.UndoManager;
   /** Marks this user's own edits, so undo never reverts anyone else's. */
   readonly origin = { local: true };
-  private persistence: IndexeddbPersistence;
+  private readonly persistence: IndexeddbPersistence;
 
-  private constructor(doc: Y.Doc) {
-    this.doc = doc;
-    const root = rootOf(doc, sceneShape);
+  private constructor(document: Y.Doc) {
+    this.doc = document;
+    const root = rootOf(document, sceneShape);
     this.elements = root.elements;
     this.settings = root.settings;
-    this.persistence = new IndexeddbPersistence(sceneDbName(doc.guid), doc);
+    this.persistence = new IndexeddbPersistence(sceneDbName(document.guid), document);
     this.undo = new Y.UndoManager([this.elements.y, this.settings.y], {
       trackedOrigins: new Set([this.origin]),
       // Every committed action is its own undo step.
@@ -65,14 +67,14 @@ export class SceneDoc {
    * diagonal rule) get the campaign's and system's defaults, as an untracked
    * edit so they can't be undone.
    */
-  static async open(doc: Y.Doc, defaults: Partial<Grid> = {}): Promise<SceneDoc> {
-    doc.load();
-    const s = new SceneDoc(doc);
+  static async open(document: Y.Doc, defaults: Partial<Grid> = {}): Promise<SceneDoc> {
+    document.load();
+    const s = new SceneDoc(document);
     await s.persistence.whenSynced;
     const missing = (Object.keys(defaults) as (keyof Grid)[]).filter(
       (k) => defaults[k] !== undefined && !s.settings.has(GRID_KEYS[k]),
     );
-    if (missing.length)
+    if (missing.length > 0)
       s.settings.patch(gridSettings(Object.fromEntries(missing.map((k) => [k, defaults[k]]))));
     return s;
   }
@@ -84,8 +86,8 @@ export class SceneDoc {
     this.doc.destroy();
   }
 
-  transact(fn: () => void) {
-    this.doc.transact(fn, this.origin);
+  transact(function_: () => void) {
+    this.doc.transact(function_, this.origin);
   }
 
   // Settings
@@ -104,17 +106,16 @@ export class SceneDoc {
   }
 
   setLighting(patch: Partial<SceneLighting>) {
-    this.transact(() =>
-      this.settings.patch({
+    this.transact(() => { this.settings.patch({
         lighting: patch.enabled,
         darkness: patch.darkness,
         vision: patch.vision,
-      }),
+      }); },
     );
   }
 
   setGrid(patch: Partial<Grid>) {
-    this.transact(() => this.settings.patch(gridSettings(patch)));
+    this.transact(() => { this.settings.patch(gridSettings(patch)); });
   }
 
   // Elements
@@ -127,7 +128,7 @@ export class SceneDoc {
   views(): SceneElement[] {
     return this.elements
       .views()
-      .map(([, el]) => el)
+      .map(([, element]) => element)
       .sort(
         (a, b) =>
           LAYERS.indexOf(a.layer) - LAYERS.indexOf(b.layer) ||
@@ -136,33 +137,31 @@ export class SceneDoc {
       );
   }
 
-  private topZ(layer: Layer): string | null {
-    let top: string | null = null;
+  /** The order of the topmost (or bottommost) element in a layer; null if it's empty. */
+  private edgeZ(layer: Layer, edge: "bottom" | "top"): string | null {
+    let found: string | null = null;
     for (const m of this.elements.values()) {
+      if (m.get("layer") !== layer) continue;
       const z = m.get("z");
-      if (m.get("layer") === layer && (top === null || z > top)) top = z;
+      if (found === null || (edge === "top" ? z > found : z < found)) found = z;
     }
-    return top;
+    return found;
   }
 
-  private bottomZ(layer: Layer): string | null {
-    let bottom: string | null = null;
-    for (const m of this.elements.values()) {
-      const z = m.get("z");
-      if (m.get("layer") === layer && (bottom === null || z < bottom)) bottom = z;
-    }
-    return bottom;
+  /** An order above everything in a layer. */
+  private zOnTop(layer: Layer): string {
+    return generateKeyBetween(this.edgeZ(layer, "top"), null);
   }
 
   add(...els: NewElement[]): string[] {
     const ids: string[] = [];
     this.transact(() => {
-      for (const el of els) {
+      for (const element of els) {
         const id = newId();
         this.elements.set(id, {
           locked: false,
-          ...el,
-          z: generateKeyBetween(this.topZ(el.layer), null),
+          ...element,
+          z: this.zOnTop(element.layer),
           createdBy: device.value.id,
         });
         ids.push(id);
@@ -172,7 +171,7 @@ export class SceneDoc {
   }
 
   /** Apply several patches as one undo step; an `undefined` value clears that field. */
-  update(patches: Map<string, ElementPatch> | [string, ElementPatch][]) {
+  update(patches: [string, ElementPatch][] | Map<string, ElementPatch>) {
     this.transact(() => {
       for (const [id, patch] of patches) this.elements.get(id)?.patchCase(patch);
     });
@@ -188,25 +187,26 @@ export class SceneDoc {
   duplicate(ids: Iterable<string>, offset: number): string[] {
     const copies: NewElement[] = [];
     for (const id of ids) {
-      const el = this.get(id);
-      if (!el) continue;
-      const { id: _id, z: _z, createdBy: _by, ...rest } = el;
-      copies.push({ ...rest, x: el.x + offset, y: el.y + offset, locked: false });
+      const element = this.get(id);
+      if (!element) continue;
+      const { id: _id, z: _z, createdBy: _by, ...rest } = element;
+      copies.push({ ...rest, x: element.x + offset, y: element.y + offset, locked: false });
     }
     return this.add(...copies);
   }
 
   /** Move elements to the top (or bottom) of their layers, keeping their order. */
-  restack(ids: Iterable<string>, to: "front" | "back") {
+  restack(ids: Iterable<string>, to: "back" | "front") {
     const els = [...ids].map((id) => this.get(id)).filter((e): e is SceneElement => !!e);
     els.sort((a, b) => byOrder(a.z, b.z));
     this.transact(() => {
       if (to === "front") {
-        for (const el of els)
-          this.elements.get(el.id)!.patch({ z: generateKeyBetween(this.topZ(el.layer), null) });
+        for (const element of els) this.elements.get(element.id)!.patch({ z: this.zOnTop(element.layer) });
       } else {
-        for (const el of els.reverse())
-          this.elements.get(el.id)!.patch({ z: generateKeyBetween(null, this.bottomZ(el.layer)) });
+        for (const element of els.reverse())
+          this.elements
+            .get(element.id)!
+            .patch({ z: generateKeyBetween(null, this.edgeZ(element.layer, "bottom")) });
       }
     });
   }
@@ -217,7 +217,7 @@ export class SceneDoc {
       for (const id of ids) {
         const m = this.elements.get(id);
         if (!m || m.get("layer") === layer) continue;
-        m.patch({ z: generateKeyBetween(this.topZ(layer), null), layer });
+        m.patch({ z: this.zOnTop(layer), layer });
       }
     });
   }

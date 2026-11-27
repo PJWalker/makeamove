@@ -18,8 +18,6 @@
      * Surfaces: tinted by the scene, at low chroma so a vivid map never makes the chrome garish.
      */
     --toolbar: oklch(from var(--scene-oklch) 20% min(c, 0.07) h / 0.7);
-    /* A raised edge: brightest at the top-left corner, where the light falls. */
-    --shine: linear-gradient(to bottom right, #fff5, #fff2 50%, #ffffff0d) 1;
     --surface: oklch(from var(--scene-oklch) calc(18% + l * 5%) min(c, 0.025) h / 0.96);
     --surface-solid: oklch(from var(--scene-oklch) calc(15% + l * 4%) min(c, 0.025) h);
     --surface-raised: oklch(from var(--scene-oklch) calc(22% + l * 5%) min(c, 0.03) h);
@@ -84,6 +82,74 @@
     --private-soft: oklch(36% 0.07 300 / 0.35);
     --disabled-opacity: 0.45;
 
+    /*
+     * Ornament: the chrome is metalwork on dark leather. Gilt is worked
+     * metal, lit from the top left; bronze is the duller trim on ordinary
+     * controls, so the gilt stays special.
+     */
+    --gilt-hi: oklch(92% 0.08 88);
+    --gilt: oklch(74% 0.11 78);
+    --gilt-lo: oklch(48% 0.08 70);
+    --bronze: oklch(52% 0.06 70);
+    --bronze-hi: oklch(68% 0.08 76);
+    /* Polished metal: a bright crown, a dark band where it turns, and the floor's reflection. */
+    --gilt-metal: linear-gradient(
+      to bottom,
+      var(--gilt-hi),
+      var(--gilt) 42%,
+      var(--gilt-lo) 54%,
+      oklch(66% 0.1 76) 100%
+    );
+    /* A thin metal edge for border-image: lit top left, shaded bottom right. */
+    --gilt-edge: linear-gradient(to bottom right, var(--gilt-hi), var(--gilt) 40%, var(--gilt-lo)) 1;
+    --bronze-edge: linear-gradient(to bottom right, var(--bronze-hi), var(--bronze) 45%, #0000 130%)
+      1;
+    /* Windows and menus sit in a gilt frame with filigree corners (border-image). */
+    --frame: url("../ui/ornament/frame.svg") 26 / 26px / 3px stretch;
+    --frame-tight: url("../ui/ornament/frame.svg") 26 / 18px / 2px stretch;
+    /* A section's rule: gilt lines with a flourish in the gap between them. */
+    --rule-ornate:
+      url("../ui/ornament/flourish.svg") top center / 64px 12px no-repeat,
+      linear-gradient(
+          to right,
+          transparent,
+          var(--gilt-lo) 15%,
+          var(--gilt) calc(50% - 36px),
+          transparent calc(50% - 36px),
+          transparent calc(50% + 36px),
+          var(--gilt) calc(50% + 36px),
+          var(--gilt-lo) 85%,
+          transparent
+        )
+        0 5.5px / 100% 1px no-repeat;
+    /*
+     * A gilt ring around something round (portraits, medallions): a dark
+     * seat, metal lit on its top left and shaded bottom right, and a dark
+     * outer bead. Goes first in a box-shadow list.
+     */
+    --gilt-ring:
+      0 0 0 1px oklch(15% 0.02 70), -0.5px -0.5px 0 2px var(--gilt-hi),
+      0.5px 0.5px 0 2px var(--gilt-lo), 0 0 0 3px oklch(15% 0.02 70);
+    --bronze-ring:
+      0 0 0 1px oklch(15% 0.02 70), -0.5px -0.5px 0 1.5px var(--bronze-hi),
+      0.5px 0.5px 0 1.5px oklch(from var(--bronze) calc(l - 0.15) c h),
+      0 0 0 2.5px oklch(15% 0.02 70);
+    /* A small gilt lozenge, set at the end of a rule. */
+    --lozenge: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Cpath d='M4 .5 7.5 4 4 7.5.5 4Z' fill='%23d4a957' stroke='%231d140a' stroke-width='.5'/%3E%3C/svg%3E");
+    /* Tooled leather: a fine grain over every surface of the chrome. */
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .9 0 0 0 0 .75 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+    /* Lamplight pooled at the top of a window, darkening to its edges. */
+    --vignette: radial-gradient(
+      ellipse 120% 70% at 30% 0%,
+      oklch(from var(--scene-oklch) 60% min(c, 0.04) h / 0.1),
+      transparent 70%
+    );
+    --vignette-edge: inset 0 0 36px oklch(0% 0 0 / 0.45);
+    /* Lettering cut into the metal, and gilt titles above it. */
+    --engraved: 0 1px 0 oklch(100% 0 0 / 0.35);
+    --title-ink: oklch(88% 0.05 85);
+    --title-shadow: 0 1px 2px oklch(0% 0 0 / 0.8);
+
     --gem-smoky: oklch(from var(--scene-oklch) 36% min(c, 0.075) h);
     --gem-smoke: oklch(from var(--scene-oklch) 30% min(c, 0.04) h);
     --gem-danger: oklch(44% 0.14 25);
@@ -107,7 +173,8 @@
     /* Search and back bars along a panel's top, under the title bar. */
     --panel-bar-h: 44px;
     --font-ui: "Cabin", system-ui, sans-serif;
-    --font-display: var(--font-ui);
+    /* Titles, headings and tabs: a bookish serif, like the rulebooks. */
+    --font-display: "Fraunces", Georgia, serif;
     /* Count badges pinned to a control's corner, the one place text goes below --text-sm. */
     --text-badge: 0.625rem;
     /* The smallest text anywhere else. */

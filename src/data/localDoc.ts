@@ -1,7 +1,10 @@
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
+import { isObject  } from "../lib/guards";
+import type {Guard} from "../lib/guards";
+import { store   } from "../lib/store";
+import type {ReadonlyStore, Store} from "../lib/store";
 import { collection, lww, rootOf } from "./schema";
-import { store, type ReadonlyStore, type Store } from "../lib/store";
 
 /*
  * A Yjs document that stays on this device: persisted to IndexedDB and never
@@ -24,12 +27,12 @@ export class LocalDoc {
   readonly #persistence: IndexeddbPersistence | null;
   readonly #stops: (() => void)[] = [];
 
-  private constructor(dbName: string | null) {
-    this.#persistence = dbName === null ? null : new IndexeddbPersistence(dbName, this.doc);
+  private constructor(databaseName: string | null) {
+    this.#persistence = databaseName === null ? null : new IndexeddbPersistence(databaseName, this.doc);
   }
 
-  static async open(dbName: string): Promise<LocalDoc> {
-    const d = new LocalDoc(dbName);
+  static async open(databaseName: string): Promise<LocalDoc> {
+    const d = new LocalDoc(databaseName);
     await d.#persistence!.whenSynced;
     return d;
   }
@@ -51,7 +54,7 @@ export class LocalDoc {
       if (!e.transaction.local && e.keysChanged.has(key)) mirror.value = read(this.ui.get(key));
     };
     this.ui.y.observe(onChange);
-    this.#stops.push(() => this.ui.y.unobserve(onChange));
+    this.#stops.push(() => { this.ui.y.unobserve(onChange); });
     const write = (next: T) => {
       if (Object.is(next, mirror.value)) return;
       mirror.value = next;
@@ -83,15 +86,43 @@ export class LocalDoc {
 export function settingsOver<T extends object>(defaults: T, name: string) {
   return (stored: unknown): T => {
     if (stored === undefined) return defaults;
-    if (!stored || typeof stored !== "object" || Array.isArray(stored)) {
+    if (!isObject<Partial<T>>(stored)) {
       console.warn(`Ignoring stored ${name}: not an object`, stored);
       return defaults;
     }
     const out = { ...defaults };
     for (const k of Object.keys(defaults) as (keyof T)[]) {
-      const v = (stored as T)[k];
+      const v = stored[k];
       if (v !== undefined && typeof v === typeof defaults[k]) out[k] = v;
     }
     return out;
+  };
+}
+
+/** Read a stored list, leaving out the items that aren't a T. */
+export function listOf<T>(is: Guard<T>, name: string, fallback: T[] = []) {
+  return (stored: unknown): T[] => {
+    if (stored === undefined) return fallback;
+    if (!Array.isArray(stored)) {
+      console.warn(`Ignoring stored ${name}: not a list`, stored);
+      return fallback;
+    }
+    const items = stored.filter(is);
+    if (items.length < stored.length)
+      console.warn(
+        `Leaving out stored ${name} that can't be read`,
+        stored.filter((v) => !is(v)),
+      );
+    return items;
+  };
+}
+
+/** Read one of `options` as stored, or `fallback`. */
+export function choiceOf<const T extends string>(options: readonly T[], fallback: T, name: string) {
+  return (stored: unknown): T => {
+    if (stored === undefined) return fallback;
+    if (options.includes(stored as T)) return stored as T;
+    console.warn(`Ignoring stored ${name}: unknown`, stored);
+    return fallback;
   };
 }

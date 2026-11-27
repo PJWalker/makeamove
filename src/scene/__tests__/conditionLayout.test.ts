@@ -3,9 +3,10 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   conditionContains,
   conditionLayout,
-  hoverSpring,
-  type ConditionLayoutInput,
+  hoverSpring
+  
 } from "../conditionLayout";
+import type {ConditionLayoutInput} from "../conditionLayout";
 
 const input: ConditionLayoutInput = {
   x: 200,

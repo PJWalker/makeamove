@@ -32,7 +32,7 @@ export function FilterableMenu({
 }: {
   label: string;
   trigger: ReactNode;
-  triggerProps?: Omit<ComponentProps<typeof Button>, "onClick" | "children">;
+  triggerProps?: Omit<ComponentProps<typeof Button>, "children" | "onClick">;
   /** A grid of compact tiles, or a list of full-width rows. */
   layout?: "grid" | "list";
   searchLabel: string;
@@ -44,7 +44,7 @@ export function FilterableMenu({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const triggerReference = useRef<HTMLButtonElement>(null);
   /** Whether the press now ending started with a mouse, which already opened the menu on mousedown. */
   const mousePress = useRef(false);
   const toggle = () => {
@@ -60,7 +60,7 @@ export function FilterableMenu({
   return (
     <div className="filterable-menu">
       <Button
-        ref={triggerRef}
+        ref={triggerReference}
         aria-haspopup="dialog"
         aria-expanded={open}
         {...triggerProps}
@@ -85,7 +85,7 @@ export function FilterableMenu({
         {trigger}
       </Button>
       <Popover
-        triggerRef={triggerRef}
+        triggerRef={triggerReference}
         isOpen={open}
         onOpenChange={setOpen}
         placement="bottom start"

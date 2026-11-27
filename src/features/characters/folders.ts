@@ -1,34 +1,35 @@
 import type { Campaign } from "../../campaign/campaign";
 import { newId } from "../../lib/ids";
-import { UNTITLED_FOLDER } from "../../campaign/folders";
+import {
+  folderName,
+  foldersByName,
+  renameFolderIn,
+  UNTITLED_FOLDER,
+  unfile
+  
+} from "../../campaign/folders";
+import type {FolderView} from "../../campaign/folders";
 
-export interface FolderView {
-  id: string;
-  name: string;
-}
+
 
 export function listFolders(campaign: Campaign): FolderView[] {
-  return campaign.characterFolders
-    .entries()
-    .map(([id, f]) => ({ id, name: f.name }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  return foldersByName(campaign.characterFolders);
 }
 
 export function createFolder(campaign: Campaign, name = UNTITLED_FOLDER) {
   const id = newId();
-  campaign.characterFolders.set(id, { name: name.trim() || UNTITLED_FOLDER });
+  campaign.characterFolders.set(id, { name: folderName(name) });
   return id;
 }
 
 export function renameFolder(campaign: Campaign, id: string, name: string) {
-  if (campaign.characterFolders.has(id) && name.trim())
-    campaign.characterFolders.set(id, { name: name.trim() });
+  renameFolderIn(campaign.characterFolders, id, name);
 }
 
 /** Deleting a folder files its characters back at the top. */
 export function deleteFolder(campaign: Campaign, id: string) {
   campaign.doc.transact(() => {
-    for (const m of campaign.characters.values()) if (m.get("folder") === id) m.delete("folder");
+    unfile(campaign.characters.values(), id);
     campaign.characterFolders.delete(id);
   });
 }
@@ -40,3 +41,5 @@ export function moveToFolder(
 ) {
   campaign.characters.get(characterId)?.patch({ folder: folderId });
 }
+
+export {type FolderView} from "../../campaign/folders";

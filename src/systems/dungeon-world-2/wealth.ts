@@ -115,7 +115,7 @@ export function wealthTierForBoxes(boxes: number) {
     threshold += tier.slots;
     if (tier.rank === 5 || filled < threshold) return tier;
   }
-  return WEALTH_TIERS[WEALTH_TIERS.length - 1]!;
+  return WEALTH_TIERS.at(-1)!;
 }
 
 /** Returns the remaining track boxes, or null when the purchase is unaffordable. */

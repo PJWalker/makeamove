@@ -1,14 +1,22 @@
-import type { Graphics } from "pixi.js";
+import { Color  } from "pixi.js";
+import type {Graphics} from "pixi.js";
 import type { Rect } from "../camera";
 import type { Point } from "../grid";
+import { fontFamily, TEXT_FONTS  } from "../types";
+import type {TextStyle} from "../types";
 import type { SdfFontSpec } from "./sdfFont";
 import type { SdfTextOptions } from "./sdfText";
 import type { RenderState } from "./state";
-import { fontFamily, TEXT_FONTS, type TextStyle } from "../types";
 
 /** The UI accent, oklch(82% 0.15 85), as sRGB for the canvas. */
-export const ACCENT = 0xf0bb3b;
-export const INK = 0x14161c;
+export const ACCENT = 0xF0_BB_3B;
+export const INK = 0x14_16_1C;
+
+/** A scene colour as CSS: its hex without alpha, and its opacity apart. */
+export function cssColour(colour: number | string) {
+  const c = new Color(colour);
+  return { hex: c.toHex(), alpha: c.alpha };
+}
 
 /** The canvas fonts, loaded from index.html. */
 export const cabin = (weight: number): SdfFontSpec => ({ family: "Cabin, sans-serif", weight });
@@ -40,17 +48,15 @@ export const CANVAS_FONTS = [
 export const TOKEN_NAME: SdfTextOptions = {
   font: cabin(600),
   size: 15,
-  fill: 0xffffff,
+  fill: 0xFF_FF_FF,
   outline: { color: INK, width: 4 },
 };
 
 /** Points as Pixi's flat [x, y, x, y…]. */
 export const flat = (pts: Point[]) => pts.flatMap((p) => [p.x, p.y]);
 
-export const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
-
 /** What of the canvas isn't covered by UI, in screen px, kept a little in from its edges. */
-export function screenViewport(s: Pick<RenderState, "size" | "insets">): Rect {
+export function screenViewport(s: Pick<RenderState, "insets" | "size">): Rect {
   const insets = s.insets();
   return {
     x: insets.left + 4,
@@ -67,5 +73,5 @@ export const POINTER_ROOM = 16;
 export const drawPointer = (g: Graphics, pointer: Point[], alpha = 1) =>
   g
     .poly(flat(pointer))
-    .fill({ color: 0xffffff, alpha })
+    .fill({ color: 0xFF_FF_FF, alpha })
     .stroke({ color: INK, width: 2, join: "round", alpha });

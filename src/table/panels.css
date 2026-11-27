@@ -1,7 +1,7 @@
 @layer components {
   /* Panels use a solid surface so content stays clear over the canvas. */
   .panel {
-    background: var(--surface);
+    background: var(--grain), var(--surface);
     border: 0;
     /* Clip children to the panel bounds without trapping fixed descendants. */
     overflow: clip;
@@ -70,11 +70,25 @@
       oklch(from var(--surface) l c h / 0.92),
       oklch(from var(--surface) l c h / 0.55)
     );
+    /* A flourished gilt rule along the title bar's foot. */
+    &::after {
+      content: "";
+      position: absolute;
+      inset: auto var(--space-3) -6px;
+      height: 12px;
+      background: var(--rule-ornate);
+      pointer-events: none;
+    }
   }
   .panel-title {
     min-width: 0;
     overflow: hidden;
+    color: var(--title-ink);
+    font-family: var(--font-display);
     font-size: var(--text-lg);
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-shadow: var(--title-shadow);
     line-height: 1.2;
     text-overflow: ellipsis;
     white-space: nowrap;

@@ -1,7 +1,8 @@
 import { markdownToRichText } from "../../src/macros/markdown.macro";
-import { readReference } from "./readReference";
 import type { Ability, Spell } from "../../src/systems/dnd55e/data";
 import { parseCommaList } from "../../src/lib/list";
+import { readReference } from "./readReference";
+import { slug } from "./slug";
 
 const ABILITIES: Record<string, Ability> = {
   strength: "str",
@@ -13,13 +14,12 @@ const ABILITIES: Record<string, Ability> = {
 };
 const DAMAGE =
   "Acid|Bludgeoning|Cold|Fire|Force|Lightning|Necrotic|Piercing|Poison|Psychic|Radiant|Slashing|Thunder";
-const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
 /** Parse the SRD's consistently formatted spell entries into the system model. */
 export function parseSrdSpells(markdown: string): Spell[] {
   const section = markdown.slice(markdown.indexOf("## Spell Descriptions"));
   return section
-    .split(/^#### /m)
+    .split(/^#{4} /m)
     .slice(1)
     .flatMap((block): Spell[] => {
       const [nameLine, ...lines] = block.split(/\r?\n/);
@@ -53,18 +53,18 @@ export function parseSrdSpells(markdown: string): Spell[] {
         .exec(body)?.[1]
         ?.toLowerCase();
       const damage = new RegExp(`(\\d+)d(\\d+)\\s*(${DAMAGE})?\\s*damage`, "i").exec(body);
-      const healing = /regains? (?:a number of )?(?:Hit Points equal to )?(\d+)d(\d+)/i.exec(body);
+      const healing = /regains? (?:a number of )?(?:hit points equal to )?(\d+)d(\d+)/i.exec(body);
       const scaling =
         /(?:damage|healing) increases by (\d+)d\d+ for each (?:spell )?slot level/i.exec(body);
       const damageModifier = /plus your spellcasting ability modifier/i.test(body);
       const attack = /spell attack|attack roll/i.test(body) && !saveName;
-      const shapeMatch = /(\d+)-foot(?:-radius)?\s+(Cube|Sphere|Cone|Line|Emanation)/i.exec(body);
+      const shapeMatch = /(\d+)-foot(?:-radius)?\s+(cube|sphere|cone|line|emanation)/i.exec(body);
       const shape = shapeMatch?.[2]?.toLowerCase();
       const shapeSize = shapeMatch?.[1];
       const area =
         shape && shapeSize && ["cube", "sphere", "cone", "line", "emanation"].includes(shape)
           ? {
-              shape: shape as "cube" | "sphere" | "cone" | "line" | "emanation",
+              shape: shape as "cone" | "cube" | "emanation" | "line" | "sphere",
               size: Number(shapeSize),
               ...(shape === "line" ? { width: 5 } : {}),
             }
@@ -111,7 +111,7 @@ export function parseSrdSpells(markdown: string): Spell[] {
               }
             : {}),
           ...(saveName && ABILITIES[saveName] ? { save: ABILITIES[saveName] } : {}),
-          ...(target ? { target: { ...target, ...(area ? { area } : {}) } } : area ? { area } : {}),
+          ...(target ? { target: { ...target, ...(area ? { area } : {}) } } : (area ? { area } : {})),
         },
       ];
     });

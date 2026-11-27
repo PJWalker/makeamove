@@ -1,7 +1,7 @@
 import type * as React from "react";
 import { use, useEffect, useState } from "react";
 import { loadBlob } from "../media/images";
-import type { BlobRef } from "../media/images";
+import type { BlobReference } from "../media/images";
 import { PeerBlobsContext } from "./blobImageContext";
 
 /** An image from the blob store, or `fallback` while it's missing from this device. */
@@ -11,7 +11,7 @@ export function BlobImage({
   className: cls,
   fallback,
 }: {
-  image?: BlobRef | undefined;
+  image?: BlobReference | undefined;
   alt?: string;
   className?: string;
   fallback?: React.ReactNode;
@@ -22,7 +22,7 @@ export function BlobImage({
   const hash = image?.hash;
   const peers = use(PeerBlobsContext);
 
-  useEffect(() => peers?.onAvailable(() => setTries((n) => n + 1)), [peers]);
+  useEffect(() => peers?.onAvailable(() => { setTries((n) => n + 1); }), [peers]);
   useEffect(() => {
     if (!hash) return;
     let made: string | null = null;

@@ -1,13 +1,8 @@
 import { markdownToRichText } from "../../src/macros/markdown.macro";
-import { readReference } from "./readReference";
 import type { Feature } from "../../src/systems/dnd55e/data";
 import { SUBCLASSES } from "../../src/systems/dnd55e/origins";
-
-const slug = (value: string) =>
-  value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+import { readReference } from "./readReference";
+import { slug } from "./slug";
 
 export function parseSrdClassFeatures(markdown: string): Feature[] {
   const features: Feature[] = [];

@@ -1,7 +1,8 @@
-import { ColourPicker } from "../ui/ColourPicker";
 import type { RefObject } from "react";
 import { useState } from "react";
-import { systemCampaignData, type Campaign } from "../campaign/campaign";
+import { ColourPicker } from "../ui/ColourPicker";
+import { systemCampaignData  } from "../campaign/campaign";
+import type {Campaign} from "../campaign/campaign";
 import { commaListOf, formatCommaList } from "../lib/list";
 import { parseInputNumber } from "../lib/number";
 import { device, setDeviceColour, setDeviceName } from "../platform/device";
@@ -31,7 +32,7 @@ export function SettingsDialog({
   campaign: Campaign;
   dialogRef: RefObject<HTMLDialogElement | null>;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const me = useQuery(device);
   const hiding = useQuery(autohide);
   const use3dDice = useQuery(threeDimensionalDice);
@@ -51,7 +52,7 @@ export function SettingsDialog({
                 const v = e.currentTarget.value.trim();
                 if (!v) return;
                 setDeviceName(v);
-                ctx.execute(setMyName, { name: v });
+                context.execute(setMyName, { name: v });
               }}
             />
           </label>
@@ -77,7 +78,7 @@ export function SettingsDialog({
                 { id: "always", label: "Always shown" },
                 { id: "autohide", label: "Autohide" },
               ]}
-              onChange={(v) => setAutohide(v === "autohide")}
+              onChange={(v) => { setAutohide(v === "autohide"); }}
             />
             <span className="muted">
               Autohide hides them until your pointer nears a window edge.
@@ -92,12 +93,12 @@ export function SettingsDialog({
                 { id: "3d", label: "3D" },
                 { id: "flat", label: "Flat" },
               ]}
-              onChange={(v) => setThreeDimensionalDice(v === "3d")}
+              onChange={(v) => { setThreeDimensionalDice(v === "3d"); }}
             />
           </div>
         </div>
       </section>
-      {can(ctx, renameCampaign, { name: "" }) && <CampaignSettings campaign={campaign} />}
+      {can(context, renameCampaign, { name: "" }) && <CampaignSettings campaign={campaign} />}
       <SystemCampaignFields campaign={campaign} />
       <CampaignSystemSheet campaign={campaign} />
       <BackupSettings campaign={campaign} />
@@ -106,7 +107,7 @@ export function SettingsDialog({
 }
 
 function CampaignSettings({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const name = useQuery(campaign.meta, () => campaign.name);
   const defaults = useQuery(campaign.meta, () => campaign.defaults());
   return (
@@ -120,7 +121,7 @@ function CampaignSettings({ campaign }: { campaign: Campaign }) {
             value={name}
             onChange={(e) => {
               const v = e.currentTarget.value.trim();
-              if (v) ctx.execute(renameCampaign, { name: v });
+              if (v) context.execute(renameCampaign, { name: v });
             }}
           />
         </label>
@@ -137,7 +138,7 @@ function CampaignSettings({ campaign }: { campaign: Campaign }) {
             label="Default token style"
             value={defaults.tokenStyle}
             options={TOKEN_STYLES}
-            onChange={(tokenStyle) => ctx.execute(setDefaults, { patch: { tokenStyle } })}
+            onChange={(tokenStyle) => context.execute(setDefaults, { patch: { tokenStyle } })}
           />
         </div>
         <div className="field">
@@ -146,7 +147,7 @@ function CampaignSettings({ campaign }: { campaign: Campaign }) {
             label="Default grid"
             value={defaults.gridType}
             options={GRID_TYPES}
-            onChange={(gridType) => ctx.execute(setDefaults, { patch: { gridType } })}
+            onChange={(gridType) => context.execute(setDefaults, { patch: { gridType } })}
           />
         </div>
       </div>
@@ -156,12 +157,12 @@ function CampaignSettings({ campaign }: { campaign: Campaign }) {
 }
 
 function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const system = getSystem(campaign.systemId);
   const fields = system.campaignFields ?? [];
   const values = useQuery(campaign.systemData, () => systemCampaignData(campaign));
-  const editable = can(ctx, setCampaignField, { field: "", value: "" });
-  if (!fields.length) return null;
+  const editable = can(context, setCampaignField, { field: "", value: "" });
+  if (fields.length === 0) return null;
   return (
     <section
       className="dialog-section form-layout"
@@ -176,7 +177,7 @@ function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
               value={String(values[field.id] ?? field.default)}
               disabled={!editable}
               onChange={(event) =>
-                ctx.execute(setCampaignField, { field: field.id, value: event.currentTarget.value })
+                context.execute(setCampaignField, { field: field.id, value: event.currentTarget.value })
               }
             >
               {field.options?.map((option) => (
@@ -185,7 +186,7 @@ function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
                 </option>
               ))}
             </select>
-          ) : field.type === "multiselect" ? (
+          ) : (field.type === "multiselect" ? (
             (() => {
               const selected = new Set(commaListOf(values[field.id]));
               return (
@@ -194,7 +195,7 @@ function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
                   aria-label={field.label}
                   disabled={!editable}
                   onChange={(event) =>
-                    ctx.execute(setCampaignField, {
+                    context.execute(setCampaignField, {
                       field: field.id,
                       value: formatCommaList(
                         [...event.currentTarget.selectedOptions].map((option) => option.value),
@@ -221,10 +222,10 @@ function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
                 const input = event.currentTarget.value;
                 const value = field.type === "number" ? parseInputNumber(input) : input;
                 if (value === undefined) return;
-                ctx.execute(setCampaignField, { field: field.id, value });
+                context.execute(setCampaignField, { field: field.id, value });
               }}
             />
-          )}
+          ))}
         </label>
       ))}
     </section>
@@ -320,14 +321,14 @@ function InviteField({ campaign }: { campaign: Campaign }) {
             aria-label="Invite link"
             readOnly
             value={url}
-            onFocus={(e) => e.currentTarget.select()}
+            onFocus={(e) => { e.currentTarget.select(); }}
           />
           <Button
             variant="secondary"
             onClick={() => {
               void navigator.clipboard.writeText(url).then(() => {
                 setCopied(true);
-                setTimeout(() => setCopied(false), 1500);
+                setTimeout(() => { setCopied(false); }, 1500);
               });
             }}
           >

@@ -1,35 +1,39 @@
-import type { EntityGraphic, EntityGraphicRef } from "../media/images";
 import { store, watch } from "../lib/store";
 import type { CampaignDefaults } from "../campaign/campaign";
 import { device } from "../platform/device";
 
-import { colourOf, type Presence } from "./presence";
-import { type Camera, clampZoom, fitCamera, toWorld, zoomAt } from "./camera";
+import {
+  
+  
+  
+  importImage,
+  imageColour
+} from "../media/images";
+import type {BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference} from "../media/images";
+import { reducedMotion } from "../ui/transition";
+import { colourOf  } from "./presence";
+import type {Presence} from "./presence";
+import {  clampZoom, fitCamera, toWorld, zoomAt } from "./camera";
+import type {Camera} from "./camera";
 import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import { bounds, hits } from "./geometry";
-import { type Point, snapPoint } from "./grid";
-import type { BlobRef } from "../media/images";
-import { importImage, imageColour } from "../media/images";
+import { cellOr,  snapPoint } from "./grid";
+import type {Point} from "./grid";
 import { tokenDistance } from "./measure";
 import {
   conversion,
   imageElement,
   newToken,
-  randomTokenColour,
-  type TokenSpec,
+  randomTokenColour
+  
 } from "./newElements";
+import type {TokenSpec} from "./newElements";
 import type { SceneRenderer } from "./renderer";
-import type { ElementPatch, SceneDoc } from "./sceneDoc";
-import { ERASER_RADIUS, GM_KINDS, kindOf, type SceneTools } from "./tools";
-import {
-  LAYERS,
-  type Layer,
-  type NewElement,
-  type SceneElement,
-  type TokenElement,
-  type TokenStyle,
-  type Transform,
-} from "./types";
+import type { ElementPatch, SceneDoc as SceneDocument } from "./sceneDoc";
+import { toolCursor } from "./toolCursors";
+import { ERASER_RADIUS, GM_KINDS, kindOf  } from "./tools";
+import type {SceneTools} from "./tools";
+import type { Layer, NewElement, SceneElement, TokenElement, TokenStyle, Transform } from "./types";
 import { TOOL_PRESS } from "./gestures";
 import { PolygonDraft } from "./gestures/polygon";
 import { pinch } from "./gestures/pan";
@@ -41,6 +45,19 @@ import type { Gesture, Placement, TextRequest, ToolContext } from "./gestures/ty
 /** How soon, and how near in screen px, a press must follow the last to count as a double click. */
 const MULTI_CLICK_MS = 500;
 const MULTI_CLICK_SLOP = 6;
+
+/** Which way each arrow key nudges the selection. */
+const ARROW_NUDGES: Record<string, Point> = {
+  ArrowUp: { x: 0, y: -1 },
+  ArrowDown: { x: 0, y: 1 },
+  ArrowLeft: { x: -1, y: 0 },
+  ArrowRight: { x: 1, y: 0 },
+};
+
+/** Just the place, size and rotation of `t`, without the rest of what it holds. */
+function transformOf(t: Transform): Transform {
+  return { x: t.x, y: t.y, w: t.w, h: t.h, rot: t.rot };
+}
 
 /**
  * Turns pointer, wheel and keyboard input into camera moves and scene edits.
@@ -80,10 +97,10 @@ export class SceneController implements ToolContext {
   }
 
   /** Asks the canvas for text to put on the map, or to change: set by SceneCanvas. */
-  onTextRequest: ((req: TextRequest) => void) | null = null;
+  onTextRequest: ((request: TextRequest) => void) | null = null;
 
   /** Send text requests to `handler` until the returned function is called. */
-  handleTextRequests(handler: (req: TextRequest) => void): () => void {
+  handleTextRequests(handler: (request: TextRequest) => void): () => void {
     this.onTextRequest = handler;
     return () => {
       if (this.onTextRequest === handler) this.onTextRequest = null;
@@ -110,7 +127,7 @@ export class SceneController implements ToolContext {
   }
   private set gesture(g: Gesture | null) {
     this.current = g;
-    this.pressing.value = !!g;
+    this.pressing.value = Boolean(g);
   }
   /** Whether a press is under way, so chrome over the scene can keep out of its way. */
   readonly pressing = store(false);
@@ -126,10 +143,10 @@ export class SceneController implements ToolContext {
   private spaceHeld = false;
   private hover: Point | null = null;
   private disposers: (() => void)[] = [];
-  private saveTimer = 0;
+  private saveTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
   private itemTokenDropFrame = 0;
 
-  readonly scene: SceneDoc;
+  readonly scene: SceneDocument;
   readonly renderer: SceneRenderer;
   readonly host: HTMLElement;
   readonly sceneId: string;
@@ -140,7 +157,7 @@ export class SceneController implements ToolContext {
   private lastCursor = 0;
 
   constructor(
-    scene: SceneDoc,
+    scene: SceneDocument,
     renderer: SceneRenderer,
     host: HTMLElement,
     sceneId: string,
@@ -158,7 +175,7 @@ export class SceneController implements ToolContext {
   }
 
   start() {
-    const refresh = () => this.refresh();
+    const refresh = () => { this.refresh(); };
     const regrid = () => {
       this.renderer.setGrid(this.scene.grid());
       this.renderer.invalidate("overlay");
@@ -184,8 +201,8 @@ export class SceneController implements ToolContext {
           // The GM's lamps, areas and effect outlines show wherever they can be picked.
           this.renderer.helpersShown = new Set(this.tools.pickingKinds());
           const keep = this.selection.value.filter((id) => {
-            const el = this.byId.get(id);
-            return el && this.pickable(el);
+            const element = this.byId.get(id);
+            return element && this.pickable(element);
           });
           if (keep.length !== this.selection.value.length) this.selection.value = keep;
           this.cancelGesture();
@@ -210,16 +227,15 @@ export class SceneController implements ToolContext {
       };
     };
     if (this.presence) {
-      const presence = this.presence;
-      const show = () =>
-        this.renderer.setPresence(
+      const {presence} = this;
+      const show = () => { this.renderer.setPresence(
           presence.marks(this.sceneId, device.value.id, device.value.name, colourOf(device.value)),
-        );
+        ); };
       presence.setScene(this.sceneId);
       this.disposers.push(
         presence.subscribe(show),
-        () => presence.setScene(null),
-        () => this.renderer.setPresence([]),
+        () => { presence.setScene(null); },
+        () => { this.renderer.setPresence([]); },
       );
       this.disposers.push(watch([device], show));
       show();
@@ -233,26 +249,26 @@ export class SceneController implements ToolContext {
       this.scheduleSaveCamera();
     };
 
-    const el = this.host;
+    const element = this.host;
     const listen = <K extends keyof HTMLElementEventMap>(
       type: K,
-      fn: (e: HTMLElementEventMap[K]) => void,
-      opts?: AddEventListenerOptions,
+      function_: (e: HTMLElementEventMap[K]) => void,
+      options?: AddEventListenerOptions,
     ) => {
-      el.addEventListener(type, fn as EventListener, opts);
-      this.disposers.push(() => el.removeEventListener(type, fn as EventListener, opts));
+      element.addEventListener(type, function_ as EventListener, options);
+      this.disposers.push(() => { element.removeEventListener(type, function_ as EventListener, options); });
     };
-    listen("pointerdown", (e) => this.onPointerDown(e));
-    listen("pointermove", (e) => this.onPointerMove(e));
-    listen("pointerup", (e) => this.onPointerUp(e));
-    listen("pointercancel", (e) => this.onPointerUp(e, true));
+    listen("pointerdown", (e) => { this.onPointerDown(e); });
+    listen("pointermove", (e) => { this.onPointerMove(e); });
+    listen("pointerup", (e) => { this.onPointerUp(e); });
+    listen("pointercancel", (e) => { this.onPointerUp(e, true); });
     listen("pointerleave", () => {
       this.presence?.setCursor(null);
       this.hover = null;
       this.renderer.setHoverToken(null);
       this.updateOverlay();
     });
-    listen("wheel", (e) => this.onWheel(e), { passive: false });
+    listen("wheel", (e) => { this.onWheel(e); }, { passive: false });
   }
 
   stop() {
@@ -277,19 +293,19 @@ export class SceneController implements ToolContext {
     const targets = this.targets.value.filter((id) => this.byId.get(id)?.type === "token");
     if (targets.length !== this.targets.value.length) this.setTargets(targets);
     const sel = this.selection.value.filter((id) => this.byId.has(id));
-    if (sel.length !== this.selection.value.length) this.selection.value = sel;
-    else {
+    if (sel.length === this.selection.value.length) {
       this.selectedElements.value = this.selected();
       this.updateOverlay();
     }
+    else {this.selection.value = sel;}
     this.updateMapColour();
   }
 
   private updateMapColour() {
     let main: SceneElement | null = null;
-    for (const el of this.elements)
-      if (el.type === "map" && (!main || el.w * el.h > main.w * main.h)) main = el;
-    if (!main || main.type !== "map") {
+    for (const element of this.elements)
+      if (element.type === "map" && (!main || element.w * element.h > main.w * main.h)) main = element;
+    if (main?.type !== "map") {
       this.mapColour.value = null;
       return;
     }
@@ -303,7 +319,7 @@ export class SceneController implements ToolContext {
   selected(): SceneElement[] {
     return this.selection.value
       .map((id) => this.byId.get(id))
-      .filter((e): e is SceneElement => !!e);
+      .filter((e): e is SceneElement => Boolean(e));
   }
 
   element(id: string) {
@@ -314,14 +330,14 @@ export class SceneController implements ToolContext {
     const tool = this.tools.activeTool.value;
     // What's hidden, such as text being edited, has no outline or handles.
     const selected = this.selecting()
-      ? this.selected().filter((el) => !this.renderer.hidden.has(el.id))
+      ? this.selected().filter((element) => !this.renderer.hidden.has(element.id))
       : [];
     const g = this.gesture;
-    const movable = selected.filter((el) => !el.locked);
+    const movable = selected.filter((element) => !element.locked);
     const groupBounds = movable.length > 1 && !g ? bounds(movable) : null;
     this.renderer.overlayState = {
       selected,
-      handles: selected.length === 1 && !selected[0]!.locked && (!g || !!g.keepsHandles),
+      handles: selected.length === 1 && !selected[0]!.locked && (!g || Boolean(g.keepsHandles)),
       group: g
         ? (g.groupFrame?.() ?? null)
         : groupBounds && {
@@ -345,7 +361,7 @@ export class SceneController implements ToolContext {
   rangeFrom(): string | null {
     const actor = this.targetMode.value?.actor;
     if (!actor) return null;
-    return this.elements.find((el) => el.type === "token" && el.characterId === actor)?.id ?? null;
+    return this.elements.find((element) => element.type === "token" && element.characterId === actor)?.id ?? null;
   }
 
   /** Target a token, or stop targeting it. */
@@ -353,7 +369,7 @@ export class SceneController implements ToolContext {
     const t = this.targets.value;
     const max = this.targetMode.value?.max;
     const next = t.includes(id) ? t.filter((x) => x !== id) : [...t, id];
-    this.setTargets(max !== undefined ? next.slice(-max) : next);
+    this.setTargets(max === undefined ? next : next.slice(-max));
   }
 
   /** The chosen targets, with each one's distance from the actor's token (null without one). */
@@ -366,14 +382,14 @@ export class SceneController implements ToolContext {
     const fromId = this.rangeFrom();
     const from = fromId ? this.byId.get(fromId) : undefined;
     return this.targets.value.flatMap((id) => {
-      const el = this.byId.get(id);
-      if (el?.type !== "token") return [];
+      const element = this.byId.get(id);
+      if (element?.type !== "token") return [];
       return [
         {
           id,
-          name: el.name || "Unnamed token",
-          ...(el.characterId ? { characterId: el.characterId } : {}),
-          distance: from ? tokenDistance(this.renderer.grid, from, el) : null,
+          name: element.name || "Unnamed token",
+          ...(element.characterId ? { characterId: element.characterId } : {}),
+          distance: from ? tokenDistance(this.renderer.grid, from, element) : null,
         },
       ];
     });
@@ -394,27 +410,18 @@ export class SceneController implements ToolContext {
   }
 
   private updateCursor(cursor?: string) {
+    this.host.style.cursor = cursor ?? this.gesture?.cursor ?? this.idleCursor();
+  }
+
+  /** The cursor for the tool in use, between gestures. */
+  private idleCursor(): string {
     const tool = this.tools.activeTool.value;
-    this.host.style.cursor =
-      cursor ??
-      this.gesture?.cursor ??
-      (this.spaceHeld || tool === "pan"
-        ? "grab"
-        : this.placing.value ||
-            tool === "draw" ||
-            tool === "shape" ||
-            tool === "wall" ||
-            tool === "light" ||
-            tool === "effect" ||
-            tool === "ruler" ||
-            tool === "ping" ||
-            (tool === "select" && this.targetMode.value)
-          ? "crosshair"
-          : tool === "text"
-            ? "text"
-            : tool === "erase"
-              ? "none"
-              : "default");
+    if (this.spaceHeld) return "grab";
+    if (this.placing.value || (tool === "select" && this.targetMode.value)) return "crosshair";
+    return toolCursor(tool, {
+      shape: this.tools.shapeTool.value,
+      effect: this.tools.effectTool.value.effect,
+    });
   }
 
   // Camera
@@ -430,7 +437,7 @@ export class SceneController implements ToolContext {
 
   private scheduleSaveCamera() {
     clearTimeout(this.saveTimer);
-    this.saveTimer = window.setTimeout(() => this.saveCamera(), 300);
+    this.saveTimer = globalThis.setTimeout(() => { this.saveCamera(); }, 300);
   }
 
   private saveCamera() {
@@ -485,21 +492,29 @@ export class SceneController implements ToolContext {
    * Select tool's options turn on, or in the Lights or Effects tool what it
    * makes. Only the GM picks walls, lights and effects.
    */
-  pickable(el: SceneElement): boolean {
-    const kind = kindOf(el);
-    if (GM_KINDS.includes(kind) && !this.gm) return false;
-    return this.tools.pickingKinds().includes(kind);
+  pickable(element: SceneElement): boolean {
+    return this.picker()(element);
+  }
+
+  /** `pickable`, with the active tool's kinds looked up once, for testing many elements. */
+  private picker(): (element: SceneElement) => boolean {
+    const kinds = this.tools.pickingKinds();
+    return (element) => {
+      const kind = kindOf(element);
+      return (this.gm || !GM_KINDS.includes(kind)) && kinds.includes(kind);
+    };
   }
 
   /** Topmost element under p. Locked elements only count when asked. */
   hitTest(p: Point, includeLocked = false, ignoreTool = false): SceneElement | null {
     const tolerance = 4 / this.renderer.camera.zoom;
-    for (let i = this.elements.length - 1; i >= 0; i--) {
-      const el = this.elements[i];
-      if (!el) continue;
-      if (el.locked && !includeLocked) continue;
-      if (!ignoreTool && !this.pickable(el)) continue;
-      if (hits(el, p, tolerance)) return el;
+    const pickable = ignoreTool ? () => true : this.picker();
+    for (let index = this.elements.length - 1; index >= 0; index--) {
+      const element = this.elements[index];
+      if (!element) continue;
+      if (element.locked && !includeLocked) continue;
+      if (!pickable(element)) continue;
+      if (hits(element, p, tolerance)) return element;
     }
     return null;
   }
@@ -531,12 +546,7 @@ export class SceneController implements ToolContext {
       return;
     }
 
-    const tool =
-      e.button === 1 || this.spaceHeld
-        ? "pan"
-        : this.selecting()
-          ? "select"
-          : this.tools.activeTool.value;
+    const tool = e.button === 1 || this.spaceHeld ? "pan" : this.tools.activeTool.value;
     this.gesture = TOOL_PRESS[tool](this, e, world, screen);
     this.updateCursor();
     this.updateOverlay();
@@ -597,12 +607,9 @@ export class SceneController implements ToolContext {
   }
 
   commitPreviews() {
-    const previews = this.renderer.previews;
-    if (!previews.size) return;
-    const patches = [...previews].map(
-      ([id, t]) => [id, { x: t.x, y: t.y, w: t.w, h: t.h, rot: t.rot }] as [string, Transform],
-    );
-    this.scene.update(patches);
+    const {previews} = this.renderer;
+    if (previews.size === 0) return;
+    this.scene.update([...previews].map(([id, t]) => [id, transformOf(t)]));
     previews.clear();
     this.renderer.invalidate("elements", "overlay");
   }
@@ -610,16 +617,10 @@ export class SceneController implements ToolContext {
   /** Shrink a scene item token into its drop point before transferring it. */
   animateItemTokenDrop(id: string, clientX: number, clientY: number, complete: () => void) {
     const original = this.byId.get(id);
-    if (original?.type !== "token") return complete();
+    if (original?.type !== "token") { complete(); return; }
     const current = this.renderer.previews.get(id) ?? original;
     cancelAnimationFrame(this.itemTokenDropFrame);
-    const from = {
-      x: current.x,
-      y: current.y,
-      w: current.w,
-      h: current.h,
-      rot: current.rot,
-    };
+    const from = transformOf(current);
     const point = this.toWorld(clientX, clientY);
     const to = {
       ...from,
@@ -634,7 +635,7 @@ export class SceneController implements ToolContext {
       this.renderer.invalidate("previews", "overlay");
       complete();
     };
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return finish();
+    if (reducedMotion.matches) { finish(); return; }
     const start = performance.now();
     const tick = (now: number) => {
       const progress = Math.min(1, (now - start) / 180);
@@ -696,55 +697,59 @@ export class SceneController implements ToolContext {
    * Undo, Duplicate, Delete and Fit are commands, with their own keys (workspace/commands).
    */
   onKeyDown(e: KeyboardEvent): boolean {
-    const mod = e.metaKey || e.ctrlKey;
+    const module_ = e.metaKey || e.ctrlKey;
     const key = e.key.toLowerCase();
-    const grid = this.renderer.grid;
 
-    if (key === " " && !mod) {
+    if (key === " " && !module_) {
       if (!this.spaceHeld) {
         this.spaceHeld = true;
         this.updateCursor();
       }
       return true;
     }
-    if (mod && key === "a") {
+    if (module_ && key === "a") {
       if (!this.selecting()) this.tools.activeTool.value = "select";
-      this.selection.value = this.elements.flatMap((el) =>
-        !el.locked && this.pickable(el) ? [el.id] : [],
+      this.selection.value = this.elements.flatMap((element) =>
+        !element.locked && this.pickable(element) ? [element.id] : [],
       );
       return true;
     }
-    if (mod) return false;
+    if (module_) return false;
 
     switch (e.key) {
-      case "Enter":
+      case "Enter": {
         if (!this.polygon.active) return false;
         this.polygon.finish();
         return true;
-      case "Escape":
+      }
+      case "Escape": {
         if (this.gesture || this.polygon.active) this.cancelGesture();
         else this.selection.value = [];
         return true;
+      }
       case "ArrowUp":
       case "ArrowDown":
       case "ArrowLeft":
       case "ArrowRight": {
-        const step = e.shiftKey ? (grid.type === "none" ? 10 : grid.size) : 1;
-        const dx = e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0;
-        const dy = e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0;
-        const sel = this.selected().filter((el) => !el.locked);
-        if (!sel.length) return false;
-        this.scene.update(sel.map((el) => [el.id, { x: el.x + dx, y: el.y + dy }]));
+        const step = e.shiftKey ? cellOr(this.renderer.grid, 10) : 1;
+        const nudge = ARROW_NUDGES[e.key]!;
+        const sel = this.selected().filter((element) => !element.locked);
+        if (sel.length === 0) return false;
+        this.scene.update(
+          sel.map((element) => [element.id, { x: element.x + nudge.x * step, y: element.y + nudge.y * step }]),
+        );
         return true;
       }
       case "=":
-      case "+":
+      case "+": {
         this.zoomBy(1.25);
         return true;
+      }
       case "-":
-      case "_":
+      case "_": {
         this.zoomBy(0.8);
         return true;
+      }
     }
     // By key position, so Shift + digit works on any keyboard layout.
     if (e.shiftKey && e.code === "Digit0") {
@@ -770,17 +775,16 @@ export class SceneController implements ToolContext {
   // Edits, for menus and shortcuts
 
   remove(ids: string[]) {
-    const removable = ids.filter((id) => this.byId.get(id) && !this.byId.get(id)!.locked);
-    if (!removable.length) return;
+    const removable = ids.filter((id) => this.byId.get(id)?.locked === false);
+    if (removable.length === 0) return;
     this.scene.remove(removable);
     const removableIds = new Set(removable);
     this.selection.value = this.selection.value.filter((id) => !removableIds.has(id));
   }
 
   duplicate(ids: string[]) {
-    if (!ids.length) return;
-    const grid = this.renderer.grid;
-    const copies = this.scene.duplicate(ids, grid.type === "none" ? 20 : grid.size);
+    if (ids.length === 0) return;
+    const copies = this.scene.duplicate(ids, cellOr(this.renderer.grid, 20));
     this.afterDuplicate(copies);
     this.selection.value = copies;
   }
@@ -792,7 +796,7 @@ export class SceneController implements ToolContext {
     this.scene.update(ids.map((id) => [id, { locked }]));
   }
 
-  restack(ids: string[], to: "front" | "back") {
+  restack(ids: string[], to: "back" | "front") {
     this.scene.restack(ids, to);
   }
 
@@ -800,14 +804,16 @@ export class SceneController implements ToolContext {
     this.scene.setLayer(ids, layer);
   }
 
-  /** Change elements' properties as one undo step. Turning a door back into a wall forgets whether it was open. */
-  /** Change elements' properties; text is resized to fit. */
+  /**
+   * Change elements' properties as one undo step; text is resized to fit.
+   * Turning a door back into a wall forgets whether it was open.
+   */
   setProps(ids: string[], patch: ElementPatch) {
     const fixed = "door" in patch && patch.door === false ? { ...patch, open: undefined } : patch;
     this.scene.update(
       ids.flatMap((id) => {
-        const el = this.byId.get(id);
-        return el ? [[id, fitPatch(this, el, fixed)] as [string, ElementPatch]] : [];
+        const element = this.byId.get(id);
+        return element ? [[id, fitPatch(this, element, fixed)] as [string, ElementPatch]] : [];
       }),
     );
   }
@@ -815,9 +821,9 @@ export class SceneController implements ToolContext {
   /** Show elements with changed properties without changing them yet; null to stop. */
   previewProps(ids: string[], patch: ElementPatch | null) {
     for (const id of ids) {
-      const el = this.byId.get(id);
-      if (!el) continue;
-      if (patch) this.renderer.previews.set(id, { ...el, ...patch } as Transform);
+      const element = this.byId.get(id);
+      if (!element) continue;
+      if (patch) this.renderer.previews.set(id, { ...element, ...patch } as Transform);
       else this.renderer.previews.delete(id);
     }
     this.renderer.invalidate("previews");
@@ -863,36 +869,29 @@ export class SceneController implements ToolContext {
     patch: {
       [
         K in
-          | "name"
-          | "style"
-          | "colour"
-          | "characterId"
-          | "image"
-          | "itemDefId"
-          | "hideName"
-          | "hideBars"
+          "characterId" | "colour" | "hideBars" | "hideName" | "image" | "itemDefId" | "name" | "style"
       ]?: TokenElement[K] | undefined;
     },
     cells?: number,
   ) {
-    const el = this.byId.get(id);
-    const grid = this.renderer.grid;
-    const size = cells && el ? cells * grid.size : 0;
-    const resize = size && el && (Math.abs(el.w - size) > 0.5 || Math.abs(el.h - size) > 0.5);
+    const element = this.byId.get(id);
+    const {grid} = this.renderer;
+    const size = cells && element ? cells * grid.size : 0;
+    const resize = size && element && (Math.abs(element.w - size) > 0.5 || Math.abs(element.h - size) > 0.5);
     this.scene.update([
-      [id, resize ? { ...patch, ...snapPoint(grid, el, cells), w: size, h: size } : patch],
+      [id, resize ? { ...patch, ...snapPoint(grid, element, cells), w: size, h: size } : patch],
     ]);
   }
 
   /** The names of every token on the scene, for naming new ones apart. */
   tokenNames(): string[] {
-    return this.elements.flatMap((el) => (el.type === "token" ? [el.name] : []));
+    return this.elements.flatMap((element) => (element.type === "token" ? [element.name] : []));
   }
 
   /** Swap an image between being a map and being a token. */
   convert(id: string, to: "map" | "token") {
-    const el = this.byId.get(id);
-    const patch = el && conversion(el, to, this.renderer.grid, this.newTokenLook(true));
+    const element = this.byId.get(id);
+    const patch = element && conversion(element, to, this.renderer.grid, this.newTokenLook(true));
     if (!patch) return;
     this.scene.update([[id, patch]]);
     this.scene.setLayer([id], to);
@@ -910,13 +909,13 @@ export class SceneController implements ToolContext {
     at: Point,
     name = "",
     options: {
-      image?: BlobRef;
+      image?: BlobReference;
       icon?: string;
       itemDefId?: string;
       style?: TokenStyle;
       colour?: string;
       graphic?: EntityGraphic;
-      entityRef?: EntityGraphicRef;
+      entityRef?: EntityGraphicReference;
     } = {},
   ) {
     return this.placeToken(at, { ...options, name });
@@ -928,11 +927,11 @@ export class SceneController implements ToolContext {
     spec: {
       characterId: string;
       name: string;
-      image?: BlobRef;
+      image?: BlobReference;
       style?: TokenStyle;
       colour?: string;
       graphic?: EntityGraphic;
-      entityRef?: EntityGraphicRef;
+      entityRef?: EntityGraphicReference;
     },
   ) {
     return this.placeToken(at, spec);
@@ -942,7 +941,7 @@ export class SceneController implements ToolContext {
     at: Point,
     spec: Omit<TokenSpec, "colour" | "style"> & { colour?: string; style?: TokenStyle },
   ) {
-    const look = this.newTokenLook(!!spec.image || spec.graphic?.kind === "image", spec);
+    const look = this.newTokenLook(Boolean(spec.image) || spec.graphic?.kind === "image", spec);
     const id = this.scene.add(newToken(this.renderer.grid, at, { ...spec, ...look }))[0]!;
     this.tools.activeTool.value = "select";
     this.selection.value = [id];
@@ -955,37 +954,33 @@ export class SceneController implements ToolContext {
    */
   async importFiles(files: Iterable<File>, at: Point) {
     const images = [...files].filter((f) => f.type.startsWith("image/"));
-    if (!images.length) return;
+    if (images.length === 0) return;
     this.host.style.cursor = "progress";
-    const grid = this.renderer.grid;
+    const {grid} = this.renderer;
     const added: NewElement[] = [];
     try {
       const imported = await Promise.all(
         images.map(async (file) => {
           try {
             return await importImage(file);
-          } catch (err) {
-            console.warn(`Couldn't import ${file.name}`, err);
+          } catch (error) {
+            console.error(`Couldn't import ${file.name}`, error);
             return null;
           }
         }),
       );
-      for (const [i, image] of imported.entries()) {
+      for (const [index, image] of imported.entries()) {
         if (!image) continue;
-        const file = images[i]!;
-        const shift = i * (grid.type === "none" ? 40 : grid.size);
+        const file = images[index]!;
+        const shift = index * cellOr(grid, 40);
         const p = { x: at.x + shift, y: at.y + shift };
         added.push(imageElement(grid, image, file.name, p, this.newTokenLook(true)));
       }
     } finally {
       this.updateCursor();
     }
-    if (!added.length) return;
+    if (added.length === 0) return;
     this.tools.activeTool.value = "select";
     this.selection.value = this.scene.add(...added);
-  }
-
-  layers() {
-    return LAYERS;
   }
 }

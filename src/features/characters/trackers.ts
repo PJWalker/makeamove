@@ -1,9 +1,9 @@
 import type { Campaign } from "../../campaign/campaign";
 import type { GameSystem, TrackerDef } from "../../systems/types";
+import type { TrackerButton } from "../../data/richText";
 import { bumpData, bumpResource, canEdit, getCharacter, systemOf } from "./api";
 import { derive } from "./store";
 import type { CharacterView } from "./types";
-import type { TrackerButton } from "../../data/richText";
 
 /*
  * Inline buttons in text that add to or spend a character's numbers:

@@ -1,35 +1,27 @@
-import { store, watch } from "../lib/store";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
+import { store, watch } from "../lib/store";
 import { newId, newSecret } from "../lib/ids";
-import { campaignDbName, campaignUiDbName } from "./storage";
 
 import { commaListOf, formatCommaList } from "../lib/list";
-import { device, type Device } from "../platform/device";
+import { device  } from "../platform/device";
+import type {Device} from "../platform/device";
 import type { JoinRoom } from "../sync/transport";
 import { joinPublicRoom } from "../sync/publicRoom";
 import type { ReadonlyStore } from "../lib/store";
-import {
-  forgetCampaign,
-  renameCampaignEntry,
-  summaryOf,
-  touchCampaign,
-  updateCampaignEntry,
-  upsertCampaign,
-} from "./registry";
 import { NO_SYSTEM_ID, getSystem } from "../systems";
 import type { Invite } from "../sync/invite";
-import { CampaignConnection } from "./connection";
-import { noteDbName, noteGuid } from "../features/notes/noteDoc";
+import { noteDbName as noteDatabaseName, noteGuid } from "../features/notes/noteDoc";
 import { deleteNoteTextIndex } from "../features/notes/textIndex";
-import { Vault, vaultDbName, vaultNoteGuid, vaultShape } from "../features/notes/vault";
+import { Vault, vaultDbName as vaultDatabaseName, vaultNoteGuid, vaultShape } from "../features/notes/vault";
 import { ChatLog, deleteChatData } from "../features/chat/chatLog";
 import { MoveRequests } from "../features/characters/moveRequests";
-import { sceneDbName } from "../scene/sceneDoc";
+import { sceneDbName as sceneDatabaseName } from "../scene/sceneDoc";
 import { upgrade } from "../data/migrate";
 import { rootOf } from "../data/schema";
-import { campaignShape, type CampaignRoot } from "./schema";
-import { SystemData } from "./systemStore";
+import { deleteData } from "../platform/dataEpoch";
+import { isString } from "../lib/guards";
+import type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
 import {
   activeSceneId as activeSceneIdFromIndex,
   createScene,
@@ -39,7 +31,20 @@ import {
   sceneViews,
   updateScene,
 } from "./sceneIndex";
-import type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
+import { SystemData } from "./systemStore";
+import type {CampaignRoot} from "./schema";
+import { campaignShape  } from "./schema";
+import { CampaignConnection } from "./connection";
+import {
+  forgetCampaign,
+  renameCampaignEntry,
+  summaryOf,
+  touchCampaign,
+  updateCampaignEntry,
+  upsertCampaign,
+} from "./registry";
+import { campaignDbName as campaignDatabaseName, campaignUiDbName as campaignUiDatabaseName } from "./storage";
+
 export type { CampaignDefaults, MemberView, RevokedView, Role, SceneView } from "./types";
 
 /* An open campaign: its root document (laid out in schema.ts), sync and services. */
@@ -96,15 +101,27 @@ export class Campaign {
   readonly systemData: SystemData;
   /** GM-only pages, on GM devices only (see notes/vault.ts). */
   readonly vault = store<Vault | null>(null);
-  private persistence: IndexeddbPersistence;
+  /** Chat, rolls and the move log (see chat/chatLog.ts). */
+  readonly chat: ChatLog;
+  /** The move this device is part-way through making (see characters/moveFlow.ts). */
+  readonly moves = new MoveRequests();
+  readonly connection: CampaignConnection;
+  /** The device this campaign is open on. */
+  readonly device: ReadonlyStore<Device>;
+  private readonly joinRoom: JoinRoom;
+  private readonly persistence: IndexeddbPersistence;
   private destroyed = false;
   private rejoinCleanups: (() => void)[] = [];
-  readonly connection: CampaignConnection;
 
   /** False while joining by invite, until the first peer has sent the campaign. */
-  /** Cursors, pings and rulers; live only while peers are connected. */
   readonly ready = store(false);
+  /** True once the GM has removed this device from the campaign. */
+  readonly removed = store(false);
+  /** Connected despite being removed, to learn whether the GM allowed us back. */
+  private checkingRejoin = false;
+  private checkMembership: () => void = () => {};
 
+  /** Cursors, pings and rulers; live only while peers are connected. */
   get presence() {
     return this.connection.presence;
   }
@@ -114,10 +131,6 @@ export class Campaign {
   get online() {
     return this.connection.online;
   }
-
-  /** The device this campaign is open on. */
-  readonly device: ReadonlyStore<Device>;
-  private readonly joinRoom: JoinRoom;
 
   private constructor(id: string, host: CampaignHost) {
     this.id = id;
@@ -142,15 +155,10 @@ export class Campaign {
       entityGraphics: this.entityGraphics,
     } = this.root);
     this.systemData = new SystemData(this.root.ext, () => this.systemId);
-    this.persistence = new IndexeddbPersistence(campaignDbName(id), this.doc);
+    this.persistence = new IndexeddbPersistence(campaignDatabaseName(id), this.doc);
     this.chat = new ChatLog(this.root.chat, id, this.device.value.id);
     this.connection = new CampaignConnection(id, this.doc, this.device, this.joinRoom);
   }
-
-  /** Chat, rolls and the move log (see chat/chatLog.ts). */
-  readonly chat: ChatLog;
-  /** The move this device is part-way through making (see characters/moveFlow.ts). */
-  readonly moves = new MoveRequests();
 
   static async open(id: string, host: CampaignHost = {}): Promise<Campaign> {
     const c = new Campaign(id, host);
@@ -203,13 +211,6 @@ export class Campaign {
     this.checkMembership();
   }
 
-  private checkMembership: () => void = () => {};
-
-  /** True once the GM has removed this device from the campaign. */
-  readonly removed = store(false);
-  /** Connected despite being removed, to learn whether the GM allowed us back. */
-  private checkingRejoin = false;
-
   /**
    * Join the campaign's room and start syncing with whoever else is in it.
    * A device the GM removed stays out, unless it is rejoining by invite: then
@@ -221,15 +222,15 @@ export class Campaign {
     if (this.removed.value && !rejoin) return;
     if (rejoin && this.removed.value) {
       this.checkingRejoin = true;
-      let timer = 0;
+      let timer: ReturnType<typeof globalThis.setTimeout> | undefined;
       const stop = watch([this.peerCount], () => {
-        if (this.peerCount.value === 0 || timer) return;
-        timer = window.setTimeout(() => {
+        if (this.peerCount.value === 0 || timer !== undefined) return;
+        timer = globalThis.setTimeout(() => {
           this.checkingRejoin = false;
           this.checkMembership();
         }, REJOIN_CHECK_MS);
       });
-      this.rejoinCleanups.push(stop, () => clearTimeout(timer));
+      this.rejoinCleanups.push(stop, () => { if (timer !== undefined) clearTimeout(timer); });
     }
     if (await this.connection.connect(roomKey, () => this.destroyed))
       void this.vault.value?.connect();
@@ -288,8 +289,8 @@ export class Campaign {
   }
 
   /** Run `fn` as one transaction on the campaign document, tagged with `origin` (see kernel/commands.ts). */
-  transact<T>(fn: () => T, origin: object | null = null): T {
-    return this.doc.transact(fn, origin);
+  transact<T>(function_: () => T, origin: object | null = null): T {
+    return this.doc.transact(function_, origin);
   }
 
   isGm(deviceId = this.device.value.id): boolean {
@@ -340,7 +341,7 @@ export class Campaign {
   }
 
   ensureMember(name: string, role: Role = "player") {
-    const id = this.device.value.id;
+    const {id} = this.device.value;
     this.doc.transact(() => {
       if (!this.members.has(id)) this.members.set(id, { role, joinedAt: Date.now() });
       if (name) this.members.get(id)?.patch({ name });
@@ -379,7 +380,7 @@ export class Campaign {
     // Where the GM goes, the table goes: tell everyone once they've settled.
     if (this.isGm()) {
       clearTimeout(this.sceneNoticeTimer);
-      this.sceneNoticeTimer = setTimeout(() => this.announceScene(), Campaign.sceneNoticeDelay);
+      this.sceneNoticeTimer = setTimeout(() => { this.announceScene(); }, Campaign.sceneNoticeDelay);
     }
   }
 
@@ -407,7 +408,7 @@ export class Campaign {
   /** Post "Scene changed to …" unless this scene was the last one announced. */
   private announceScene(force = false) {
     if (this.destroyed) return;
-    const id = activeSceneIdFromIndex(this.members, this.scenes, this.device.value.id);
+    const id = this.activeSceneId();
     if (!id || (!force && id === this.meta.get("tableScene"))) return;
     this.meta.set("tableScene", id);
     const name = sceneViews(this.scenes).find((s) => s.id === id)?.name ?? "a new scene";
@@ -472,7 +473,7 @@ export async function createCampaign(
 }
 
 /** Resolve a system's campaign-level values, falling back for older stored campaigns. */
-export function systemCampaignData(campaign: Campaign): Record<string, string | number | boolean> {
+export function systemCampaignData(campaign: Campaign): Record<string, boolean | number | string> {
   const system = getSystem(campaign.systemId);
   return Object.fromEntries(
     (system.campaignFields ?? []).map((field) => [
@@ -486,7 +487,7 @@ export function systemCampaignData(campaign: Campaign): Record<string, string | 
 export function setSystemCampaignData(
   campaign: Campaign,
   fieldId: string,
-  value: string | number | boolean,
+  value: boolean | number | string,
 ) {
   const field = getSystem(campaign.systemId).campaignFields?.find(
     (candidate) => candidate.id === fieldId,
@@ -495,7 +496,6 @@ export function setSystemCampaignData(
   if (field.type === "number") {
     const number = Number(value);
     if (
-      !Number.isFinite(number) ||
       !Number.isInteger(number) ||
       (field.min !== undefined && number < field.min) ||
       (field.max !== undefined && number > field.max)
@@ -511,7 +511,7 @@ export function setSystemCampaignData(
     campaign.systemData.setValue(fieldId, formatCommaList([...new Set(values)]));
     return;
   }
-  if (field.type === "text" && typeof value !== "string") return;
+  if (field.type === "text" && isString(value)) return;
   campaign.systemData.setValue(fieldId, value);
 }
 
@@ -552,33 +552,35 @@ export function joinCampaign({ campaignId, roomKey }: Invite): string {
   return campaignId;
 }
 
-/** Drop this device's GM vault for a campaign, and its pages' text. */
-async function deleteVault(id: string) {
-  const doc = new Y.Doc();
-  const p = new IndexeddbPersistence(vaultDbName(id), doc);
+/** Load a stored document, let `clear` delete what it points to, then delete the document. */
+async function clearStoredDocument(databaseName: string, clear: (document: Y.Doc) => Promise<void> | void) {
+  const document = new Y.Doc();
+  const p = new IndexeddbPersistence(databaseName, document);
   await p.whenSynced;
-  for (const noteId of rootOf(doc, vaultShape).notes.keys())
-    indexedDB.deleteDatabase(noteDbName(vaultNoteGuid(id, noteId)));
+  await clear(document);
   await p.clearData();
-  doc.destroy();
+  document.destroy();
+}
+
+/** Drop this device's GM vault for a campaign, and its pages' text. */
+function deleteVault(id: string) {
+  return clearStoredDocument(vaultDatabaseName(id), (document) => {
+    for (const noteId of rootOf(document, vaultShape).notes.keys())
+      deleteData(noteDatabaseName(vaultNoteGuid(id, noteId)));
+  });
 }
 
 /** Remove a campaign from this device only. Peers keep their copies. */
 export async function deleteLocalCampaign(id: string) {
   for (const c of open) if (c.id === id) c.destroy();
-  const doc = new Y.Doc();
-  const p = new IndexeddbPersistence(campaignDbName(id), doc);
-  await p.whenSynced;
-  const root = rootOf(doc, campaignShape);
-  for (const sceneId of root.scenes.keys())
-    indexedDB.deleteDatabase(sceneDbName(sceneGuid(id, sceneId)));
-  for (const noteId of root.notes.keys())
-    indexedDB.deleteDatabase(noteDbName(noteGuid(id, noteId)));
-  await deleteVault(id);
-  await deleteNoteTextIndex(id);
-  indexedDB.deleteDatabase(campaignUiDbName(id));
-  deleteChatData(root.chat);
-  await p.clearData();
-  doc.destroy();
+  await clearStoredDocument(campaignDatabaseName(id), async (document) => {
+    const root = rootOf(document, campaignShape);
+    for (const sceneId of root.scenes.keys()) deleteData(sceneDatabaseName(sceneGuid(id, sceneId)));
+    for (const noteId of root.notes.keys()) deleteData(noteDatabaseName(noteGuid(id, noteId)));
+    await deleteVault(id);
+    await deleteNoteTextIndex(id);
+    deleteData(campaignUiDatabaseName(id));
+    deleteChatData(root.chat);
+  });
   forgetCampaign(id);
 }

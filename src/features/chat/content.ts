@@ -2,12 +2,15 @@ import type { JSONContent } from "@tiptap/core";
 import type { LinkKind } from "../notes/links";
 import { LINK_NODE } from "../notes/links";
 import {
+  plainParagraph,
   plainText,
   TRACKER_NODE,
-  trackerToken,
-  type RichText,
-  type TrackerButton,
+  trackerToken
+  
+  
 } from "../../data/richText";
+import type {RichText, TrackerButton} from "../../data/richText";
+import { isString } from "../../lib/guards";
 
 /** A chat message's text: rich text, as everywhere else. */
 export type ChatContent = RichText;
@@ -15,19 +18,15 @@ export type ChatContent = RichText;
 type NameOf = (kind: LinkKind, id: string) => string | null;
 
 const entityToken = (kind: LinkKind, id: string, text = "") =>
-  `@[${text.replace(/[\]\n]/g, "")}](${kind}:${id})`;
+  `@[${text.replaceAll(/[\n\]]/g, "")}](${kind}:${id})`;
 
 export function emptyChatContent(): ChatContent {
   return { type: "doc", content: [{ type: "paragraph" }] };
 }
 
+/** Typed text as a message: one paragraph, its line breaks kept. */
 export function contentFromText(text: string): ChatContent {
-  const content: JSONContent[] = [];
-  for (const [index, line] of text.split("\n").entries()) {
-    if (index) content.push({ type: "hardBreak" });
-    if (line) content.push({ type: "text", text: line });
-  }
-  return { type: "doc", content: [{ type: "paragraph", content }] };
+  return { type: "doc", content: [plainParagraph(text)] };
 }
 
 export function entityContent(kind: LinkKind, id: string, label: string): ChatContent {
@@ -45,23 +44,23 @@ export function entityContent(kind: LinkKind, id: string, label: string): ChatCo
   };
 }
 
-function attrsOf(node: JSONContent) {
+function attributesOf(node: JSONContent) {
   return node.attrs ?? {};
 }
 
 function entityTokenOf(node: JSONContent): string {
-  const attrs = attrsOf(node);
+  const attributes = attributesOf(node);
   return entityToken(
-    attrs["kind"] as LinkKind,
-    String(attrs["id"] ?? ""),
-    typeof attrs["text"] === "string" ? attrs["text"] : "",
+    attributes["kind"] as LinkKind,
+    String(attributes["id"] ?? ""),
+    isString(attributes["text"]) ? attributes["text"] : "",
   );
 }
 
 /** The text a link or tracker button stands for when typed. */
 function atomToken(node: JSONContent): string | null {
   if (node.type === LINK_NODE) return entityTokenOf(node);
-  if (node.type === TRACKER_NODE) return trackerToken(attrsOf(node) as TrackerButton);
+  if (node.type === TRACKER_NODE) return trackerToken(attributesOf(node) as TrackerButton);
   return null;
 }
 
@@ -82,11 +81,11 @@ export function commandText(content: ChatContent): string {
 export function messageText(content: ChatContent, nameOf: NameOf = () => null): string {
   return plainText(content, (node) => {
     if (node.type !== LINK_NODE) return null;
-    const attrs = attrsOf(node);
+    const attributes = attributesOf(node);
     return (
-      (typeof attrs["text"] === "string" && attrs["text"]) ||
-      nameOf(attrs["kind"] as LinkKind, String(attrs["id"] ?? "")) ||
-      (typeof attrs["label"] === "string" && attrs["label"]) ||
+      (isString(attributes["text"]) && attributes["text"]) ||
+      nameOf(attributes["kind"] as LinkKind, String(attributes["id"] ?? "")) ||
+      (isString(attributes["label"]) && attributes["label"]) ||
       "a link"
     );
   });
@@ -124,7 +123,7 @@ function sliceInline(nodes: JSONContent[], start: number, end: number): JSONCont
         selected.push(node);
       } else if (node.content) {
         const content = sliceInline(node.content, from - offset, to - offset);
-        if (content.length) selected.push({ ...node, content });
+        if (content.length > 0) selected.push({ ...node, content });
       }
     }
     offset += length;
@@ -136,12 +135,12 @@ export function contentForCommand(content: ChatContent, body: string): ChatConte
   if (!body) return emptyChatContent();
   const source = commandText(content);
   const start = source.lastIndexOf(body);
-  if (start < 0) return contentFromText(body);
+  if (start === -1) return contentFromText(body);
 
   let offset = 0;
   const blocks: JSONContent[] = [];
   const sourceBlocks = content.content ?? [];
-  sourceBlocks.forEach((block, index) => {
+  for (const [index, block] of sourceBlocks.entries()) {
     const length = nodeLength(block);
     const from = Math.max(0, start - offset);
     const to = Math.min(length, start + body.length - offset);
@@ -152,9 +151,9 @@ export function contentForCommand(content: ChatContent, body: string): ChatConte
       });
     }
     offset += length + (index < sourceBlocks.length - 1 ? 1 : 0);
-  });
+  }
   return {
     type: "doc",
-    content: blocks.length ? blocks : [{ type: "paragraph" }],
+    content: blocks.length > 0 ? blocks : [{ type: "paragraph" }],
   };
 }

@@ -7,10 +7,10 @@
  *   worker:  serveWorker<Task, Result>(handle, (result) => transferables)
  */
 
-type Typed = { type: string };
+interface Typed { type: string }
 
-type Request<Task> = { id: number; task: Task };
-type Response<Result> = { id: number; result: Result } | { id: number; error: string };
+interface Request<Task> { id: number; task: Task }
+type Response<Result> = { id: number; error: string } | { id: number; result: Result };
 
 export type WorkerRun<Task extends Typed, Result extends Typed> = <T extends Task["type"]>(
   task: Extract<Task, { type: T }>,
@@ -57,7 +57,7 @@ export function workerClient<Task extends Typed, Result extends Typed>(
       event.preventDefault();
       fail(w, new Error(event.message || `${name} failed`));
     };
-    w.onmessageerror = () => fail(w, new Error(`Could not read ${name.toLowerCase()} response`));
+    w.addEventListener('messageerror', () => { fail(w, new Error(`Could not read ${name.toLowerCase()} response`)); });
     worker = w;
     return w;
   };
@@ -77,10 +77,10 @@ export function workerClient<Task extends Typed, Result extends Typed>(
   };
 }
 
-type WorkerScope = {
+interface WorkerScope {
   onmessage: ((event: MessageEvent) => void) | null;
   postMessage(message: unknown, transfer?: Transferable[]): void;
-};
+}
 
 /** Answer a workerClient's tasks, inside the worker. */
 export function serveWorker<Task extends Typed, Result extends Typed>(
@@ -90,13 +90,11 @@ export function serveWorker<Task extends Typed, Result extends Typed>(
   const scope = globalThis as unknown as WorkerScope;
   scope.onmessage = ({ data }: MessageEvent<Request<Task>>) => {
     void handle(data.task).then(
-      (result) =>
-        scope.postMessage({ id: data.id, result } satisfies Response<Result>, transferOf(result)),
-      (error: unknown) =>
-        scope.postMessage({
+      (result) => { scope.postMessage({ id: data.id, result } satisfies Response<Result>, transferOf(result)); },
+      (error: unknown) => { scope.postMessage({
           id: data.id,
           error: error instanceof Error ? error.message : String(error),
-        } satisfies Response<Result>),
+        } satisfies Response<Result>); },
     );
   };
 }

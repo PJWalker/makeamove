@@ -1,24 +1,28 @@
-import { useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState   } from "react";
+import type {ComponentType, ReactNode} from "react";
 import { statBonus } from "../features/characters/store";
+import type { ConditionState } from "../features/characters/sheet";
 import type { CharacterView } from "../features/characters/types";
 import { conditionColour } from "../features/combat/pipColours";
 import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import type { Derived, GameSystem, SheetCounter, SheetSection } from "../systems/types";
-import type { SheetProps } from "../systems/extensionTypes";
+import type { SheetProps as SheetProperties } from "../systems/extensionTypes";
 import { commaListOf } from "../lib/list";
 import { parseInputNumber } from "../lib/number";
 import { Button } from "../ui/Button";
 import { IconLock } from "../ui/icons";
 import { menuTrigger } from "../ui/menuTrigger";
-import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
+import { ContextMenu  } from "../ui/ContextMenu";
+import type {MenuItem} from "../ui/ContextMenu";
+import { useQuery } from "../ui/useQuery";
 import { AdvancementDialog } from "./CreationParts";
 import { useExtension } from "./systemExtensions";
-import { registerEntityDrop, type DragEntity } from "./entityDrag";
+import { registerEntityDrop  } from "./entityDrag";
+import type {DragEntity} from "./entityDrag";
 import { Inventory } from "./Inventory";
 import { Counter } from "./sheetParts";
-import { signedStr } from "./actionPresentation";
-import { useQuery } from "../ui/useQuery";
+import { signedStr as signedString } from "./actionPresentation";
 import {
   ActionsSection,
   ChoicesSection,
@@ -27,9 +31,10 @@ import {
   HeaderSection,
   ModifiersSection,
   NpcFieldsSection,
-  TextSection,
-  type SectionContext,
+  TextSection
+  
 } from "./sheetSections";
+import type {SectionContext} from "./sheetSections";
 import {
   bumpData,
   bumpResource,
@@ -49,9 +54,9 @@ import { useSheet } from "./sheetModel";
  */
 
 export type { SheetProps } from "../systems/extensionTypes";
-type Props = SheetProps & { layout: SheetSection[] };
+type Properties = SheetProperties & { layout: SheetSection[] };
 
-const num = (v: unknown) => Number(v ?? 0);
+const number_ = (v: unknown) => Number(v ?? 0);
 const sectionKey = (section: SheetSection) => `${section.kind}:${JSON.stringify(section)}`;
 
 /** What a sheet takes when dropped on it, beyond gear and moves: a rules entity from the Libraries, say. */
@@ -65,7 +70,7 @@ export function SheetFrame({
   editable,
   drop,
   children,
-}: SheetProps & { editable: boolean; drop?: SheetDrop | undefined; children: ReactNode }) {
+}: SheetProperties & { editable: boolean; drop?: SheetDrop | undefined; children: ReactNode }) {
   const me = useQuery(device).id;
   const frame = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -83,15 +88,15 @@ export function SheetFrame({
       {children}
       {c.kind === "pc" && (
         <p className="muted sheet-owner">
-          {c.owner === me ? "Yours" : editable ? "Editing as GM" : "View only"}
+          {c.owner === me ? "Yours" : (editable ? "Editing as GM" : "View only")}
         </p>
       )}
     </div>
   );
 }
 
-export function DeclarativeSheet({ layout, ...props }: Props) {
-  const sheet = useSheet(props);
+export function DeclarativeSheet({ layout, ...properties }: Properties) {
+  const sheet = useSheet(properties);
   const keys = useMemo(() => layout.map(sectionKey), [layout]);
   return (
     <SheetFrame {...sheet}>
@@ -110,16 +115,16 @@ function Advancement({ campaign, system, c, d, editable, section }: SectionOf<"a
     !editable ||
     needed === undefined ||
     !Number.isFinite(needed) ||
-    num(c.data[section.xp]) < needed
+    number_(c.data[section.xp]) < needed
   )
     return null;
   return (
     <div className="sheet-advancement">
       <span>{section.label}</span>
-      <Button onClick={() => setOpen(true)}>{section.button}…</Button>
+      <Button onClick={() => { setOpen(true); }}>{section.button}…</Button>
       {Actions && <Actions campaign={campaign} characterId={c.id} />}
       {open && (
-        <AdvancementDialog campaign={campaign} characterId={c.id} onClose={() => setOpen(false)} />
+        <AdvancementDialog campaign={campaign} characterId={c.id} onClose={() => { setOpen(false); }} />
       )}
     </div>
   );
@@ -141,7 +146,7 @@ function Loadout({ system, c, d, editable, id }: SectionContext & { id: string }
             type="checkbox"
             checked={free}
             disabled={!editable}
-            onChange={(event) => setFree(event.currentTarget.checked)}
+            onChange={(event) => { setFree(event.currentTarget.checked); }}
           />
           {definition.freeSwapLabel}
         </label>
@@ -151,7 +156,7 @@ function Loadout({ system, c, d, editable, id }: SectionContext & { id: string }
           type="search"
           aria-label={`Search ${definition.label}`}
           value={query}
-          onInput={(event) => setQuery(event.currentTarget.value)}
+          onInput={(event) => { setQuery(event.currentTarget.value); }}
         />
       )}
       {options.map(({ option, selected, affordable }) => (
@@ -160,7 +165,7 @@ function Loadout({ system, c, d, editable, id }: SectionContext & { id: string }
             type="checkbox"
             checked={selected}
             disabled={!editable || (!selected && (active.length >= max || !affordable))}
-            onChange={() => toggleOption(option.id)}
+            onChange={() => { toggleOption(option.id); }}
           />
           {option.name}
         </label>
@@ -174,8 +179,8 @@ function useLoadout({
   c,
   d,
   id,
-}: Pick<SectionContext, "system" | "c" | "d"> & { id: string }) {
-  const ctx = useCampaign();
+}: Pick<SectionContext, "c" | "d" | "system"> & { id: string }) {
+  const context = useCampaign();
   const [free, setFree] = useState(false);
   const [query, setQuery] = useState("");
   const definition = system.loadouts?.find((entry) => entry.id === id);
@@ -198,10 +203,10 @@ function useLoadout({
         (c.resources[cost.resource] ?? 0) + cost.by >= 0);
     return [{ option, affordable, selected: activeIds.has(option.id) }];
   });
-  if (!options.length || max <= 0) return null;
+  if (options.length === 0 || max <= 0) return null;
   const toggleOption = (optionId: string) => {
     const selected = activeIds.has(optionId);
-    ctx.execute(setLoadout, {
+    context.execute(setLoadout, {
       id: c.id,
       loadout: id,
       options: selected ? active.filter((entry) => entry !== optionId) : [...active, optionId],
@@ -293,7 +298,7 @@ function SheetNumber({
   editable: boolean;
   item: SheetCounter;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const max = "max" in item && item.max ? d.values[item.max] : undefined;
   if ("resource" in item) {
     const value = c.resources[item.resource] ?? 0;
@@ -305,7 +310,7 @@ function SheetNumber({
         value={value}
         max={max}
         disabled={!editable}
-        onChange={(by) => ctx.execute(bumpResource, { id: c.id, resource: item.resource, by, max })}
+        onChange={(by) => context.execute(bumpResource, { id: c.id, resource: item.resource, by, max })}
         status={
           status && active
             ? {
@@ -318,7 +323,7 @@ function SheetNumber({
       />
     );
   }
-  const value = num(c.data[item.data]);
+  const value = number_(c.data[item.data]);
   if (item.input) {
     return (
       <label className="counter">
@@ -332,7 +337,7 @@ function SheetNumber({
           onChange={(e) => {
             const value = parseInputNumber(e.currentTarget.value);
             if (value !== undefined && value >= 1)
-              ctx.execute(setData, { id: c.id, key: item.data, value: Math.floor(value) });
+              context.execute(setData, { id: c.id, key: item.data, value: Math.floor(value) });
           }}
         />
       </label>
@@ -344,7 +349,7 @@ function SheetNumber({
       value={value}
       max={max}
       disabled={!editable}
-      onChange={(by) => ctx.execute(bumpData, { id: c.id, key: item.data, by })}
+      onChange={(by) => context.execute(bumpData, { id: c.id, key: item.data, by })}
     />
   );
 }
@@ -395,11 +400,11 @@ function Stats({
               className="stat-mod"
               title={`Roll +${stat.name}`}
               aria-label={`Roll +${stat.name}`}
-              onClick={() => rollStat(stat.id, stat.abbr)}
+              onClick={() => { rollStat(stat.id, stat.abbr); }}
               onPointerDown={editable ? trigger.onPointerDown : undefined}
               onContextMenu={editable ? trigger.onContextMenu : undefined}
             >
-              {signedStr(statBonus(d, stat.id))}
+              {signedString(statBonus(d, stat.id))}
             </button>
             {showScore && (
               <label className="stat-score-label">
@@ -412,7 +417,7 @@ function Stats({
                   aria-label={`${stat.name} score`}
                   value={c.scores[stat.id]}
                   disabled={!editable}
-                  onChange={(event) => updateScore(stat, event.currentTarget.value)}
+                  onChange={(event) => { updateScore(stat, event.currentTarget.value); }}
                 />
               </label>
             )}
@@ -422,7 +427,7 @@ function Stats({
                 className="stat-deb condition-status"
                 data-state={state}
                 style={{ "--condition-colour": conditionColour(system, tied.id) }}
-                aria-label={`${tied.name}: ${state}. ${nextState === "clear" ? "Clear" : nextState === "marked" ? "Mark" : "Lock"} condition`}
+                aria-label={`${tied.name}: ${state}. ${CONDITION_VERB[nextState]} condition`}
                 title={`${tied.name}: ${state}`}
                 disabled={!editable}
                 onClick={() => cycleCondition(tied.id, nextState)}
@@ -448,10 +453,23 @@ function Stats({
           </li>
         ))}
       </ul>
-      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
+      {menu && <ContextMenu {...menu} onClose={() => { setMenu(null); }} />}
     </section>
   );
 }
+
+/** A lockable condition cycles clear, marked, locked, and back. */
+const NEXT_CONDITION_STATE: Record<ConditionState, ConditionState> = {
+  clear: "marked",
+  marked: "locked",
+  locked: "clear",
+};
+/** What pressing a condition does, by the state it moves to. */
+const CONDITION_VERB: Record<ConditionState, string> = {
+  clear: "Clear",
+  marked: "Mark",
+  locked: "Lock",
+};
 
 function useStats({
   system,
@@ -459,8 +477,8 @@ function useStats({
   d,
   editable,
   showScore,
-}: Pick<SectionContext, "system" | "c" | "d" | "editable"> & { showScore: boolean }) {
-  const ctx = useCampaign();
+}: Pick<SectionContext, "c" | "d" | "editable" | "system"> & { showScore: boolean }) {
+  const context = useCampaign();
   const [menu, setMenu] = useState<{
     x: number;
     y: number;
@@ -468,9 +486,9 @@ function useStats({
     items: MenuItem[];
   } | null>(null);
   const rollStat = (statId: string, abbr: string) => {
-    const mod = statBonus(d, statId);
-    const formula = `${system.baseRoll}${mod ? `${mod < 0 ? "-" : "+"}${Math.abs(mod)}` : ""}[${abbr}]`;
-    void ctx.execute(roll, {
+    const module_ = statBonus(d, statId);
+    const formula = `${system.baseRoll}${module_ ? `${module_ < 0 ? "-" : "+"}${Math.abs(module_)}` : ""}[${abbr}]`;
+    void context.execute(roll, {
       formula: system.checkRoll?.(formula, statId, c) ?? formula,
       visibility: "public",
       comment: abbr,
@@ -481,10 +499,9 @@ function useStats({
   const rows = system.stats.map((stat) => {
     const tied = system.conditions.find((condition) => condition.stat === stat.id);
     const has = !!tied && conditionIds.has(tied.id);
-    const state: "clear" | "marked" | "locked" =
-      tied && lockedConditionIds.has(tied.id) ? "locked" : has ? "marked" : "clear";
-    const nextState: "clear" | "marked" | "locked" =
-      state === "clear" ? "marked" : state === "marked" ? "locked" : "clear";
+    let state: ConditionState = has ? "marked" : "clear";
+    if (tied && lockedConditionIds.has(tied.id)) state = "locked";
+    const nextState = NEXT_CONDITION_STATE[state];
     const trigger = menuTrigger((x, y) => {
       if (!editable) return;
       const min = stat.min ?? 1;
@@ -496,9 +513,9 @@ function useStats({
         items: Array.from({ length: max - min + 1 }, (_, index) => {
           const value = min + index;
           return {
-            label: `Set ${stat.name} to ${showScore ? value : signedStr(value)}`,
+            label: `Set ${stat.name} to ${showScore ? value : signedString(value)}`,
             checked: c.scores[stat.id] === value,
-            onSelect: () => ctx.execute(setScore, { id: c.id, stat: stat.id, score: value }),
+            onSelect: () => context.execute(setScore, { id: c.id, stat: stat.id, score: value }),
           };
         }),
       });
@@ -513,7 +530,7 @@ function useStats({
       value >= (stat.min ?? 1) &&
       value <= (stat.max ?? 20)
     )
-      ctx.execute(setScore, { id: c.id, stat: stat.id, score: value });
+      context.execute(setScore, { id: c.id, stat: stat.id, score: value });
   };
   return {
     menu,
@@ -522,9 +539,9 @@ function useStats({
     rows,
     rollStat,
     updateScore,
-    cycleCondition: (condition: string, state: "clear" | "marked" | "locked") =>
-      ctx.execute(setCondition, { id: c.id, condition, state }),
+    cycleCondition: (condition: string, state: "clear" | "locked" | "marked") =>
+      context.execute(setCondition, { id: c.id, condition, state }),
     toggleConditionState: (condition: string) =>
-      ctx.execute(toggleCondition, { id: c.id, condition }),
+      context.execute(toggleCondition, { id: c.id, condition }),
   };
 }

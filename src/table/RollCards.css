@@ -139,12 +139,6 @@
     align-items: center;
     gap: var(--space-1);
   }
-  .roll-term {
-    display: inline-flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-1);
-  }
   .roll-op {
     color: var(--text-faint);
     padding-inline: 2px;
@@ -166,7 +160,7 @@
     transition: opacity 560ms var(--ease);
   }
   /* Reveal the total once every die has landed. */
-  .roll-body:has(.die:is([data-phase="pending"], [data-phase="flying"])) > .roll-total {
+  .roll-body:has(.die:is([data-phase="pending"], [data-phase="moving"])) > .roll-total {
     opacity: 0;
   }
 

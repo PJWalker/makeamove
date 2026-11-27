@@ -2,7 +2,7 @@ import { store } from "../lib/store";
 import type { EntryKind } from "../features/library";
 import type { PanelLayout } from "./panelLayout";
 
-export type KindFilter = "all" | EntryKind;
+export type KindFilter = EntryKind | "all";
 
 /** What the Libraries panel shows, kept apart from it so sheets and actions can steer it. */
 export class LibraryView {

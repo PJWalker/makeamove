@@ -1,12 +1,13 @@
-import { Node, mergeAttributes, type Editor, type JSONContent } from "@tiptap/core";
+import { Node, mergeAttributes   } from "@tiptap/core";
+import type {Editor, JSONContent} from "@tiptap/core";
 import CollaborationCaret from "@tiptap/extension-collaboration-caret";
 import { prosemirrorJSONToYXmlFragment, yXmlFragmentToProsemirrorJSON } from "@tiptap/y-tiptap";
 import type { Awareness } from "y-protocols/awareness";
-import * as Y from "yjs";
+import type * as Y from "yjs";
 import { newId } from "../lib/ids";
 import { colourOf } from "../scene/presence";
-import { importImage, loadBlob, type PeerBlobs } from "../media/images";
-import type { BlobRef } from "../media/images";
+import { importImage, loadBlob   } from "../media/images";
+import type {PeerBlobs, BlobReference} from "../media/images";
 import { device } from "../platform/device";
 
 /*
@@ -77,7 +78,7 @@ export const NoteImage = Node.create<{ peers: PeerBlobs | null }>({
       const dom = document.createElement("figure");
       dom.className = "note-image";
       dom.dataset["type"] = IMAGE_NODE;
-      const { hash, width, height } = node.attrs as BlobRef;
+      const { hash, width, height } = node.attrs as BlobReference;
       // Hold the space while it loads, so text doesn't jump.
       if (width && height) {
         dom.style.aspectRatio = `${width} / ${height}`;
@@ -91,7 +92,7 @@ export const NoteImage = Node.create<{ peers: PeerBlobs | null }>({
       const load = () =>
         loadBlob(hash, peers).then((blob) => {
           if (gone || !blob || url) return;
-          // oxlint-disable-next-line react-doctor/no-create-object-url-without-revoke -- The node view revokes this URL in destroy().
+          // eslint-disable-next-line react-doctor/no-create-object-url-without-revoke -- The node view revokes this URL in destroy().
           url = URL.createObjectURL(blob);
           img.src = url;
           dom.append(img);
@@ -114,11 +115,11 @@ export const NoteImage = Node.create<{ peers: PeerBlobs | null }>({
 /** Store image files and put them in the note at a position, in order. */
 export async function insertImages(editor: Editor, files: File[], pos?: number) {
   const images = files.filter((f) => f.type.startsWith("image/"));
-  const refs = await Promise.all(images.map(importImage));
-  for (const ref of refs) {
+  const references = await Promise.all(images.map(importImage));
+  for (const reference of references) {
     if (editor.isDestroyed) return;
     const at = pos ?? editor.state.selection.to;
-    editor.chain().focus().insertContentAt(at, { type: IMAGE_NODE, attrs: ref }).run();
+    editor.chain().focus().insertContentAt(at, { type: IMAGE_NODE, attrs: reference }).run();
   }
 }
 
@@ -204,30 +205,32 @@ export function makeSecret(editor: Editor, vault: Y.Doc): boolean {
   return true;
 }
 
+/** The secret at `pos` in the note: where it sits, and its text in the vault. */
+function secretAt(editor: Editor, vault: Y.Doc, pos: number) {
+  const node = editor.state.doc.nodeAt(pos);
+  if (node?.type.name !== SECRET_NODE) return null;
+  return {
+    range: { from: pos, to: pos + node.nodeSize },
+    fragment: secretFragment(vault, node.attrs["id"] as string),
+  };
+}
+
 /** Reveal a secret: its text goes into the note where it was, for everyone, and leaves the vault. */
 export function revealSecret(editor: Editor, vault: Y.Doc, pos: number) {
-  const node = editor.state.doc.nodeAt(pos);
-  if (node?.type.name !== SECRET_NODE) return;
-  const fragment = secretFragment(vault, node.attrs["id"] as string);
+  const secret = secretAt(editor, vault, pos);
+  if (!secret) return;
+  const { range, fragment } = secret;
   const json = yXmlFragmentToProsemirrorJSON(fragment) as JSONContent;
   const content = json.content?.length ? json.content : [{ type: "paragraph" }];
-  editor
-    .chain()
-    .focus()
-    .insertContentAt({ from: pos, to: pos + node.nodeSize }, content)
-    .run();
-  vault.transact(() => fragment.delete(0, fragment.length));
+  editor.chain().focus().insertContentAt(range, content).run();
+  vault.transact(() => { fragment.delete(0, fragment.length); });
 }
 
 /** Delete a secret from the note and the vault. */
 export function deleteSecret(editor: Editor, vault: Y.Doc, pos: number) {
-  const node = editor.state.doc.nodeAt(pos);
-  if (node?.type.name !== SECRET_NODE) return;
-  const fragment = secretFragment(vault, node.attrs["id"] as string);
-  editor
-    .chain()
-    .focus()
-    .deleteRange({ from: pos, to: pos + node.nodeSize })
-    .run();
-  vault.transact(() => fragment.delete(0, fragment.length));
+  const secret = secretAt(editor, vault, pos);
+  if (!secret) return;
+  const { range, fragment } = secret;
+  editor.chain().focus().deleteRange(range).run();
+  vault.transact(() => { fragment.delete(0, fragment.length); });
 }

@@ -14,9 +14,9 @@
     position-try-fallbacks: flip-block;
     max-width: 260px;
     padding: var(--space-1) var(--space-3);
-    background: var(--surface-raised, var(--surface));
+    background: var(--grain), var(--surface-raised, var(--surface));
     color: var(--text);
-    border: 1px solid var(--hairline-strong);
+    border: 1px solid var(--gilt-lo);
     background-clip: padding-box;
     box-shadow:
       3px 6px 16px -4px oklch(0% 0 0 / 0.5),

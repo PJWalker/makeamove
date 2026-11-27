@@ -3,14 +3,15 @@ import type { MenuItem } from "../../ui/ContextMenu";
 import type { CampaignContext } from "../campaignContext";
 import { platformCombo, shortcutFor, showCombo } from "./custom";
 import {
-  MENU_SECTIONS,
-  type Action,
-  type AnyTableCommand,
-  type MenuSection,
-  type Offer,
-  type TableCommand,
-  type Target,
+  MENU_SECTIONS
+  
+  
+  
+  
+  
+  
 } from "./types";
+import type {Action, AnyTableCommand, MenuSection, Offer, TableCommand, Target} from "./types";
 
 /*
  * Views over the command registry: what the palette and hotbar list, and
@@ -19,69 +20,70 @@ import {
  */
 
 /** The table's commands. Everything registered on a table's context is one. */
-const commands = (ctx: CampaignContext) => ctx.commands.all() as AnyTableCommand[];
+const commands = (context: CampaignContext) => context.commands.all() as AnyTableCommand[];
 
-const shown = <T>(
-  v: T | ((ctx: CampaignContext, params: unknown) => T),
-  ctx: CampaignContext,
-  p: unknown,
-): T => (typeof v === "function" ? (v as (ctx: CampaignContext, params: unknown) => T)(ctx, p) : v);
+/** What a command shows (its title, source, detail) for a call: fixed, or worked out from it. */
+export const shown = <T, P>(
+  v: T | ((context: CampaignContext, parameters: P) => T),
+  context: CampaignContext,
+  p: P,
+): T => (typeof v === "function" ? (v as (context_: CampaignContext, parameters: P) => T)(context, p) : v);
 
 /** Run a call from a view, asking first if its command wants confirming. */
-export function invoke(ctx: CampaignContext, command: AnyTableCommand, params: unknown) {
-  const confirmation = command.confirm?.(ctx, params);
-  if (confirmation) ctx.table.confirm(confirmation, () => ctx.execute(command, params));
-  else ctx.execute(command, params);
+export function invoke(context: CampaignContext, command: AnyTableCommand, parameters: unknown) {
+  const confirmation = command.confirm?.(context, parameters);
+  if (confirmation) context.table.confirm(confirmation, () => context.execute(command, parameters));
+  else context.execute(command, parameters);
 }
 
 /** A call as views show it. */
 export function actionFor(
-  ctx: CampaignContext,
+  context: CampaignContext,
   command: AnyTableCommand,
   offer: Offer<unknown>,
 ): Action {
   const { params } = offer;
-  const detail = offer.detail ?? (command.detail && shown(command.detail, ctx, params));
+  const detail = offer.detail ?? (command.detail && shown(command.detail, context, params));
   const aliases = [...(command.aliases ?? []), ...(offer.aliases ?? [])];
   const id = callKey(command.id, params);
   const keys = (offer.keys ?? command.keys ?? []).map((k) => platformCombo(k));
-  const own = shortcutFor(ctx.campaign, id);
+  const own = shortcutFor(context.campaign, id);
   const hint = own ? showCombo(own) : keys[0] && showCombo(keys[0]);
   return {
     id,
     command,
     params,
     kind: command.kind ?? "command",
-    title: offer.title ?? shown(command.title, ctx, params),
-    source: command.source ? shown(command.source, ctx, params) : "Core",
-    available: ctx.commands.check(command, params),
-    run: () => invoke(ctx, command, params),
+    title: offer.title ?? shown(command.title, context, params),
+    source: command.source ? shown(command.source, context, params) : "Core",
+    available: context.commands.check(command, params),
+    run: () => { invoke(context, command, params); },
     ...(offer.group ? { group: offer.group } : {}),
-    ...(aliases.length ? { aliases } : {}),
+    ...(aliases.length > 0 ? { aliases } : {}),
     ...(offer.tags ? { tags: offer.tags } : {}),
     ...(detail ? { detail } : {}),
-    ...(keys.length ? { keys } : {}),
+    ...(keys.length > 0 ? { keys } : {}),
     ...(hint ? { hint } : {}),
     ...((offer.icon ?? command.icon) ? { icon: offer.icon ?? command.icon } : {}),
     ...(command.danger ? { danger: true } : {}),
-    ...(command.checked ? { checked: command.checked(ctx, params) } : {}),
+    ...(command.checked ? { checked: command.checked(context, params) } : {}),
     ...(offer.mine ? { mine: true } : {}),
     ...(offer.open ? { open: offer.open } : {}),
   };
 }
 
 /** Calls the player may not run at all are left out of views. */
-const permitted = (ctx: CampaignContext, command: AnyTableCommand, params: unknown) =>
-  ctx.commands.permits(command, params) === true;
+const permitted = (context: CampaignContext, command: AnyTableCommand, parameters: unknown) =>
+  context.commands.permits(command, parameters) === true;
 
 /** Every call the palette lists, in the order commands were registered. */
-export function listActions(ctx: CampaignContext): Action[] {
+export function listActions(context: CampaignContext): Action[] {
   const seen = new Set<string>();
   const out: Action[] = [];
-  for (const command of commands(ctx)) {
-    for (const offer of command.offers?.(ctx) ?? []) {
-      if (!permitted(ctx, command, offer.params)) continue;
-      const action = actionFor(ctx, command, offer);
+  for (const command of commands(context)) {
+    for (const offer of command.offers?.(context) ?? []) {
+      if (!permitted(context, command, offer.params)) continue;
+      const action = actionFor(context, command, offer);
       if (seen.has(action.id)) continue;
       seen.add(action.id);
       out.push(action);
@@ -94,14 +96,14 @@ export function listActions(ctx: CampaignContext): Action[] {
  * A stored call (from the hotbar or a shortcut) by its key, as the palette
  * would show it if it lists it.
  */
-export function findAction(ctx: CampaignContext, key: string): Action | undefined {
-  const call = ctx.commands.resolve(key);
+export function findAction(context: CampaignContext, key: string): Action | undefined {
+  const call = context.commands.resolve(key);
   if (!call) return undefined;
   const command = call.command as AnyTableCommand;
   const offer =
-    command.offers?.(ctx).find((o) => callKey(command.id, o.params) === key) ??
+    command.offers?.(context).find((o) => callKey(command.id, o.params) === key) ??
     ({ params: call.params } satisfies Offer<unknown>);
-  return actionFor(ctx, command, offer);
+  return actionFor(context, command, offer);
 }
 
 /**
@@ -109,15 +111,15 @@ export function findAction(ctx: CampaignContext, key: string): Action | undefine
  * section with dividers between. Calls the player may not run are left out;
  * ones that can't run now are dimmed.
  */
-export function menuFor(ctx: CampaignContext, target: Target): MenuItem[] {
+export function menuFor(context: CampaignContext, target: Target): MenuItem[] {
   const sections = new Map<MenuSection, MenuItem[]>();
-  for (const command of commands(ctx)) {
+  for (const command of commands(context)) {
     const offers = command.menu?.[target.kind] as
-      | ((ctx: CampaignContext, target: Target) => Offer<unknown>[])
+      | ((context_: CampaignContext, target: Target) => Offer<unknown>[])
       | undefined;
-    for (const offer of offers?.(ctx, target) ?? []) {
-      if (!permitted(ctx, command, offer.params)) continue;
-      const a = actionFor(ctx, command, offer);
+    for (const offer of offers?.(context, target) ?? []) {
+      if (!permitted(context, command, offer.params)) continue;
+      const a = actionFor(context, command, offer);
       const section = command.section ?? "act";
       const list = sections.get(section) ?? [];
       sections.set(section, list);
@@ -127,8 +129,8 @@ export function menuFor(ctx: CampaignContext, target: Target): MenuItem[] {
         ...(a.icon ? { Icon: a.icon } : {}),
         ...(a.hint ? { shortcut: a.hint } : {}),
         ...(a.danger ? { danger: true } : {}),
-        ...(a.available !== true ? { disabled: true } : {}),
-        ...(a.checked !== undefined ? { checked: a.checked } : {}),
+        ...(a.available === true ? {} : { disabled: true }),
+        ...(a.checked === undefined ? {} : { checked: a.checked }),
       });
     }
   }
@@ -139,13 +141,13 @@ export function menuFor(ctx: CampaignContext, target: Target): MenuItem[] {
 export function joinSections(sections: MenuItem[][]): MenuItem[] {
   const joined: MenuItem[] = [];
   for (const s of sections) {
-    if (!s.length) continue;
-    if (joined.length) joined.push("divider");
+    if (s.length === 0) continue;
+    if (joined.length > 0) joined.push("divider");
     joined.push(...s);
   }
   return joined;
 }
 
 /** Whether the player may run a call at all: what components ask instead of checking roles. */
-export const can = <P>(ctx: CampaignContext, command: TableCommand<P, unknown>, params: P) =>
-  ctx.commands.permits(command, params) === true;
+export const can = <P>(context: CampaignContext, command: TableCommand<P>, parameters: P) =>
+  context.commands.permits(command, parameters) === true;

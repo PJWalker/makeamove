@@ -1,15 +1,16 @@
 import { useMemo, useRef, useState } from "react";
 import {
-  layoutWeb,
-  type NodePosition,
-  type RelationshipEdge,
+  layoutWeb
+  
+  
 } from "../features/characters/relationships";
+import type {NodePosition, RelationshipEdge} from "../features/characters/relationships";
 
 const WIDTH = 640;
 const HEIGHT = 440;
 const NODE_RADIUS = 20;
 
-type RelationshipPerson = { id: string; name: string; kind: string };
+interface RelationshipPerson { id: string; name: string; kind: string }
 
 export function RelationshipWeb({
   people,
@@ -26,10 +27,10 @@ export function RelationshipWeb({
     () => layoutWeb(ids, edges, { width: WIDTH, height: HEIGHT, fixed: dragged }),
     [ids, edges, dragged],
   );
-  const svgRef = useRef<SVGSVGElement>(null);
+  const svgReference = useRef<SVGSVGElement>(null);
 
   const drag = (id: string, event: PointerEvent) => {
-    const svg = svgRef.current;
+    const svg = svgReference.current;
     if (!svg || event.button !== 0) return;
     event.preventDefault();
     const box = svg.getBoundingClientRect();
@@ -46,17 +47,17 @@ export function RelationshipWeb({
       setDragged((current) => ({ ...current, [id]: position }));
     };
     const up = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
+      globalThis.removeEventListener("pointermove", move);
+      globalThis.removeEventListener("pointerup", up);
       if (!moved) onOpenCharacter(id);
     };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
+    globalThis.addEventListener("pointermove", move);
+    globalThis.addEventListener("pointerup", up);
   };
 
   return (
     <svg
-      ref={svgRef}
+      ref={svgReference}
       className="relationship-web"
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       role="img"
@@ -127,7 +128,7 @@ export function RelationshipWeb({
             className="relationship-node"
             data-npc={person.kind === "npc" || undefined}
             transform={`translate(${position.x},${position.y})`}
-            onPointerDown={(event) => drag(person.id, event as unknown as PointerEvent)}
+            onPointerDown={(event) => { drag(person.id, event as unknown as PointerEvent); }}
           >
             <circle r={NODE_RADIUS} />
             <text className="relationship-initial" textAnchor="middle" dy="0.35em">

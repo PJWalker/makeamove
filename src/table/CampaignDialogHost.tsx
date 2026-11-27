@@ -3,40 +3,40 @@ import { watch } from "../lib/store";
 import type { Campaign } from "../campaign/campaign";
 import { openPopup } from "../ui/popup";
 import { HelpDialog, SettingsDialog } from "../workspace/CampaignDialogs";
-import { RelationshipsDialog } from "./Relationships";
 import { useCampaign } from "../workspace/campaignContext";
 import { useQuery } from "../ui/useQuery";
-import { ConfirmDialog } from "./ConfirmDialog";
 import type { Confirmation } from "../workspace/tableState";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { RelationshipsDialog } from "./Relationships";
 
 /** Always mounted so campaign actions can open dialogs from any panel. */
 export function CampaignDialogHost({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
-  const settingsRef = useRef<HTMLDialogElement>(null);
-  const helpRef = useRef<HTMLDialogElement>(null);
-  const relationshipsRef = useRef<HTMLDialogElement>(null);
+  const context = useCampaign();
+  const settingsReference = useRef<HTMLDialogElement>(null);
+  const helpReference = useRef<HTMLDialogElement>(null);
+  const relationshipsReference = useRef<HTMLDialogElement>(null);
 
   useEffect(
     () =>
-      watch([ctx.canvas.dialogRequest], () => {
-        const want = ctx.canvas.dialogRequest.value;
+      watch([context.canvas.dialogRequest], () => {
+        const want = context.canvas.dialogRequest.value;
         if (!want) return;
-        ctx.canvas.dialogRequest.set(null);
+        context.canvas.dialogRequest.set(null);
         const dialog = {
-          settings: settingsRef,
-          help: helpRef,
-          relationships: relationshipsRef,
+          settings: settingsReference,
+          help: helpReference,
+          relationships: relationshipsReference,
         }[want].current;
         openPopup(dialog);
       }),
-    [ctx],
+    [context],
   );
 
   return (
     <>
-      <SettingsDialog campaign={campaign} dialogRef={settingsRef} />
-      <HelpDialog dialogRef={helpRef} />
-      <RelationshipsDialog campaign={campaign} dialogRef={relationshipsRef} />
+      <SettingsDialog campaign={campaign} dialogRef={settingsReference} />
+      <HelpDialog dialogRef={helpReference} />
+      <RelationshipsDialog campaign={campaign} dialogRef={relationshipsReference} />
       <CommandConfirmation />
     </>
   );
@@ -44,8 +44,8 @@ export function CampaignDialogHost({ campaign }: { campaign: Campaign }) {
 
 /** Asks before running a command that wants confirming (commands/views.ts `invoke`). */
 function CommandConfirmation() {
-  const ctx = useCampaign();
-  const asking = useQuery(ctx.table.confirming);
+  const context = useCampaign();
+  const asking = useQuery(context.table.confirming);
   if (!asking) return null;
   const { title, confirmLabel, danger } = asking.confirmation;
   return (
@@ -54,8 +54,8 @@ function CommandConfirmation() {
       title={title}
       confirmLabel={confirmLabel}
       confirmVariant={danger ? "danger" : "primary"}
-      onClose={() => ctx.table.confirming.set(null)}
-      onConfirm={() => asking.run()}
+      onClose={() => { context.table.confirming.set(null); }}
+      onConfirm={() => { asking.run(); }}
     >
       <p>
         <Emphasised {...asking.confirmation} />

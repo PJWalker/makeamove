@@ -28,7 +28,8 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    padding-top: var(--header-inset, 0px);
+    /* Clear of the flourish under the title bar. */
+    padding-top: calc(var(--header-inset, 0px) + var(--space-2));
     scroll-padding-top: var(--header-inset, 0px);
   }
   /* Sized by hand (ui/popup.ts): keep that size rather than fit the content. */
@@ -112,9 +113,6 @@
   .dialog-section {
     display: grid;
     gap: var(--space-3);
-  }
-  .dialog-heading {
-    font-size: var(--text-md);
   }
   .dialog-section a {
     color: var(--accent);

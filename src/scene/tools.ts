@@ -1,30 +1,36 @@
 import { store } from "../lib/store";
-import { settingsOver, type LocalDoc, type LocalValue } from "../data/localDoc";
+import { choiceOf, listOf, settingsOver   } from "../data/localDoc";
+import type {LocalDoc as LocalDocument, LocalValue} from "../data/localDoc";
+import { oneOf, isString } from "../lib/guards";
 import {
   EFFECTS,
   SHAPES,
-  type AreaTone,
-  type EffectKind,
-  type Layer,
-  type SceneElement,
-  type ShapeKind,
-  type ShapePaint,
-  type TextStyle,
-  TEXT_FONTS,
+  
+  
+  
+  
+  
+  
+  
+  TEXT_FONTS
 } from "./types";
+import type {AreaTone, EffectKind, Layer, SceneElement, ShapeKind, ShapePaint, TextStyle} from "./types";
 
-export type ToolId =
-  | "select"
-  | "pan"
-  | "draw"
-  | "erase"
-  | "shape"
-  | "text"
-  | "ruler"
-  | "ping"
-  | "wall"
-  | "light"
-  | "effect";
+export const TOOL_IDS = [
+  "select",
+  "pan",
+  "draw",
+  "erase",
+  "shape",
+  "text",
+  "ruler",
+  "ping",
+  "wall",
+  "light",
+  "effect",
+] as const;
+
+export type ToolId = (typeof TOOL_IDS)[number];
 
 /** The range of pen widths, in screen px. */
 export const PEN_WIDTH_RANGE = { min: 1, max: 24 } as const;
@@ -33,14 +39,14 @@ interface PenSettings {
   colour: string;
   /** Stroke width in screen px, so the brush is the same size on screen at any zoom. */
   width: number;
-  layer: Extract<Layer, "under" | "over">;
+  layer: Extract<Layer, "over" | "under">;
 }
 
 /** Eraser radius in screen px. */
 export const ERASER_RADIUS = 14;
 
 /** What the Lights tool places: a lamp, or an area of solid light or dark. */
-export type LightToolMode = "lamp" | AreaTone;
+export type LightToolMode = AreaTone | "lamp";
 
 /** What the Effects tool puts down: the effect, its colour, light and sight, and the shape of its zone. */
 interface EffectSettings {
@@ -59,16 +65,9 @@ function effectDefaults(effect: EffectKind) {
 
 /** The sorts of things on a scene, as the Select tool picks them: lamps and areas are both lights. */
 export type SelectKind =
-  | "token"
-  | "map"
-  | "drawing"
-  | "shape"
-  | "text"
-  | "wall"
-  | "light"
-  | "effect";
-export const kindOf = (el: SceneElement): SelectKind => (el.type === "area" ? "light" : el.type);
-const SELECT_KINDS: readonly SelectKind[] = [
+  "drawing" | "effect" | "light" | "map" | "shape" | "text" | "token" | "wall";
+export const kindOf = (element: SceneElement): SelectKind => (element.type === "area" ? "light" : element.type);
+const SELECT_KINDS = new Set([
   "token",
   "map",
   "drawing",
@@ -77,18 +76,8 @@ const SELECT_KINDS: readonly SelectKind[] = [
   "wall",
   "light",
   "effect",
-];
+]);
 const SELECTABLE_DEFAULT: SelectKind[] = ["token", "map", "drawing", "shape", "text", "wall"];
-
-/** One of `options` as stored, or `fallback`. */
-function oneOf<T extends string>(options: readonly T[], fallback: T, name: string) {
-  return (stored: unknown): T => {
-    if (stored === undefined) return fallback;
-    if (options.includes(stored as T)) return stored as T;
-    console.warn(`Ignoring stored ${name}: unknown`, stored);
-    return fallback;
-  };
-}
 
 /**
  * The scene tools on this device: which is in use (for this session only),
@@ -110,12 +99,8 @@ export class SceneTools {
   /** The sorts of things the Select tool picks. Lights and effects are off until asked for. */
   readonly selectable: LocalValue<SelectKind[]>;
 
-  constructor(local: LocalDoc) {
-    this.toolOrder = local.value("toolOrder", (v) => {
-      if (Array.isArray(v)) return v.filter((t): t is ToolId => typeof t === "string");
-      if (v !== undefined) console.warn("Ignoring stored tool order: not a list", v);
-      return [];
-    });
+  constructor(local: LocalDocument) {
+    this.toolOrder = local.value("toolOrder", listOf(oneOf(...TOOL_IDS), "tool order"));
     // Gold, like the UI accent.
     const penRead = settingsOver<PenSettings>(
       { colour: "#f0bb3b", width: 6, layer: "over" },
@@ -127,7 +112,7 @@ export class SceneTools {
     });
     this.shapeTool = local.value(
       "shapeTool",
-      oneOf(
+      choiceOf(
         SHAPES.map((s) => s.id),
         "rect",
         "shape tool",
@@ -148,7 +133,7 @@ export class SceneTools {
     });
     this.lightTool = local.value(
       "lightTool",
-      oneOf(["lamp", "light", "dark"], "lamp", "light tool"),
+      choiceOf(["lamp", "light", "dark"], "lamp", "light tool"),
     );
     const effectRead = settingsOver<EffectSettings>(
       { ...effectDefaults("fog"), shape: "circle" },
@@ -159,12 +144,14 @@ export class SceneTools {
       const known = EFFECTS.some((x) => x.id === e.effect) && SHAPES.some((s) => s.id === e.shape);
       return known ? e : effectRead(undefined);
     });
-    this.selectable = local.value("selectable", (v) => {
-      if (Array.isArray(v))
-        return v.filter((k: unknown): k is SelectKind => SELECT_KINDS.includes(k as SelectKind));
-      if (v !== undefined) console.warn("Ignoring stored selectable kinds: not a list", v);
-      return SELECTABLE_DEFAULT;
-    });
+    this.selectable = local.value(
+      "selectable",
+      listOf(
+        (value): value is SelectKind => isString(value) && SELECT_KINDS.has(value as SelectKind),
+        "selectable kinds",
+        SELECTABLE_DEFAULT,
+      ),
+    );
   }
 
   setPen(patch: Partial<PenSettings>) {

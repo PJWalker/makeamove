@@ -6,7 +6,48 @@
     justify-items: center;
     width: var(--strip-w);
     padding-block: var(--space-2);
-    background: var(--raised-sheen), var(--toolbar);
+  }
+
+  /*
+   * Chrome over the map (the toolbar, the hotbar, the sidebars' tab strips)
+   * sits on a band of shade that keeps it legible. The band is solid
+   * against the window edge or sidebar it hangs from, fades out toward the
+   * map (--fade-toward), and fades at both ends along its length
+   * (--fade-along). It is a layer of its own so the fade never reaches the
+   * controls.
+   */
+  .toolbar,
+  .hotbar,
+  .sidebar-rail-edge {
+    isolation: isolate;
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: var(--grain), var(--toolbar);
+      mask:
+        linear-gradient(to var(--fade-toward), #000 50%, transparent),
+        linear-gradient(
+          to var(--fade-along),
+          transparent,
+          #000 32px,
+          #000 calc(100% - 32px),
+          transparent
+        );
+      mask-composite: intersect;
+      pointer-events: none;
+    }
+  }
+  .toolbar,
+  .hotbar {
+    --fade-along: right;
+  }
+  .toolbar {
+    --fade-toward: bottom;
+  }
+  .hotbar {
+    --fade-toward: top;
   }
 
   /* The same strip laid out along a window edge, for the tools on top. */
@@ -56,7 +97,6 @@
     width: calc(100% - var(--panel-l, 0px) - var(--panel-r, 0px));
     max-width: none;
     padding-inline: var(--space-2);
-    background: var(--toolbar);
     overflow: visible;
     container: canvas-toolbar / inline-size;
   }
@@ -73,6 +113,8 @@
   }
   .toolbar-tools > button {
     flex-shrink: 0;
+    width: 44px;
+    min-height: 44px;
   }
   .toolbar-options {
     flex: 1 1 var(--toolbar-options-width);
@@ -116,6 +158,10 @@
       border-inline-start: 0;
       border-block-start: 1px solid var(--hairline-strong);
     }
+    /* A tool without options needs no second row. */
+    .toolbar-options:empty {
+      display: none;
+    }
   }
   /* The pen width slider, with a dot of that size in the pen's colour beside it. */
   .pen-width {
@@ -138,6 +184,22 @@
 
   /* The campaign menu stands a little apart from the tools after it. */
   .toolbar .toolbar-menu {
-    margin-right: var(--space-2);
+    margin-right: var(--toolbar-menu-gap, var(--space-2));
+  }
+
+  /* On a phone the tools close up so they all fit across the screen. */
+  @media (max-width: 600px) {
+    .toolbar {
+      --toolbar-row-height: 44px;
+      --toolbar-menu-gap: 0px;
+      padding-inline: var(--space-1);
+    }
+    .toolbar-tools > .btn-icon {
+      width: 29px;
+      & svg {
+        width: 26px;
+        height: 26px;
+      }
+    }
   }
 }

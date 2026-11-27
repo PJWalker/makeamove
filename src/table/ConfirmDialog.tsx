@@ -14,16 +14,16 @@ export function ConfirmDialog({
 }: {
   title: string;
   confirmLabel: string;
-  confirmVariant: "primary" | "danger";
+  confirmVariant: "danger" | "primary";
   onClose: () => void;
   onConfirm: () => void;
   children: ReactNode;
 }) {
-  const ref = usePopupDialog();
-  const close = () => closePopup(ref.current, onClose);
+  const reference = usePopupDialog();
+  const close = () => { closePopup(reference.current, onClose); };
 
   return (
-    <Dialog dialogRef={ref} title={title} onClose={onClose}>
+    <Dialog dialogRef={reference} title={title} onClose={onClose}>
       {children}
       <div className="form-actions">
         <Button variant="ghost" onClick={close}>

@@ -1,10 +1,11 @@
-import type { Point } from "../grid";
-import { formatDistance } from "../measure";
+import { snapToLattice  } from "../grid";
+import type {Point} from "../grid";
+import { formatDistance, toUnits } from "../measure";
 import type { Transform } from "../types";
 import { wallEnds } from "../vision";
 import type { ToolContext, ToolPress } from "./types";
 
-type Keys = { altKey: boolean };
+interface Keys { altKey: boolean }
 
 /** The Walls tool (the GM's): drag a wall from end to end. Ends snap to other walls' ends, then to grid corners. */
 export const wall: ToolPress = (c, e, world) => {
@@ -12,7 +13,7 @@ export const wall: ToolPress = (c, e, world) => {
   const start = snapWallPoint(c, world, e);
   const show = (p: Point, e: Keys) => {
     const t = wallFrom(c, start, p, e);
-    const grid = c.renderer.grid;
+    const {grid} = c.renderer;
     c.renderer.draft = {
       kind: "shape",
       shape: "line",
@@ -20,14 +21,14 @@ export const wall: ToolPress = (c, e, world) => {
       paint: { stroke: "#d8e0ffff", fill: "#d8e0ff38" },
       width: 2,
       layer: "over",
-      label: formatDistance(grid, (t.w / grid.size) * grid.unit),
+      label: formatDistance(grid, toUnits(grid, t.w)),
     };
     c.renderer.invalidate("overlay", "presence");
   };
   show(world, e);
   return {
     kind: "wall",
-    move: (e, world) => show(world, e),
+    move: (e, world) => { show(world, e); },
     end(e) {
       c.renderer.draft = null;
       c.renderer.invalidate("overlay", "presence");
@@ -43,9 +44,9 @@ export function snapWallPoint(c: ToolContext, p: Point, e: Keys): Point {
   const reach = 12 / c.renderer.camera.zoom;
   let best: Point | null = null;
   let bestD = reach;
-  for (const el of c.allElements()) {
-    if (el.type !== "wall") continue;
-    const { a, b } = wallEnds(el);
+  for (const element of c.allElements()) {
+    if (element.type !== "wall") continue;
+    const { a, b } = wallEnds(element);
     for (const q of [a, b]) {
       const d = Math.hypot(q.x - p.x, q.y - p.y);
       if (d < bestD) {
@@ -55,22 +56,18 @@ export function snapWallPoint(c: ToolContext, p: Point, e: Keys): Point {
     }
   }
   if (best) return best;
-  const grid = c.renderer.grid;
-  if (grid.type !== "square") return p;
-  return {
-    x: grid.offsetX + Math.round((p.x - grid.offsetX) / grid.size) * grid.size,
-    y: grid.offsetY + Math.round((p.y - grid.offsetY) / grid.size) * grid.size,
-  };
+  const {grid} = c.renderer;
+  return grid.type === "square" ? snapToLattice(grid, p, grid.size) : p;
 }
 
 /** A wall from where the drag started to (snapped) p. */
 function wallFrom(c: ToolContext, start: Point, p: Point, e: Keys): Transform {
   const end = snapWallPoint(c, p, e);
-  const len = Math.hypot(end.x - start.x, end.y - start.y);
+  const length = Math.hypot(end.x - start.x, end.y - start.y);
   return {
     x: (start.x + end.x) / 2,
     y: (start.y + end.y) / 2,
-    w: len,
+    w: length,
     h: 6,
     rot: Math.atan2(end.y - start.y, end.x - start.x),
   };

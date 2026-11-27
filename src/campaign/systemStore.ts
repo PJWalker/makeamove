@@ -1,4 +1,5 @@
-import type { Guard, Observable } from "../data/schema";
+import type { Observable } from "../data/schema";
+import type { Guard } from "../lib/guards";
 import type { DataValue } from "../data/types";
 import type { CampaignRoot } from "./schema";
 
@@ -19,21 +20,21 @@ export interface SystemStore<T> {
 
 export class SystemData implements Observable {
   constructor(
-    private readonly ext: CampaignRoot["ext"],
+    private readonly extension: CampaignRoot["ext"],
     private readonly systemId: () => string,
   ) {}
 
   /** Changes to any system's data, for useQuery. */
   get y() {
-    return this.ext.y;
+    return this.extension.y;
   }
 
   private read() {
-    return this.ext.get(this.systemId());
+    return this.extension.get(this.systemId());
   }
 
   private write() {
-    return this.ext.ensure(this.systemId());
+    return this.extension.ensure(this.systemId());
   }
 
   value(key: string): DataValue | undefined {
@@ -52,7 +53,7 @@ export class SystemData implements Observable {
     return {
       get: (key) => checked(read()?.get(key)),
       has: (key) => checked(read()?.get(key)) !== undefined,
-      set: (key, value) => write().set(key, value),
+      set: (key, value) => { write().set(key, value); },
       delete: (key) => read()?.delete(key),
       values: () => (read()?.values() ?? []).filter(is),
     };

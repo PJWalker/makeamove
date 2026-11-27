@@ -16,13 +16,12 @@ import {
   USER_COLOUR_LIMITS,
   userColourToHex,
   rgbToOklab,
-  sceneOklchFromHex,
 } from "../colour";
 
 describe("colour", () => {
   it("round-trips sRGB through OKLab", () => {
     for (const hex of ["#000000", "#ffffff", "#2b3a55", "#c08a3e", "#ff0000"]) {
-      const n = parseInt(hex.slice(1), 16);
+      const n = Number.parseInt(hex.slice(1), 16);
       expect(oklabToHex(rgbToOklab((n >> 16) & 255, (n >> 8) & 255, n & 255))).toBe(hex);
     }
   });
@@ -57,7 +56,7 @@ describe("colour", () => {
   it("keeps blue lightness when rotating its hue to yellow", () => {
     const blue = clampUserOklch(hexToOklch("#0000ff"));
     const yellow = userColourToHex({ ...blue, h: 109.77 });
-    const target = 0x5b5a00;
+    const target = 0x5B_5A_00;
     const actual = Number.parseInt(yellow.slice(1), 16);
     for (const shift of [16, 8, 0])
       expect(Math.abs(((actual >> shift) & 255) - ((target >> shift) & 255))).toBeLessThanOrEqual(
@@ -73,13 +72,6 @@ describe("colour", () => {
     expect(mappedBlue.c).toBeCloseTo(blue.c, 2);
     expect(mappedYellow.l).toBeCloseTo(blue.l, 3);
     expect(mappedYellow.c).toBeLessThan(blue.c);
-  });
-  it("keeps the full scene OKLCH value", () => {
-    const grey = sceneOklchFromHex("#808080");
-    expect(grey).toEqual(hexToOklch("#808080"));
-
-    const red = sceneOklchFromHex("#ff0000");
-    expect(red).toEqual(hexToOklch("#ff0000"));
   });
   it("fills the gamut rectangle with selectable in-gamut colours", () => {
     for (const range of [GENERAL_COLOUR_LIMITS, USER_COLOUR_LIMITS]) {

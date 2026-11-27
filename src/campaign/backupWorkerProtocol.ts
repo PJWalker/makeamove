@@ -1,4 +1,4 @@
-import type { BackupDevice, BackupDoc } from "./backupFormat";
+import type { BackupDevice, BackupDoc as BackupDocument } from "./backupFormat";
 
 /** What importing a backup did, and what's left for the main thread to merge. */
 export interface ImportSummary {
@@ -11,7 +11,7 @@ export interface ImportSummary {
   createdAt: number | undefined;
   exportedBy: string;
   /** Documents open on the main thread, which must merge them into memory. */
-  live: BackupDoc[];
+  live: BackupDocument[];
 }
 
 export type BackupTask =

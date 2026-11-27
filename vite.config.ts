@@ -1,17 +1,11 @@
-import react from "@vitejs/plugin-react";
-import Icons from "unplugin-icons/vite";
-import { createJiti, type Jiti } from "jiti";
-import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
+import react from "@vitejs/plugin-react";
+import { createJiti  } from "jiti";
+import type {Jiti} from "jiti";
 import Macros from "unplugin-macros/vite";
-import { defineConfig, type Plugin, lazyPlugins } from "vite-plus";
+import { defineConfig,  lazyPlugins } from "vite-plus";
+import type {Plugin} from "vite-plus";
 import { VitePWA } from "vite-plugin-pwa";
-
-const doctorRules = (
-  createRequire(import.meta.url)("./doctor.config.json") as {
-    rules: Record<string, "error" | "warn" | "off">;
-  }
-).rules;
 
 /**
  * Build-time macros (`import … with { type: "macro" }`), such as markdown
@@ -33,7 +27,7 @@ export function macroPlugins(): Plugin[] {
           return jiti.import<Record<string, unknown>>(resolved);
         },
         invalidate: () => {
-          for (const key of Object.keys(jiti.cache)) delete jiti.cache[key];
+          for (const key of Object.keys(jiti.cache)) Reflect.deleteProperty(jiti.cache, key);
           const stale = [...loaded];
           loaded.clear();
           return stale;
@@ -46,322 +40,28 @@ export function macroPlugins(): Plugin[] {
       // Tests run in Node, so they may call a macro's functions directly, and
       // macro modules may use each other.
       resolveId(source, importer, options) {
-        const buildTime = importer?.includes("/__tests__/") || importer?.endsWith(".macro.ts");
+        const buildTime =
+          importer !== undefined &&
+          (importer.includes("/__tests__/") || importer.endsWith(".macro.ts"));
         if (source.endsWith(".macro") || source.endsWith(".macro.ts")) {
-          if ("scan" in options && options.scan) return { id: source, external: true };
+          if ("scan" in options && options.scan === true) return { id: source, external: true };
           if (!buildTime)
             this.error(
-              `${source} is a build-time macro: import it with { type: "macro" } (${importer})`,
+              `${source} is a build-time macro: import it with { type: "macro" } (${importer ?? "entry"})`,
             );
         }
-        return undefined;
+        return;
       },
     },
   ];
 }
 
 export default defineConfig({
+  // The same checks as `npm run lint`, through its own scripts so the two can't drift apart.
+  // The typecheck covers the whole project, so takes no files.
+  // React Doctor's rules run inside ESLint; its full scan (`npm run doctor`) is left to `npm run lint`.
   staged: {
-    "*": "vp check --fix",
-  },
-  lint: {
-    options: {
-      typeAware: true,
-      typeCheck: true,
-    },
-    settings: {
-      "react-doctor": { capabilities: ["react-compiler"] },
-    },
-    env: {
-      builtin: true,
-    },
-    ignorePatterns: [
-      "dist/**",
-      "coverage/**",
-      "playwright-report/**",
-      "test-results/**",
-      "reference/**",
-    ],
-    overrides: [
-      {
-        files: ["src/**/*.{ts,tsx}"],
-        rules: {
-          "no-empty": [
-            "error",
-            {
-              allowEmptyCatch: true,
-            },
-          ],
-          "no-implied-eval": "off",
-          "no-throw-literal": "off",
-          "no-unused-vars": [
-            "error",
-            {
-              argsIgnorePattern: "^_",
-              varsIgnorePattern: "^_",
-            },
-          ],
-          "no-case-declarations": "warn",
-          "no-useless-escape": "warn",
-          "prefer-promise-reject-errors": "off",
-          "require-await": "off",
-          "typescript/ban-ts-comment": "error",
-          "typescript/no-empty-object-type": "warn",
-          "typescript/no-explicit-any": "error",
-          "typescript/no-misused-promises": "error",
-          "typescript/no-namespace": "error",
-          "typescript/no-require-imports": "error",
-          "typescript/no-unnecessary-type-assertion": "error",
-          "typescript/no-unnecessary-type-constraint": "error",
-          "typescript/no-unsafe-argument": "error",
-          "typescript/no-unsafe-assignment": "error",
-          "typescript/no-unsafe-call": "error",
-          "typescript/no-unsafe-enum-comparison": "error",
-          "typescript/no-unsafe-function-type": "error",
-          "typescript/no-unsafe-member-access": "error",
-          "typescript/no-unsafe-return": "error",
-          "typescript/only-throw-error": "error",
-          "typescript/prefer-promise-reject-errors": "error",
-          "typescript/require-await": "error",
-          "typescript/restrict-plus-operands": "error",
-          "react/jsx-key": "error",
-          "react/jsx-no-comment-textnodes": "error",
-          "react/jsx-no-duplicate-props": "error",
-          "react/jsx-no-target-blank": "error",
-          "react/jsx-no-undef": "error",
-          "react/no-danger-with-children": "error",
-          "react/no-direct-mutation-state": "error",
-          "react/no-find-dom-node": "error",
-          "react/no-is-mounted": "error",
-          "react/no-render-return-value": "error",
-          "react/no-string-refs": "error",
-          "react/no-unknown-property": [
-            "error",
-            {
-              ignore: ["closedby"],
-            },
-          ],
-          "react/no-unsafe": "off",
-          "react/require-render-return": "error",
-          "react/rules-of-hooks": "error",
-          "react/exhaustive-deps": "warn",
-          "react/static-components": "error",
-          "react/use-memo": "error",
-          "react/preserve-manual-memoization": "error",
-          "react/incompatible-library": "warn",
-          "react/immutability": "error",
-          "react/globals": "error",
-          "react/refs": "error",
-          "react/set-state-in-effect": "error",
-          "react/error-boundaries": "error",
-          "react/purity": "error",
-          "react/set-state-in-render": "error",
-          "react/unsupported-syntax": "warn",
-          "jsx-a11y/alt-text": "error",
-          "jsx-a11y/anchor-ambiguous-text": "off",
-          "jsx-a11y/anchor-has-content": "error",
-          "jsx-a11y/anchor-is-valid": "error",
-          "jsx-a11y/aria-activedescendant-has-tabindex": "error",
-          "jsx-a11y/aria-props": "error",
-          "jsx-a11y/aria-proptypes": "error",
-          "jsx-a11y/aria-role": "error",
-          "jsx-a11y/aria-unsupported-elements": "error",
-          "jsx-a11y/autocomplete-valid": "error",
-          "jsx-a11y/click-events-have-key-events": "warn",
-          "jsx-a11y/control-has-associated-label": [
-            "off",
-            {
-              ignoreElements: ["audio", "canvas", "embed", "input", "textarea", "tr", "video"],
-              ignoreRoles: [
-                "grid",
-                "listbox",
-                "menu",
-                "menubar",
-                "radiogroup",
-                "row",
-                "tablist",
-                "toolbar",
-                "tree",
-                "treegrid",
-              ],
-            },
-          ],
-          "jsx-a11y/heading-has-content": "error",
-          "jsx-a11y/html-has-lang": "error",
-          "jsx-a11y/iframe-has-title": "error",
-          "jsx-a11y/img-redundant-alt": "error",
-          "jsx-a11y/interactive-supports-focus": [
-            "error",
-            {
-              tabbable: [
-                "button",
-                "checkbox",
-                "link",
-                "searchbox",
-                "spinbutton",
-                "switch",
-                "textbox",
-              ],
-            },
-          ],
-          "jsx-a11y/label-has-associated-control": [
-            "error",
-            {
-              controlComponents: ["CommitInput"],
-            },
-          ],
-          "jsx-a11y/media-has-caption": "error",
-          "jsx-a11y/mouse-events-have-key-events": "error",
-          "jsx-a11y/no-access-key": "error",
-          "jsx-a11y/no-autofocus": "off",
-          "jsx-a11y/no-distracting-elements": "error",
-          "jsx-a11y/no-interactive-element-to-noninteractive-role": [
-            "error",
-            {
-              tr: ["none", "presentation"],
-              canvas: ["img"],
-            },
-          ],
-          "jsx-a11y/no-noninteractive-element-interactions": "warn",
-          "jsx-a11y/no-noninteractive-element-to-interactive-role": [
-            "error",
-            {
-              ul: ["listbox", "menu", "menubar", "radiogroup", "tablist", "tree", "treegrid"],
-              ol: ["listbox", "menu", "menubar", "radiogroup", "tablist", "tree", "treegrid"],
-              li: [
-                "menuitem",
-                "menuitemradio",
-                "menuitemcheckbox",
-                "option",
-                "row",
-                "tab",
-                "treeitem",
-              ],
-              table: ["grid"],
-              td: ["gridcell"],
-              fieldset: ["radiogroup", "presentation"],
-            },
-          ],
-          "jsx-a11y/no-noninteractive-tabindex": "warn",
-          "jsx-a11y/no-redundant-roles": "error",
-          "jsx-a11y/no-static-element-interactions": "warn",
-          "jsx-a11y/role-has-required-aria-props": "error",
-          "jsx-a11y/role-supports-aria-props": "error",
-          "jsx-a11y/scope": "error",
-          "jsx-a11y/tabindex-no-positive": "error",
-          // Mixed domain exports and component size/complexity are reviewed architecturally, not enforced as lint blockers.
-          ...doctorRules,
-        },
-        plugins: ["react", "jsx-a11y"],
-        jsPlugins: ["oxlint-plugin-react-doctor"],
-        env: {
-          browser: true,
-        },
-      },
-      {
-        files: ["src/**/*.tsx"],
-        excludeFiles: ["**/__tests__/**"],
-        rules: {
-          complexity: ["warn", 57],
-          "max-depth": ["warn", 3],
-          "max-nested-callbacks": ["warn", 4],
-          "max-lines-per-function": [
-            "warn",
-            { max: 531, skipBlankLines: false, skipComments: false },
-          ],
-        },
-      },
-      {
-        files: [
-          "src/{lib,platform,data,kernel,api,sync,campaign,scene,features,ui,workspace,systems}/**/*.{ts,tsx}",
-        ],
-        rules: {
-          "no-restricted-imports": [
-            "error",
-            {
-              patterns: [
-                {
-                  regex: "^(\\.\\.?/)+(app|lobby|table)(/|$)",
-                  message: "Only composition (app, lobby, table) may import app, lobby or table.",
-                },
-              ],
-            },
-          ],
-        },
-      },
-      {
-        files: ["src/table/**/*.{ts,tsx}"],
-        rules: {
-          "no-restricted-imports": [
-            "error",
-            {
-              patterns: [
-                {
-                  regex: "^(\\.\\./)+app(/|$)",
-                  message: "The app shell wires the lobby and the table; neither imports it.",
-                },
-                {
-                  regex: "^(\\.\\./)+lobby(/|$)",
-                  message: "The table may not import the lobby.",
-                },
-              ],
-            },
-          ],
-        },
-      },
-      {
-        files: ["src/lobby/**/*.{ts,tsx}"],
-        rules: {
-          "no-restricted-imports": [
-            "error",
-            {
-              patterns: [
-                {
-                  regex: "^(\\.\\./)+app(/|$)",
-                  message: "The app shell wires the lobby and the table; neither imports it.",
-                },
-                {
-                  regex: "^(\\.\\./)+table(/|$)",
-                  message: "The lobby may not import the table.",
-                },
-              ],
-            },
-          ],
-        },
-      },
-      {
-        files: ["src/**/__tests__/**/*.{ts,tsx}"],
-        rules: { "no-restricted-imports": "off" },
-      },
-      {
-        files: ["vite.config.ts"],
-        rules: {
-          "typescript/ban-ts-comment": "error",
-          "typescript/no-empty-object-type": "error",
-          "typescript/no-explicit-any": "error",
-          "typescript/no-namespace": "error",
-          "typescript/no-require-imports": "error",
-          "typescript/no-unnecessary-type-constraint": "error",
-          "typescript/no-unsafe-function-type": "error",
-        },
-        env: {
-          node: true,
-        },
-      },
-    ],
-    jsPlugins: [
-      {
-        name: "react-hooks-js",
-        specifier: "eslint-plugin-react-hooks",
-      },
-      {
-        name: "vite-plus",
-        specifier: "vite-plus/oxlint-plugin",
-      },
-    ],
-    rules: {
-      "vite-plus/prefer-vite-plus-imports": "error",
-    },
+    "*": ["npm run lint:eslint", () => "npm run typecheck"],
   },
   fmt: {
     printWidth: 100,
@@ -387,7 +87,7 @@ export default defineConfig({
       "src/systems/dungeon-world-2/rulebook.json",
     ],
   },
-  base: process.env["PAGES_BASE_PATH"] || "/",
+  base: (process.env["PAGES_BASE_PATH"] ?? "") || "/",
   server: {
     hmr: false,
   },
@@ -438,8 +138,6 @@ export default defineConfig({
     lazyPlugins(() => [
       ...macroPlugins(),
       react({ babel: { plugins: ["babel-plugin-react-compiler"] } }),
-      // Icons are compiled into the bundle from local Iconify data, so they work offline.
-      Icons({ compiler: "jsx", jsx: "react", scale: 1 }),
       VitePWA({
         registerType: "autoUpdate",
         // The glob below already precaches every icon; don't list them twice.

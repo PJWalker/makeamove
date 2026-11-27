@@ -9,14 +9,16 @@ import type { GameSystem } from "./types";
  * registry that maps a system to its extension lives in ./extensions.ts.
  */
 
-export interface SheetProps {
+export interface SheetProperties {
   campaign: Campaign;
   system: GameSystem;
   c: CharacterView;
 }
 
+export type SheetProps = SheetProperties;
+
 /** A form drawn under a move's text, for the character making it. */
-export interface MoveFormProps {
+export interface MoveFormProperties {
   sheet: {
     campaign: Campaign;
     /** The character making the move. */
@@ -26,26 +28,30 @@ export interface MoveFormProps {
   };
 }
 
-export interface ItemUseProps {
+export type MoveFormProps = MoveFormProperties;
+
+export interface ItemUseProperties {
   campaign: Campaign;
   character: CharacterView;
   item: ItemInstance;
   editable: boolean;
 }
 
+export type ItemUseProps = ItemUseProperties;
+
 export interface SystemExtension {
   /** The system's own sheet components, instead of the core's declarative sheet. */
-  sheets?: { pc: ComponentType<SheetProps>; npc: ComponentType<SheetProps> };
+  sheets?: { pc: ComponentType<SheetProperties>; npc: ComponentType<SheetProperties> };
   /** Campaign-wide controls (a crew sheet). */
   campaignSheet?: ComponentType<{ campaign: Campaign }>;
   /** Forms for moves, by move id. */
-  moveForms?: Record<string, ComponentType<MoveFormProps>>;
+  moveForms?: Record<string, ComponentType<MoveFormProperties>>;
   /** Buttons beside the declarative sheet's advancement banner. */
   advancementActions?: ComponentType<{ campaign: Campaign; characterId: string }>;
   /** Drawn at the end of a character's Relationships section. */
   relationshipsExtra?: ComponentType<{ campaign: Campaign; c: CharacterView; editable: boolean }>;
   /** Controls for using an item with uses, instead of the core's Use button. */
-  ItemUse?: ComponentType<ItemUseProps>;
+  ItemUse?: ComponentType<ItemUseProperties>;
   /** The system's own commands: its moves' bookkeeping, its entries in menus, and stand-ins for the core's. */
   commands?: readonly AnyTableCommand[];
 }

@@ -1,23 +1,28 @@
-import { ColorMatrixFilter, type Container } from "pixi.js";
-import { downFrame, type DownTurn } from "../downed";
-import { kindOf, type SelectKind } from "../tools";
-import { LAYERS, type Layer, type TokenElement } from "../types";
-import { buildView, contentKey, DESTROY_VIEW, type View } from "./elementViews";
+import { ColorMatrixFilter  } from "pixi.js";
+import type {Container} from "pixi.js";
+import { downFrame  } from "../downed";
+import type {DownTurn} from "../downed";
+import { kindOf  } from "../tools";
+import type {SelectKind} from "../tools";
+import { LAYERS   } from "../types";
+import type {Layer, TokenElement} from "../types";
+import { reducedMotion } from "../../ui/transition";
+import { buildView, contentKey, DESTROY_VIEW  } from "./elementViews";
+import type {View} from "./elementViews";
 import type { RenderState } from "./state";
-import { reducedMotion } from "./style";
 
 /** The scene's elements: a view per element, kept in its layer and in order. */
 export class ElementLayer {
-  private views = new Map<string, View>();
+  private readonly views = new Map<string, View>();
   /** Elements given a preview transform at the last sync, to put back once it's gone. */
   private previewed = new Set<string>();
   private order = "";
   private dropHighlightToken: string | null = null;
-  private dropFlashFrames = new Map<string, number>();
+  private readonly dropFlashFrames = new Map<string, number>();
   private destroyed = false;
   /** Each token falling over, getting up, or lying down. */
-  private turns = new Map<string, DownTurn>();
-  private greys = new Map<string, ColorMatrixFilter>();
+  private readonly turns = new Map<string, DownTurn>();
+  private readonly greys = new Map<string, ColorMatrixFilter>();
   /** Whether a token's character is down. */
   downed: (token: TokenElement) => boolean = () => false;
 
@@ -48,16 +53,16 @@ export class ElementLayer {
     const s = this.state;
     for (const [id, view] of this.views) {
       view.root.visible = !s.hidden.has(id);
-      const el = s.byId.get(id);
-      if (!view.helper || !el) continue;
-      const kind = kindOf(el);
+      const element = s.byId.get(id);
+      if (!view.helper || !element) continue;
+      const kind = kindOf(element);
       view.helper.visible = showHelpers && (kind === "wall" || shown.has(kind));
     }
   }
 
   /** Play out the moving effects; whether they need more frames (not under reduced motion). */
   animate(): boolean {
-    const still = reducedMotion();
+    const still = reducedMotion.matches;
     const time = still ? 0 : performance.now() / 1000;
     let animating = false;
     for (const view of this.views.values()) {
@@ -71,21 +76,21 @@ export class ElementLayer {
   sync() {
     const s = this.state;
     const seen = new Set<string>();
-    for (const el of s.elements) {
-      seen.add(el.id);
-      const key = contentKey(el);
-      let view = this.views.get(el.id);
+    for (const element of s.elements) {
+      seen.add(element.id);
+      const key = contentKey(element);
+      let view = this.views.get(element.id);
       if (view && view.key !== key) {
         view.root.destroy(DESTROY_VIEW);
         view = undefined;
       }
       if (!view) {
-        view = buildView(el, key, () => s.invalidate(), this.dropHighlightToken, s.peers);
-        this.views.set(el.id, view);
+        view = buildView(element, key, () => { s.invalidate(); }, this.dropHighlightToken, s.peers);
+        this.views.set(element.id, view);
         // A new view isn't in a layer yet, so force a restack.
         this.order = "";
       }
-      view.apply(s.previews.get(el.id) ?? el);
+      view.apply(s.previews.get(element.id) ?? element);
     }
     this.previewed = new Set(s.previews.keys());
     for (const [id, view] of this.views) {
@@ -95,11 +100,11 @@ export class ElementLayer {
       }
     }
     // Restack only when the order (or a layer) actually changed.
-    const order = s.elements.map((e) => `${e.layer}:${e.id}`).join();
+    const order = s.elements.map((e) => `${e.layer}:${e.id}`).join(',');
     if (order !== this.order) {
       this.order = order;
       for (const layer of LAYERS) this.layers[layer].removeChildren();
-      for (const el of s.elements) this.layers[el.layer].addChild(this.views.get(el.id)!.root);
+      for (const element of s.elements) this.layers[element.layer].addChild(this.views.get(element.id)!.root);
     }
   }
 
@@ -108,8 +113,8 @@ export class ElementLayer {
     const s = this.state;
     for (const id of this.previewed) {
       if (s.previews.has(id)) continue;
-      const el = s.byId.get(id);
-      if (el) this.views.get(id)?.apply(el);
+      const element = s.byId.get(id);
+      if (element) this.views.get(id)?.apply(element);
     }
     for (const [id, t] of s.previews) this.views.get(id)?.apply(t);
     this.previewed = new Set(s.previews.keys());
@@ -122,12 +127,12 @@ export class ElementLayer {
   syncDowned(): boolean {
     const s = this.state;
     const now = performance.now();
-    const still = reducedMotion();
+    const still = reducedMotion.matches;
     let animating = false;
     for (const [id, view] of this.views) {
-      const el = s.byId.get(id);
-      if (!view.pose || el?.type !== "token") continue;
-      const down = this.downed(el);
+      const element = s.byId.get(id);
+      if (!view.pose || element?.type !== "token") continue;
+      const down = this.downed(element);
       let turn = this.turns.get(id);
       if (!turn) {
         // Already down when first drawn: no fall to play.

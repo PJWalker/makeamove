@@ -1,5 +1,12 @@
-import { useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-import { Radio, RadioGroup, ToggleButton, ToggleButtonGroup } from "react-aria-components";
+import { useLayoutEffect, useRef, useState   } from "react";
+import type {ReactNode, RefObject} from "react";
+import {
+  RadioButton,
+  RadioField,
+  RadioGroup,
+  ToggleButton,
+  ToggleButtonGroup,
+} from "react-aria-components";
 
 /**
  * A row of mutually exclusive choices, like a set of radio buttons. An option
@@ -30,23 +37,30 @@ export function Segmented<T extends string>({
       aria-label={label}
       orientation="horizontal"
       value={value}
-      onChange={(next) => onChange(next as T)}
-      {...(disabled !== undefined ? { isDisabled: disabled } : {})}
+      onChange={(next) => { onChange(next as T); }}
+      {...(disabled === undefined ? {} : { isDisabled: disabled })}
     >
-      {options.map((o) => (
-        <Radio
-          key={o.id}
-          value={o.id}
-          className="segment"
-          {...(o.disabled !== undefined ? { isDisabled: o.disabled } : {})}
-          {...(o.icon ? { "aria-label": o.label, "data-icon": true } : {})}
-          {...((o.title ?? (o.icon ? o.label : undefined)) !== undefined
-            ? { "data-tip": o.title ?? o.label }
-            : {})}
-        >
-          {o.icon ?? o.label}
-        </Radio>
-      ))}
+      {options.map((o) => {
+        // An icon shows no label, so its tooltip names it.
+        const tip = o.title ?? (o.icon ? o.label : undefined);
+        return (
+          <RadioField
+            key={o.id}
+            value={o.id}
+            className="segment-field"
+            {...(o.disabled === undefined ? {} : { isDisabled: o.disabled })}
+            {...(o.icon ? { "aria-label": o.label } : {})}
+          >
+            <RadioButton
+              className="segment"
+              {...(o.icon ? { "data-icon": true } : {})}
+              {...(tip === undefined ? {} : { "data-tip": tip })}
+            >
+              {o.icon ?? o.label}
+            </RadioButton>
+          </RadioField>
+        );
+      })}
     </RadioGroup>
   );
 }
@@ -56,24 +70,24 @@ export function Segmented<T extends string>({
  * select. A hidden copy of the segmented control is measured as the space
  * changes.
  */
-export function SegmentedOrSelect<T extends string>(props: Parameters<typeof Segmented<T>>[0]) {
-  const { label, value, options, onChange, disabled } = props;
-  const rootRef = useRef<HTMLDivElement>(null);
-  const measureRef = useRef<HTMLDivElement>(null);
-  const fits = useSegmentedFit(rootRef, measureRef);
+export function SegmentedOrSelect<T extends string>(properties: Parameters<typeof Segmented<T>>[0]) {
+  const { label, value, options, onChange, disabled } = properties;
+  const rootReference = useRef<HTMLDivElement>(null);
+  const measureReference = useRef<HTMLDivElement>(null);
+  const fits = useSegmentedFit(rootReference, measureReference);
   return (
-    <div className="segmented-or-select" ref={rootRef}>
-      <div className="segmented-measure" ref={measureRef} aria-hidden="true" inert>
+    <div className="segmented-or-select" ref={rootReference}>
+      <div className="segmented-measure" ref={measureReference} aria-hidden="true" inert>
         <Segmented label={label} value={value} options={options} onChange={() => {}} />
       </div>
       {fits ? (
-        <Segmented {...props} />
+        <Segmented {...properties} />
       ) : (
         <select
           aria-label={label}
           value={value}
           disabled={disabled}
-          onChange={(event) => onChange(event.currentTarget.value as T)}
+          onChange={(event) => { onChange(event.currentTarget.value as T); }}
         >
           {options.map((option) => (
             <option key={option.id} value={option.id} disabled={option.disabled}>
@@ -87,21 +101,21 @@ export function SegmentedOrSelect<T extends string>(props: Parameters<typeof Seg
 }
 
 function useSegmentedFit(
-  rootRef: RefObject<HTMLDivElement | null>,
-  measureRef: RefObject<HTMLDivElement | null>,
+  rootReference: RefObject<HTMLDivElement | null>,
+  measureReference: RefObject<HTMLDivElement | null>,
 ) {
   const [fits, setFits] = useState(true);
   useLayoutEffect(() => {
-    const root = rootRef.current;
-    const measure = measureRef.current;
+    const root = rootReference.current;
+    const measure = measureReference.current;
     if (!root || !measure) return;
-    const check = () => setFits(measure.offsetWidth <= root.clientWidth);
+    const check = () => { setFits(measure.offsetWidth <= root.clientWidth); };
     check();
     const ro = new ResizeObserver(check);
     ro.observe(root);
     ro.observe(measure);
-    return () => ro.disconnect();
-  }, [fits, measureRef, rootRef]);
+    return () => { ro.disconnect(); };
+  }, [fits, measureReference, rootReference]);
   return fits;
 }
 
@@ -127,9 +141,7 @@ export function ToggleGroup<T extends string>({
       aria-label={label}
       selectionMode="multiple"
       selectedKeys={value}
-      onSelectionChange={(keys) =>
-        // In the options' order, whatever order they were turned on in.
-        onChange(options.flatMap((o) => (keys.has(o.id) ? [o.id] : [])))
+      onSelectionChange={(keys) => { onChange(options.flatMap((o) => (keys.has(o.id) ? [o.id] : []))); }
       }
     >
       {options.map((o) => (

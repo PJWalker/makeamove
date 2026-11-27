@@ -13,7 +13,7 @@ import { useCampaign } from "../workspace/campaignContext";
  * its tokens.
  */
 export function TemplateSettings({ campaign, c }: { campaign: Campaign; c: CharacterView }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const editable = canEdit(campaign, c);
   const t = c.template;
   return (
@@ -36,7 +36,7 @@ export function TemplateSettings({ campaign, c }: { campaign: Campaign; c: Chara
         ]}
         disabled={!editable}
         onChange={(v) =>
-          ctx.execute(setTemplate, {
+          context.execute(setTemplate, {
             id: c.id,
             settings: v === "template" ? (t ?? DEFAULT_TEMPLATE) : null,
           })
@@ -52,7 +52,7 @@ export function TemplateSettings({ campaign, c }: { campaign: Campaign; c: Chara
               options={NAMINGS}
               disabled={!editable}
               onChange={(naming) =>
-                ctx.execute(setTemplate, { id: c.id, settings: { ...t, naming } })
+                context.execute(setTemplate, { id: c.id, settings: { ...t, naming } })
               }
             />
           </div>
@@ -65,7 +65,7 @@ export function TemplateSettings({ campaign, c }: { campaign: Campaign; c: Chara
                 disabled={!editable}
                 placeholder={"Snag\nGrub\nNix"}
                 onChange={(e) =>
-                  ctx.execute(setTemplate, {
+                  context.execute(setTemplate, {
                     id: c.id,
                     settings: {
                       ...t,
@@ -90,7 +90,7 @@ export function TemplateSettings({ campaign, c }: { campaign: Campaign; c: Chara
 
 /** Above a copy's sheet: what it's a copy of, and a way back to it. */
 export function CopyBanner({ campaign, c }: { campaign: Campaign; c: CharacterView }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const template = getCharacter(campaign, c.base);
   return (
     <div className="sheet-banner">
@@ -98,7 +98,7 @@ export function CopyBanner({ campaign, c }: { campaign: Campaign; c: CharacterVi
         Derived From <strong>{template?.name ?? "a deleted template"}</strong>.
       </span>
       {template && canEdit(campaign, c) && (
-        <Button variant="ghost" onClick={() => ctx.execute(resetCopy, { id: c.id })}>
+        <Button variant="ghost" onClick={() => context.execute(resetCopy, { id: c.id })}>
           Reset
         </Button>
       )}

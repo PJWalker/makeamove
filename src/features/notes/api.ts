@@ -1,18 +1,21 @@
 import { generateKeyBetween } from "fractional-indexing";
 import * as Y from "yjs";
+import { IndexeddbPersistence } from "y-indexeddb";
+import { yXmlFragmentToProsemirrorJSON } from "@tiptap/y-tiptap";
+import Fuse from "fuse.js";
 import { newId } from "../../lib/ids";
-import { UNTITLED_FOLDER } from "../../campaign/folders";
+import { byOrder } from "../../lib/order";
+import { folderName, renameFolderIn, UNTITLED_FOLDER, unfile } from "../../campaign/folders";
 import type { Campaign } from "../../campaign/campaign";
 import type { NotesIndex } from "../../campaign/schema";
 import type { Item } from "../../data/schema";
-import type { noteEntry } from "./schema";
 import { device } from "../../platform/device";
-import { IndexeddbPersistence } from "y-indexeddb";
-import { yXmlFragmentToProsemirrorJSON } from "@tiptap/y-tiptap";
-import { NoteDoc, noteDbName, noteGuid } from "./noteDoc";
-import Fuse from "fuse.js";
-import type { LinkRef } from "./links";
-import { NoteTextIndex, type NoteNode, type TextMatch } from "./textIndex";
+import { deleteData } from "../../platform/dataEpoch";
+import type { noteEntry } from "./schema";
+import { NoteDoc as NoteDocument, noteDbName as noteDatabaseName, noteGuid } from "./noteDoc";
+import type { LinkRef as LinkReference } from "./links";
+import { NoteTextIndex   } from "./textIndex";
+import type {NoteNode, TextMatch} from "./textIndex";
 import { vaultNoteGuid } from "./vault";
 
 /*
@@ -33,7 +36,7 @@ export interface NoteView {
   folder?: string | undefined;
   order: string;
   /** What this page links to. */
-  links: LinkRef[];
+  links: LinkReference[];
   updatedAt: number;
   updatedBy?: string | undefined;
   /** In the GM vault: only GM devices have it. */
@@ -51,9 +54,6 @@ export const DEFAULT_NOTE_FOLDERS: NoteFolderView[] = [
   { id: "sessions", name: "Sessions", order: "a0" },
   { id: "world", name: "World", order: "a1" },
 ];
-
-const byOrder = (a: { order: string }, b: { order: string }) =>
-  a.order < b.order ? -1 : a.order > b.order ? 1 : 0;
 
 /** Add the default folders, if this campaign has never had them. */
 export function ensureNoteFolders(campaign: Campaign) {
@@ -132,8 +132,7 @@ export function createNote(
   const id = newId();
   const last =
     listNotes(campaign)
-      .filter((n) => n.folder === folder)
-      .at(-1)?.order ?? null;
+      .findLast((n) => n.folder === folder)?.order ?? null;
   (gmOnly ? vault!.notes : campaign.notes).set(id, {
     title: title.trim(),
     ...(folder && { folder }),
@@ -163,12 +162,11 @@ export function noteTextIndex(campaign: Campaign): Promise<NoteTextIndex> {
 }
 
 /** Open a page's text, keeping this device's search index in step with it. */
-export async function openNotePage(campaign: Campaign, id: string): Promise<NoteDoc | null> {
+export async function openNotePage(campaign: Campaign, id: string): Promise<NoteDocument | null> {
   const sub = noteSubdoc(campaign, id);
   if (!sub) return null;
   const index = await noteTextIndex(campaign);
-  return NoteDoc.open(sub, (body) =>
-    index.set(id, yXmlFragmentToProsemirrorJSON(body) as NoteNode),
+  return NoteDocument.open(sub, (body) => { index.set(id, yXmlFragmentToProsemirrorJSON(body) as NoteNode); },
   );
 }
 
@@ -202,9 +200,8 @@ export async function searchNotes(
     // Open in the editor already, so it's in the index.
     if (!sub || sub.isLoaded) continue;
     const copy = new Y.Doc({ guid: sub.guid });
-    // oxlint-disable-next-line react-doctor/async-await-in-loop -- Keep document memory bounded and check cancellation between notes.
-    const opened = await NoteDoc.open(copy, (body) =>
-      index.set(note.id, yXmlFragmentToProsemirrorJSON(body) as NoteNode),
+    // eslint-disable-next-line react-doctor/async-await-in-loop -- Keep document memory bounded and check cancellation between notes.
+    const opened = await NoteDocument.open(copy, (body) => { index.set(note.id, yXmlFragmentToProsemirrorJSON(body) as NoteNode); },
     );
     opened.destroy();
     if (cancelled()) return [];
@@ -245,8 +242,7 @@ export function moveNote(campaign: Campaign, id: string, folder: string | undefi
   const { m } = at;
   const last =
     listNotes(campaign)
-      .filter((n) => n.folder === folder && n.id !== id)
-      .at(-1)?.order ?? null;
+      .findLast((n) => n.folder === folder && n.id !== id)?.order ?? null;
   m.patch({ folder, order: generateKeyBetween(last, null) });
 }
 
@@ -254,9 +250,9 @@ export function deleteNote(campaign: Campaign, id: string) {
   const at = locate(campaign, id);
   if (!at) return;
   at.map.delete(id);
-  void noteTextIndex(campaign).then((index) => index.delete(id));
+  void noteTextIndex(campaign).then((index) => { index.delete(id); });
   // This device's copy of the text; peers that have it keep theirs.
-  indexedDB.deleteDatabase(noteDbName(guidOf(campaign, id, at.gmOnly)));
+  deleteData(noteDatabaseName(guidOf(campaign, id, at.gmOnly)));
 }
 
 /**
@@ -270,7 +266,7 @@ export async function revealNote(campaign: Campaign, id: string) {
   if (!vault || !m) return;
   // The text as stored (the editor saves every change as it's made).
   const from = new Y.Doc();
-  const read = new IndexeddbPersistence(noteDbName(vaultNoteGuid(campaign.id, id)), from);
+  const read = new IndexeddbPersistence(noteDatabaseName(vaultNoteGuid(campaign.id, id)), from);
   await read.whenSynced;
   const text = Y.encodeStateAsUpdate(from);
   void read.destroy();
@@ -278,23 +274,23 @@ export async function revealNote(campaign: Campaign, id: string) {
 
   // Saved first, then filled, so the copy is kept even before anyone opens it.
   const to = new Y.Doc({ guid: noteGuid(campaign.id, id) });
-  const save = new IndexeddbPersistence(noteDbName(to.guid), to);
+  const save = new IndexeddbPersistence(noteDatabaseName(to.guid), to);
   await save.whenSynced;
   Y.applyUpdate(to, text);
 
   campaign.notes.set(id, { ...m.read(), doc: to });
   vault.notes.delete(id);
-  indexedDB.deleteDatabase(noteDbName(vaultNoteGuid(campaign.id, id)));
+  deleteData(noteDatabaseName(vaultNoteGuid(campaign.id, id)));
   // Let the stored copy settle before letting go of it.
   setTimeout(() => void save.destroy(), 1000);
 }
 
 /** Record that the page was just edited, and what it links to now. */
-export function touchNote(campaign: Campaign, id: string, links: LinkRef[]) {
+export function touchNote(campaign: Campaign, id: string, links: LinkReference[]) {
   const m = locate(campaign, id)?.m;
   if (!m) return;
   const before = m.get("links");
-  const same = before.length === links.length && before.every((l, i) => l === links[i]);
+  const same = before.length === links.length && before.every((l, index) => l === links[index]);
   m.patch({
     ...(!same && { links }),
     updatedAt: Date.now(),
@@ -303,7 +299,7 @@ export function touchNote(campaign: Campaign, id: string, links: LinkRef[]) {
 }
 
 /** Pages that link to this one, or to any other target. */
-export function backlinks(campaign: Campaign, target: LinkRef): NoteView[] {
+export function backlinks(campaign: Campaign, target: LinkReference): NoteView[] {
   return listNotes(campaign).filter((n) => n.links.includes(target));
 }
 
@@ -311,25 +307,22 @@ export function createNoteFolder(campaign: Campaign, name = UNTITLED_FOLDER): st
   const id = newId();
   const last = listNoteFolders(campaign).at(-1)?.order ?? null;
   campaign.noteFolders.set(id, {
-    name: name.trim() || UNTITLED_FOLDER,
+    name: folderName(name),
     order: generateKeyBetween(last, null),
   });
   return id;
 }
 
 export function renameNoteFolder(campaign: Campaign, id: string, name: string) {
-  const f = campaign.noteFolders.get(id);
-  if (f && name.trim()) campaign.noteFolders.set(id, { ...f, name: name.trim() });
+  renameFolderIn(campaign.noteFolders, id, name);
 }
 
 /** Deleting a folder files its pages back at the top. */
 export function deleteNoteFolder(campaign: Campaign, id: string) {
   campaign.doc.transact(() => {
-    for (const m of campaign.notes.values()) if (m.get("folder") === id) m.delete("folder");
+    unfile(campaign.notes.values(), id);
     campaign.noteFolders.delete(id);
   });
   const vault = campaign.vault.value;
-  vault?.notes.transact(() => {
-    for (const m of vault.notes.values()) if (m.get("folder") === id) m.delete("folder");
-  });
+  vault?.notes.transact(() => { unfile(vault.notes.values(), id); });
 }

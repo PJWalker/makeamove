@@ -20,8 +20,8 @@ interface ClassInfo {
 const slug = (text: string) =>
   text
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+    .replaceAll(/[^\da-z]+/g, "-")
+    .replaceAll(/^-|-$/g, "");
 
 /** The advancements, one entry for each kind of choice; level-up offers the specific ones. */
 const ADVANCEMENTS: { name: string; text: string; note: string }[] = [
@@ -91,7 +91,7 @@ export function dw2Library({
   ): LibraryNode => {
     const [first, ...more] = option.items ?? [option.id];
     if (first && itemIds.has(first))
-      return more.length
+      return more.length > 0
         ? { item: first, note: `+ ${more.map((id) => items.get(id)?.name ?? id).join(", ")}` }
         : { item: first };
     return { entity: { id: `${classId}-kit-${option.id}`, name: option.name, text: option.text } };
@@ -205,31 +205,31 @@ export function dw2Library({
       id: "gear-armor",
       name: "Armor & shields",
       kind: "item",
-      entries: gear.flatMap((i) => (ARMOR.has(i.id) ? [{ item: i.id }] : [])),
+      entries: gear.flatMap((index) => (ARMOR.has(index.id) ? [{ item: index.id }] : [])),
     },
     {
       id: "gear-weapons",
       name: "Weapons",
       kind: "item",
-      entries: gear.flatMap((i) => (!ARMOR.has(i.id) && i.equippable ? [{ item: i.id }] : [])),
+      entries: gear.flatMap((index) => (!ARMOR.has(index.id) && index.equippable ? [{ item: index.id }] : [])),
     },
     {
       id: "gear-supplies",
       name: "Supplies",
       kind: "item",
-      entries: gear.flatMap((i) => (!ARMOR.has(i.id) && !i.equippable ? [{ item: i.id }] : [])),
+      entries: gear.flatMap((index) => (!ARMOR.has(index.id) && !index.equippable ? [{ item: index.id }] : [])),
     },
     {
       id: "gear-magic",
       name: "Magic items",
       kind: "item",
-      entries: magicItems.flatMap((i) => (i.artifact ? [] : [{ item: i.id }])),
+      entries: magicItems.flatMap((index) => (index.artifact ? [] : [{ item: index.id }])),
     },
     {
       id: "gear-artifacts",
       name: "Artifacts",
       kind: "item",
-      entries: magicItems.flatMap((i) => (i.artifact ? [artifactEntry(i)] : [])),
+      entries: magicItems.flatMap((index) => (index.artifact ? [artifactEntry(index)] : [])),
     },
   ];
 }

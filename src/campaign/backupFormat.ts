@@ -1,16 +1,38 @@
-import * as decoding from "lib0/decoding";
-import * as encoding from "lib0/encoding";
-import * as Y from "yjs";
+import {
+  createDecoder,
+  readVarString,
+  readVarUint,
+  readVarUint8Array,
+} from "lib0/decoding";
+import {
+  createEncoder,
+  toUint8Array,
+  writeVarString,
+  writeVarUint,
+  writeVarUint8Array,
+} from "lib0/encoding";
+import {
+  Doc,
+  Item,
+  ContentAny,
+  ContentJSON,
+  ContentFormat,
+  ContentEmbed,
+  encodeStateAsUpdate,
+  applyUpdate,
+} from "yjs";
+
 import { IndexeddbPersistence, storeState } from "y-indexeddb";
-import { chatDbName } from "../features/chat/chatLog";
-import { noteDbName } from "../features/notes/noteDoc";
-import { vaultDbName, vaultGuid, vaultShape } from "../features/notes/vault";
+import { chatDbName as chatDatabaseName } from "../features/chat/chatLog";
+import { noteDbName as noteDatabaseName } from "../features/notes/noteDoc";
+import { vaultDbName as vaultDatabaseName, vaultGuid, vaultShape } from "../features/notes/vault";
 import { rootOf } from "../data/schema";
-import { campaignShape } from "./schema";
 import { getBlob } from "../platform/blobs";
 import type { FileKind } from "../platform/files";
-import { sceneDbName } from "../scene/sceneDoc";
-import { campaignDbName } from "./storage";
+import { sceneDbName as sceneDatabaseName } from "../scene/sceneDoc";
+import { isString } from "../lib/guards";
+import { campaignDbName as campaignDatabaseName } from "./storage";
+import { campaignShape } from "./schema";
 
 /*
  * Campaign backups: everything this device holds of a campaign in one file.
@@ -41,11 +63,13 @@ const FORMAT = 1;
 const KINDS = ["campaign", "scene", "note", "chat", "vault", "vault-note"] as const;
 export type BackupDocKind = (typeof KINDS)[number];
 
-export interface BackupDoc {
+export interface BackupDocument {
   kind: BackupDocKind;
   guid: string;
   update: Uint8Array;
 }
+
+export type BackupDoc = BackupDocument;
 
 export interface BackupBlob {
   hash: string;
@@ -60,7 +84,7 @@ export interface CampaignBackup {
   exportedAt: number;
   /** The device that made it. */
   exportedBy: string;
-  docs: BackupDoc[];
+  docs: BackupDocument[];
   blobs: BackupBlob[];
 }
 
@@ -71,13 +95,13 @@ export interface BackupDevice {
 }
 
 const DB_NAMES: Record<BackupDocKind, (guid: string) => string> = {
-  campaign: campaignDbName,
-  scene: sceneDbName,
-  note: noteDbName,
-  chat: chatDbName,
+  campaign: campaignDatabaseName,
+  scene: sceneDatabaseName,
+  note: noteDatabaseName,
+  chat: chatDatabaseName,
   // The vault's guid is `<campaign>/vault`; its database is named by campaign.
-  vault: (guid) => vaultDbName(guid.slice(0, -"/vault".length)),
-  "vault-note": noteDbName,
+  vault: (guid) => vaultDatabaseName(guid.slice(0, -"/vault".length)),
+  "vault-note": noteDatabaseName,
 };
 
 /** Whether a document may belong to the campaign, so a file can't write into another one. */
@@ -89,75 +113,77 @@ function belongs(campaignId: string, { kind, guid }: { kind: string; guid: strin
 }
 
 /** The subdocuments a root or vault document lists, by kind. */
-export function subdocsOf(kind: BackupDocKind, doc: Y.Doc): { kind: BackupDocKind; doc: Y.Doc }[] {
-  const docsIn = (entries: { get(key: "doc"): Y.Doc | undefined }[], as: BackupDocKind) =>
+export function subdocsOf(kind: BackupDocKind, document: Doc): { kind: BackupDocKind; doc: Doc }[] {
+  const docsIn = (entries: { get: (key: "doc") => Doc | undefined }[], as: BackupDocKind) =>
     entries.flatMap((entry) => {
       const sub = entry.get("doc");
       return sub ? [{ kind: as, doc: sub }] : [];
     });
   if (kind === "campaign") {
-    const root = rootOf(doc, campaignShape);
+    const root = rootOf(document, campaignShape);
     return [
       ...docsIn(root.scenes.values(), "scene"),
       ...docsIn(root.notes.values(), "note"),
       ...root.chat.toArray().map((chunk) => ({ kind: "chat" as const, doc: chunk })),
     ];
   }
-  if (kind === "vault") return docsIn(rootOf(doc, vaultShape).notes.values(), "vault-note");
+  if (kind === "vault") return docsIn(rootOf(document, vaultShape).notes.values(), "vault-note");
   return [];
 }
 
 /** Load a document as this device stored it. The caller destroys it. */
-async function readStoredDoc(kind: BackupDocKind, guid: string): Promise<Y.Doc> {
-  const doc = new Y.Doc({ guid });
-  const p = new IndexeddbPersistence(DB_NAMES[kind](guid), doc);
+async function readStoredDocument(kind: BackupDocKind, guid: string): Promise<Doc> {
+  const document = new Doc({ guid });
+  const p = new IndexeddbPersistence(DB_NAMES[kind](guid), document);
   await p.whenSynced;
   await p.destroy();
-  return doc;
+  return document;
 }
 
-const isEmpty = (doc: Y.Doc) => doc.store.clients.size === 0;
+const isEmpty = (document: Doc) => document.store.clients.size === 0;
 
-const HASH = /^[0-9a-f]{64}$/;
+const HASH = /^[\da-f]{64}$/;
 
 /**
  * Every blob hash a document mentions. Images are referenced in many places
  * (map elements, tokens, entity graphics, note image attributes), so this
  * looks at every stored value rather than knowing each one.
  */
-export function blobHashesIn(doc: Y.Doc): Set<string> {
+export function blobHashesIn(document: Doc): Set<string> {
   const found = new Set<string>();
   const visit = (v: unknown) => {
-    if (typeof v === "string") {
+    if (isString(v)) {
       if (HASH.test(v)) found.add(v);
     } else if (Array.isArray(v)) {
       for (const x of v) visit(x);
-    } else if (v && typeof v === "object" && !(v instanceof Uint8Array) && !(v instanceof Y.Doc)) {
+    } else if (v && typeof v === "object" && !(v instanceof Uint8Array) && !(v instanceof Doc)) {
       for (const x of Object.values(v)) visit(x);
     }
   };
-  for (const structs of doc.store.clients.values()) {
+  for (const structs of document.store.clients.values()) {
     for (const s of structs) {
-      if (!(s instanceof Y.Item) || s.deleted) continue;
+      if (!(s instanceof Item) || s.deleted) continue;
       const c = s.content;
-      if (c instanceof Y.ContentAny || c instanceof Y.ContentJSON) visit(c.arr);
-      else if (c instanceof Y.ContentFormat) visit(c.value);
-      else if (c instanceof Y.ContentEmbed) visit(c.embed);
+      if (c instanceof ContentAny || c instanceof ContentJSON) visit(c.arr);
+      else if (c instanceof ContentFormat) visit(c.value);
+      else if (c instanceof ContentEmbed) visit(c.embed);
     }
   }
   return found;
 }
 
 /** One document of a backup, with the images it uses. */
-export interface DocSnapshot extends BackupDoc {
+export interface DocumentSnapshot extends BackupDocument {
   hashes: Set<string>;
 }
 
-const snapshotDoc = (kind: BackupDocKind, doc: Y.Doc): DocSnapshot => ({
+export type DocSnapshot = DocumentSnapshot;
+
+const snapshotDocument = (kind: BackupDocKind, document: Doc): DocumentSnapshot => ({
   kind,
-  guid: doc.guid,
-  update: Y.encodeStateAsUpdate(doc),
-  hashes: blobHashesIn(doc),
+  guid: document.guid,
+  update: encodeStateAsUpdate(document),
+  hashes: blobHashesIn(document),
 });
 
 /**
@@ -170,25 +196,25 @@ export async function snapshotCampaign(
   campaignId: string,
   device: BackupDevice,
   role: string | undefined,
-  reuse: (guid: string) => DocSnapshot | undefined = () => undefined,
-): Promise<DocSnapshot[]> {
-  const out: DocSnapshot[] = [];
-  const visit = async (kind: BackupDocKind, guid: string): Promise<DocSnapshot | undefined> => {
+  reuse: (guid: string) => DocumentSnapshot | undefined = () => {},
+): Promise<DocumentSnapshot[]> {
+  const out: DocumentSnapshot[] = [];
+  const visit = async (kind: BackupDocKind, guid: string): Promise<DocumentSnapshot | undefined> => {
     const kept = reuse(guid);
     if (kept) return kept;
-    const doc = await readStoredDoc(kind, guid);
-    const snapshot = isEmpty(doc) ? undefined : snapshotDoc(kind, doc);
-    doc.destroy();
+    const document = await readStoredDocument(kind, guid);
+    const snapshot = isEmpty(document) ? undefined : snapshotDocument(kind, document);
+    document.destroy();
     return snapshot;
   };
   // A root is always read, to find its subdocuments.
   const walk = async (kind: BackupDocKind, guid: string) => {
-    const root = await readStoredDoc(kind, guid);
-    if (!isEmpty(root)) out.push(reuse(guid) ?? snapshotDoc(kind, root));
+    const root = await readStoredDocument(kind, guid);
+    if (!isEmpty(root)) out.push(reuse(guid) ?? snapshotDocument(kind, root));
     const subdocs = await Promise.all(
       subdocsOf(kind, root).map((sub) => visit(sub.kind, sub.doc.guid)),
     );
-    out.push(...subdocs.filter((doc) => doc !== undefined));
+    out.push(...subdocs.filter((document) => document !== undefined));
     return root;
   };
 
@@ -196,49 +222,46 @@ export async function snapshotCampaign(
   const memberRole = rootOf(root, campaignShape).members.get(device.id)?.get("role");
   root.destroy();
   // Only GM devices have a vault; don't make an empty one on a player's.
-  if ((memberRole ?? role) === "gm") (await walk("vault", vaultGuid(campaignId))).destroy();
+  if ((memberRole ?? role) === "gm") {
+    const vault = await walk("vault", vaultGuid(campaignId));
+    vault.destroy();
+  }
   return out;
 }
 
 /** Read images from the blob store. Ones this device hasn't got yet are left out. */
 export async function readBlobs(hashes: Iterable<string>): Promise<BackupBlob[]> {
-  const out: BackupBlob[] = [];
-  const hashList = [...hashes];
-  for (let offset = 0; offset < hashList.length; offset += 4) {
-    // oxlint-disable-next-line react-doctor/async-await-in-loop -- Keep blob reads bounded to four at a time.
-    const batch = await Promise.all(
-      hashList.slice(offset, offset + 4).map(async (hash): Promise<BackupBlob | null> => {
-        const blob = await getBlob(hash);
-        return blob
-          ? { hash, type: blob.type, data: new Uint8Array(await blob.arrayBuffer()) }
-          : null;
-      }),
-    );
-    out.push(...batch.filter((blob) => blob !== null));
-  }
-  return out;
+  const blobs = await Promise.all(
+    [...hashes].map(async (hash): Promise<BackupBlob | null> => {
+      const blob = await getBlob(hash);
+      return blob
+        ? { hash, type: blob.type, data: new Uint8Array(await blob.arrayBuffer()) }
+        : null;
+    }),
+  );
+  return blobs.filter((blob) => blob !== null);
 }
 
 /** What the campaign's root document says about itself. */
-export function metaOf(docs: BackupDoc[], campaignId: string) {
-  const doc = new Y.Doc();
+export function metaOf(docs: BackupDocument[], campaignId: string) {
+  const document = new Doc();
   const root = docs.find((d) => d.kind === "campaign" && d.guid === campaignId);
-  if (root) Y.applyUpdate(doc, root.update);
-  const meta = rootOf(doc, campaignShape).meta;
+  if (root) applyUpdate(document, root.update);
+  const {meta} = rootOf(document, campaignShape);
   const out = {
     name: meta.get("name") ?? "Untitled campaign",
     systemId: meta.get("systemId") ?? "",
     roomKey: meta.get("roomKey"),
     createdAt: meta.get("createdAt"),
   };
-  doc.destroy();
+  document.destroy();
   return out;
 }
 
 export function assembleBackup(
   campaignId: string,
   device: BackupDevice,
-  docs: BackupDoc[],
+  docs: BackupDocument[],
   blobs: BackupBlob[],
 ): CampaignBackup {
   const { name, systemId } = metaOf(docs, campaignId);
@@ -261,30 +284,35 @@ async function pipe(data: Uint8Array, through: CompressionStream | Decompression
 }
 
 export async function encodeBackup(backup: CampaignBackup): Promise<Uint8Array> {
-  const e = encoding.createEncoder();
-  encoding.writeVarString(e, MAGIC);
-  encoding.writeVarUint(e, FORMAT);
-  encoding.writeVarString(e, backup.campaignId);
-  encoding.writeVarString(e, backup.name);
-  encoding.writeVarString(e, backup.systemId);
-  encoding.writeVarUint(e, backup.exportedAt);
-  encoding.writeVarString(e, backup.exportedBy);
-  encoding.writeVarUint(e, backup.docs.length);
+  const e = createEncoder();
+  writeVarString(e, MAGIC);
+  writeVarUint(e, FORMAT);
+  writeVarString(e, backup.campaignId);
+  writeVarString(e, backup.name);
+  writeVarString(e, backup.systemId);
+  writeVarUint(e, backup.exportedAt);
+  writeVarString(e, backup.exportedBy);
+  writeVarUint(e, backup.docs.length);
   for (const d of backup.docs) {
-    encoding.writeVarString(e, d.kind);
-    encoding.writeVarString(e, d.guid);
-    encoding.writeVarUint8Array(e, d.update);
+    writeVarString(e, d.kind);
+    writeVarString(e, d.guid);
+    writeVarUint8Array(e, d.update);
   }
-  encoding.writeVarUint(e, backup.blobs.length);
+  writeVarUint(e, backup.blobs.length);
   for (const b of backup.blobs) {
-    encoding.writeVarString(e, b.hash);
-    encoding.writeVarString(e, b.type);
-    encoding.writeVarUint8Array(e, b.data);
+    writeVarString(e, b.hash);
+    writeVarString(e, b.type);
+    writeVarUint8Array(e, b.data);
   }
-  return pipe(encoding.toUint8Array(e), new CompressionStream("gzip"));
+  return pipe(toUint8Array(e), new CompressionStream("gzip"));
 }
 
-export class BackupFileError extends Error {}
+export class BackupFileError extends Error {
+	constructor(message: string) {
+		super(message);
+		this.name = 'BackupFileError';
+	}
+}
 
 export async function decodeBackup(file: Uint8Array): Promise<CampaignBackup> {
   let data: Uint8Array;
@@ -294,47 +322,47 @@ export async function decodeBackup(file: Uint8Array): Promise<CampaignBackup> {
     throw new BackupFileError("That file isn't a Make a Move campaign.");
   }
   try {
-    const d = decoding.createDecoder(data);
-    if (decoding.readVarString(d) !== MAGIC) throw new Error();
-    const format = decoding.readVarUint(d);
+    const d = createDecoder(data);
+    if (readVarString(d) !== MAGIC) throw new Error();
+    const format = readVarUint(d);
     if (format > FORMAT)
       throw new BackupFileError("That backup is from a newer version of Make a Move.");
-    const campaignId = decoding.readVarString(d);
-    const name = decoding.readVarString(d);
-    const systemId = decoding.readVarString(d);
-    const exportedAt = decoding.readVarUint(d);
-    const exportedBy = decoding.readVarString(d);
-    const docs: BackupDoc[] = [];
-    for (let n = decoding.readVarUint(d); n > 0; n--) {
-      const kind = decoding.readVarString(d) as BackupDocKind;
-      const guid = decoding.readVarString(d);
-      const update = decoding.readVarUint8Array(d);
+    const campaignId = readVarString(d);
+    const name = readVarString(d);
+    const systemId = readVarString(d);
+    const exportedAt = readVarUint(d);
+    const exportedBy = readVarString(d);
+    const docs: BackupDocument[] = [];
+    for (let n = readVarUint(d); n > 0; n--) {
+      const kind = readVarString(d) as BackupDocKind;
+      const guid = readVarString(d);
+      const update = readVarUint8Array(d);
       if (!belongs(campaignId, { kind, guid })) throw new Error();
       docs.push({ kind, guid, update });
     }
     const blobs: BackupBlob[] = [];
-    for (let n = decoding.readVarUint(d); n > 0; n--) {
-      const hash = decoding.readVarString(d);
-      const type = decoding.readVarString(d);
-      blobs.push({ hash, type, data: decoding.readVarUint8Array(d) });
+    for (let n = readVarUint(d); n > 0; n--) {
+      const hash = readVarString(d);
+      const type = readVarString(d);
+      blobs.push({ hash, type, data: readVarUint8Array(d) });
     }
     return { campaignId, name, systemId, exportedAt, exportedBy, docs, blobs };
-  } catch (e) {
-    if (e instanceof BackupFileError) throw e;
+  } catch (error) {
+    if (error instanceof BackupFileError) throw error;
     throw new BackupFileError("That campaign file is damaged.");
   }
 }
 
-/** A file name for a backup: the campaign's name and the day. */
+/** A file name for a backup: the campaign's name and the da */
 export function backupFileName(name: string, at = new Date()): string {
   const slug =
     name
       .normalize("NFKD")
-      .replace(/[^\w\s-]/g, "")
+      .replaceAll(/[^\s\w-]/g, "")
       .trim()
-      .replace(/\s+/g, "-")
+      .replaceAll(/\s+/g, "-")
       .toLowerCase() || "campaign";
-  const day = `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}-${String(at.getDate()).padStart(2, "0")}`;
+  const [day] = at.toISOString().split("T");
   return `${slug}-${day}${BACKUP_FILE.extension}`;
 }
 
@@ -342,26 +370,26 @@ export function backupFileName(name: string, at = new Date()): string {
 
 /**
  * A GM's backup brings the GM role with it: it holds the room key and the
- * vault already. Restoring on a new device (a new device id) makes this
+ * vault alread Restoring on a new device (a new device id) makes this
  * device a GM too, under the name the backup was made under.
  */
-export function claimGm(root: Y.Doc, device: BackupDevice, exportedBy: string) {
+export function claimGm(root: Doc, device: BackupDevice, exportedBy: string) {
   const { members } = rootOf(root, campaignShape);
   const me = members.get(device.id);
   if (me?.get("role") === "gm") return;
-  const name = device.name || members.get(exportedBy)?.get("name") || "GM";
+  const name = device.name || (members.get(exportedBy)?.get("name") ?? "GM");
   if (me) me.set("role", "gm");
   else members.set(device.id, { role: "gm", joinedAt: Date.now(), name });
 }
 
 export const isGmBackup = (backup: CampaignBackup) => backup.docs.some((d) => d.kind === "vault");
 
-/** Merge a document into this device's stored copy. */
-export async function mergeStoredDoc(doc: BackupDoc, after?: (doc: Y.Doc) => void) {
-  const stored = new Y.Doc({ guid: doc.guid });
-  const p = new IndexeddbPersistence(DB_NAMES[doc.kind](doc.guid), stored);
+/** Merge a document into this device's stored cop */
+export async function mergeStoredDoc(document: BackupDocument, after?: (document_: Doc) => void) {
+  const stored = new Doc({ guid: document.guid });
+  const p = new IndexeddbPersistence(DB_NAMES[document.kind](document.guid), stored);
   await p.whenSynced;
-  Y.applyUpdate(stored, doc.update);
+  applyUpdate(stored, document.update);
   after?.(stored);
   await storeState(p);
   await p.destroy();

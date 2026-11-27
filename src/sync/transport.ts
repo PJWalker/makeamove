@@ -3,7 +3,7 @@
  * written against this, so it works over Trystero in the app and over an
  * in-memory network in tests.
  */
-export type Channel = "sync" | "blob";
+export type Channel = "blob" | "sync";
 
 export interface Transport {
   readonly selfId: string;

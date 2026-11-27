@@ -1,8 +1,9 @@
-import { store } from "../lib/store";
 import { lazy, Suspense, useEffect, useState } from "react";
+import { store } from "../lib/store";
 import { Lobby } from "../lobby/Lobby";
 import { goToCampaign, routeCampaignId } from "../navigation/router";
-import { type Campaign, deleteLocalCampaign, openCampaign } from "../campaign/campaign";
+import {  deleteLocalCampaign, openCampaign } from "../campaign/campaign";
+import type {Campaign} from "../campaign/campaign";
 import { tableCommands } from "../workspace/commands/all";
 import { extensionOf } from "../systems/extensions";
 import { CampaignContext, CampaignReactContext } from "../workspace/campaignContext";
@@ -13,7 +14,9 @@ import { withTransition } from "../ui/transition";
 import { useQuery } from "../ui/useQuery";
 
 // The table loads when a campaign opens, so the lobby comes up quickly.
-const Tabletop = lazy(() => import("../table/Tabletop").then((m) => ({ default: m.Tabletop })));
+const Tabletop = lazy(() =>
+  import(/* webpackChunkName: "tabletop" */ "../table/Tabletop").then((m) => ({ default: m.Tabletop }))
+);
 
 const openError = store<string | null>(null);
 
@@ -21,45 +24,51 @@ const openError = store<string | null>(null);
 function useOpenCampaign(id: string | null): CampaignContext | null {
   const [open, setOpen] = useState<CampaignContext | null>(null);
   useEffect(() => {
-    if (!id) return;
+    if (!id) return undefined;
     openError.value = null;
-    let ctx: CampaignContext | null = null;
+    let context: CampaignContext | null = null;
     let left = false;
-    openCampaign(id)
-      .then((campaign) =>
-        CampaignContext.open(campaign, () => [
+    void (async () => {
+      try {
+        const campaign = await openCampaign(id);
+        const c = await CampaignContext.open(campaign, () => [
           ...tableCommands,
           ...(extensionOf(campaign.systemId).commands ?? []),
-        ]),
-      )
-      .then((c) => {
-        if (left) return c.dispose();
-        ctx = c;
+        ]);
+        if (left) {
+          c.dispose();
+          return;
+        }
+        context = c;
         setOpen(c);
-      })
-      .catch((e) => {
+      } catch (error: unknown) {
         if (left) return;
-        openError.value = `Couldn't open that campaign: ${e}`;
+        openError.value = `Couldn't open that campaign: ${String(error)}`;
         goToCampaign(null);
-      });
+      }
+    })();
     return () => {
       left = true;
-      ctx?.dispose();
+      context?.dispose();
     };
   }, [id]);
   return open && !open.disposed && open.campaign.id === id ? open : null;
 }
 
-export function App() {
+function App() {
   const id = useQuery(routeCampaignId);
-  const ctx = useOpenCampaign(id);
+  const context = useOpenCampaign(id);
   return (
     <>
-      <Screen id={id} ctx={ctx} />
+      <Screen id={id} ctx={context} />
       <Tooltip />
     </>
   );
 }
+
+App.displayName = "App";
+
+export default App;
 
 function Screen({ id, ctx }: { id: string | null; ctx: CampaignContext | null }) {
   const campaign = ctx?.campaign;
@@ -93,11 +102,11 @@ function Removed({ campaign }: { campaign: Campaign }) {
         <Button
           variant="danger"
           className="form-actions-start"
-          onClick={() => void deleteLocalCampaign(campaign.id).then(() => goToCampaign(null))}
+          onClick={() => void deleteLocalCampaign(campaign.id).then(() => { goToCampaign(null); })}
         >
           Delete from This Device
         </Button>
-        <Button variant="primary" onClick={() => goToCampaign(null)}>
+        <Button variant="primary" onClick={() => { goToCampaign(null); }}>
           Back to the Lobby
         </Button>
       </div>
@@ -117,8 +126,8 @@ function Waiting({ campaign }: { campaign: Campaign }) {
   const peers = useQuery(campaign.peerCount);
   const [timedOut, setTimedOut] = useState(false);
   useEffect(() => {
-    const timer = setTimeout(() => void withTransition(() => setTimedOut(true)), WAIT_TIMEOUT_MS);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => void withTransition(() => { setTimedOut(true); }), WAIT_TIMEOUT_MS);
+    return () => { clearTimeout(timer); };
   }, []);
   return (
     <main className="loading waiting">
@@ -139,12 +148,12 @@ function Waiting({ campaign }: { campaign: Campaign }) {
           <Button
             variant="danger"
             className="form-actions-start"
-            onClick={() => void deleteLocalCampaign(campaign.id).then(() => goToCampaign(null))}
+            onClick={() => void deleteLocalCampaign(campaign.id).then(() => { goToCampaign(null); })}
           >
             Delete from This Device
           </Button>
         )}
-        <Button variant={timedOut ? "primary" : "secondary"} onClick={() => goToCampaign(null)}>
+        <Button variant={timedOut ? "primary" : "secondary"} onClick={() => { goToCampaign(null); }}>
           Back to the Lobby
         </Button>
       </div>

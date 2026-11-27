@@ -4,7 +4,7 @@ import { getNote } from "../features/notes/api";
 import { leave } from "../ui/morph";
 
 /** What can be changed about an action from its menu (see ActionDialogs.tsx and commands/custom.ts). */
-export type ActionEditKind = "rename" | "icon" | "shortcut";
+export type ActionEditKind = "icon" | "rename" | "shortcut";
 
 /** What a command asks before it runs (commands/views.ts `invoke`). */
 export interface Confirmation {
@@ -64,10 +64,10 @@ export class TableState {
   }
 
   /** The palette is showing as `el` until the returned function is called. */
-  showingPalette(el: HTMLElement): () => void {
-    this.#palette = el;
+  showingPalette(element: HTMLElement): () => void {
+    this.#palette = element;
     return () => {
-      if (this.#palette === el) this.#palette = null;
+      if (this.#palette === element) this.#palette = null;
     };
   }
 

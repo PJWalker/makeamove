@@ -1,4 +1,5 @@
 import type * as React from "react";
+import { suppressNextClick } from "./suppressClick";
 
 /*
  * Press-and-drag reordering for a row or column of items (sidebar tabs, tools,
@@ -35,14 +36,14 @@ const SLACK = 24;
 export function startReorder(o: ReorderOptions) {
   const { event: down, axis } = o;
   if (down.button !== 0) return;
-  const el = down.currentTarget as HTMLElement;
+  const element = down.currentTarget as HTMLElement;
   const startX = down.clientX;
   const startY = down.clientY;
   let lifted = false;
 
-  const others = () => o.items().filter((i) => i !== el);
+  const others = () => o.items().filter((index) => index !== element);
   const inside = (e: PointerEvent) => {
-    const r = (o.container ?? el.parentElement)!.getBoundingClientRect();
+    const r = (o.container ?? element.parentElement)!.getBoundingClientRect();
     return (
       e.clientX > r.left - SLACK &&
       e.clientX < r.right + SLACK &&
@@ -53,25 +54,23 @@ export function startReorder(o: ReorderOptions) {
 
   const marker = dropLine(axis);
   const slot = (e: PointerEvent) => indexAmong(others(), axis, e);
-  const showLine = (index: number) => marker.show(others(), index);
+  const showLine = (index: number) => { marker.show(others(), index); };
 
   function put() {
     marker.hide();
-    el.classList.remove("reorder-lifted");
-    el.style.translate = "";
+    element.classList.remove("reorder-lifted");
+    element.style.translate = "";
   }
 
   function finish() {
-    window.removeEventListener("pointermove", move);
-    window.removeEventListener("pointerup", up);
-    window.removeEventListener("pointercancel", cancel);
+    globalThis.removeEventListener("pointermove", move);
+    globalThis.removeEventListener("pointerup", up);
+    globalThis.removeEventListener("pointercancel", cancel);
     document.documentElement.classList.remove("is-reordering");
     put();
     if (lifted) {
       // The click that ends a drag is not a press on the item.
-      const swallow = (ev: Event) => ev.stopPropagation();
-      window.addEventListener("click", swallow, { capture: true, once: true });
-      setTimeout(() => window.removeEventListener("click", swallow, { capture: true }), 0);
+      suppressNextClick();
       o.onEnd?.();
     }
   }
@@ -80,11 +79,11 @@ export function startReorder(o: ReorderOptions) {
     if (!lifted) {
       if (Math.hypot(e.clientX - startX, e.clientY - startY) < LIFT_DISTANCE) return;
       lifted = true;
-      el.classList.add("reorder-lifted");
+      element.classList.add("reorder-lifted");
       document.documentElement.classList.add("is-reordering");
       o.onLift?.();
     }
-    el.style.translate = `${e.clientX - startX}px ${e.clientY - startY}px`;
+    element.style.translate = `${e.clientX - startX}px ${e.clientY - startY}px`;
     o.onMove?.(e, inside(e));
     if (inside(e)) {
       showLine(slot(e));
@@ -107,11 +106,11 @@ export function startReorder(o: ReorderOptions) {
     else if (o.outside?.when === "release") o.outside.run(e);
   }
 
-  const cancel = () => finish();
+  const cancel = () => { finish(); };
 
-  window.addEventListener("pointermove", move);
-  window.addEventListener("pointerup", up);
-  window.addEventListener("pointercancel", cancel);
+  globalThis.addEventListener("pointermove", move);
+  globalThis.addEventListener("pointerup", up);
+  globalThis.addEventListener("pointercancel", cancel);
 }
 
 /** Where among `items` (in order) a pointer would drop: the count of items whose centre it has passed. */
@@ -121,8 +120,8 @@ export function indexAmong(
   e: Pick<PointerEvent, "clientX" | "clientY">,
 ) {
   const p = axis === "x" ? e.clientX : e.clientY;
-  return items.filter((i) => {
-    const r = i.getBoundingClientRect();
+  return items.filter((index) => {
+    const r = index.getBoundingClientRect();
     return (axis === "x" ? r.left + r.width / 2 : r.top + r.height / 2) < p;
   }).length;
 }
@@ -132,8 +131,8 @@ export function dropLine(axis: "x" | "y") {
   let line: HTMLElement | null = null;
   return {
     show(items: HTMLElement[], index: number) {
-      if (!items.length) return this.hide();
-      const rects = items.map((i) => i.getBoundingClientRect());
+      if (items.length === 0) { this.hide(); return; }
+      const rects = items.map((index_) => index_.getBoundingClientRect());
       const rectAt = (index: number) => {
         const rect = rects[index];
         if (!rect) throw new RangeError(`Missing reorder item at ${index}`);
@@ -141,12 +140,10 @@ export function dropLine(axis: "x" | "y") {
       };
       const lo = (r: DOMRect) => (axis === "x" ? r.left : r.top);
       const hi = (r: DOMRect) => (axis === "x" ? r.right : r.bottom);
-      const at =
-        index === 0
-          ? lo(rectAt(0)) - 2
-          : index === rects.length
-            ? hi(rectAt(index - 1)) + 2
-            : (hi(rectAt(index - 1)) + lo(rectAt(index))) / 2;
+      let at: number;
+      if (index === 0) at = lo(rectAt(0)) - 2;
+      else if (index === rects.length) at = hi(rectAt(index - 1)) + 2;
+      else at = (hi(rectAt(index - 1)) + lo(rectAt(index))) / 2;
       const left = Math.min(...rects.map((r) => r.left));
       const right = Math.max(...rects.map((r) => r.right));
       const top = Math.min(...rects.map((r) => r.top));
@@ -154,7 +151,7 @@ export function dropLine(axis: "x" | "y") {
       if (!line) {
         line = document.createElement("div");
         line.className = "reorder-line";
-        document.body.appendChild(line);
+        document.body.append(line);
       }
       const s = line.style;
       if (axis === "x") {

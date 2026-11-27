@@ -1,10 +1,11 @@
 import { memo, useEffect, useMemo } from "react";
-import { useConstant } from "../ui/useConstant";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
-import { type ChatContent } from "../features/chat/content";
+import { useConstant } from "../ui/useConstant";
+import type { ChatContent } from "../features/chat/content";
 import type { ChatMessage, TextMessage } from "../features/chat/types";
 import { canEdit, getCharacter, actingCharacterId } from "../features/characters/api";
-import { TRACKER_NODE, type TrackerButton } from "../data/richText";
+import { TRACKER_NODE  } from "../data/richText";
+import type {TrackerButton} from "../data/richText";
 import { TrackerButtonView } from "../workspace/RichTextView";
 import { stampTime } from "../lib/hlc";
 import type { Campaign } from "../campaign/campaign";
@@ -13,16 +14,16 @@ import { useQuery } from "../ui/useQuery";
 import { Avatar } from "../ui/Avatar";
 import { Button } from "../ui/Button";
 import { menuTrigger } from "../ui/menuTrigger";
-import { chatContentExtensions } from "./chatContentExtensions";
 import { LINK_NODE } from "../features/notes/links";
 import type { LinkKind } from "../features/notes/links";
 import { LinkChip } from "../workspace/LinkChip";
 import { editedText, useTextState } from "../features/chat/messageState";
-import { CounterCard, EditBox, TimerCard } from "./ChatExtras";
 import { isPinned } from "../features/chat/messages";
 import { playUiSound } from "../ui/sounds";
-import { MoveCard, RollCard } from "./RollCards";
 import { useCampaign } from "../workspace/campaignContext";
+import { MoveCard, RollCard } from "./RollCards";
+import { CounterCard, EditBox, TimerCard } from "./ChatExtras";
+import { chatContentExtensions } from "./chatContentExtensions";
 
 /* One message in the chat, as the log and the pinned strip show it. */
 
@@ -51,7 +52,7 @@ export function LoneMessage({ campaign, m }: { campaign: Campaign; m: ChatMessag
   );
 }
 
-type MessageProps = {
+interface MessageProperties {
   campaign: Campaign;
   m: ChatMessage;
   header: boolean;
@@ -67,7 +68,7 @@ type MessageProps = {
   quickRollActive?: boolean;
   /** Opens the message's menu; present when there's something in it. */
   onMenu?: ((x: number, y: number, id: string) => void) | undefined;
-};
+}
 
 /** Messages that have played their arrival, so scrolling the log's window back over them doesn't replay it. */
 const arrived = new Set<string>();
@@ -90,38 +91,43 @@ function useArrival(id: string, fresh: boolean, mine: boolean, quickRoll: boolea
 /** What a message says, in the card for its kind. */
 function MessageBody({
   m,
-  ...props
+  ...properties
 }: Pick<
-  MessageProps,
-  "campaign" | "masked" | "mine" | "canAct" | "quickRoll" | "quickRollActive"
+  MessageProperties,
+  "campaign" | "canAct" | "masked" | "mine" | "quickRoll" | "quickRollActive"
 > & {
   m: Exclude<ChatMessage, { kind: "system" }>;
   arriving: boolean;
 }) {
-  const { campaign, mine, arriving } = props;
+  const { campaign, mine, arriving } = properties;
   switch (m.kind) {
-    case "roll":
+    case "roll": {
       return (
         <RollCard
           campaign={campaign}
           m={m}
-          masked={props.masked}
+          masked={properties.masked}
           arriving={arriving}
           mine={mine}
-          quickRoll={props.quickRoll ?? false}
-          quickRollActive={props.quickRollActive ?? false}
+          quickRoll={properties.quickRoll ?? false}
+          quickRollActive={properties.quickRollActive ?? false}
         />
       );
-    case "move":
+    }
+    case "move": {
       return (
-        <MoveCard campaign={campaign} m={m} canAct={props.canAct} arriving={arriving} mine={mine} />
+        <MoveCard campaign={campaign} m={m} canAct={properties.canAct} arriving={arriving} mine={mine} />
       );
-    case "timer":
+    }
+    case "timer": {
       return <TimerCard campaign={campaign} m={m} />;
-    case "counter":
+    }
+    case "counter": {
       return <CounterCard campaign={campaign} m={m} />;
-    case "text":
+    }
+    case "text": {
       return <TextBody campaign={campaign} m={m} mine={mine} />;
+    }
   }
 }
 
@@ -152,7 +158,7 @@ function SystemNotice({
         <Button
           variant="ghost"
           className="chat-go"
-          onClick={() => campaign.setActiveScene(m.sceneId!)}
+          onClick={() => { campaign.setActiveScene(m.sceneId!); }}
         >
           Go There
         </Button>
@@ -161,7 +167,7 @@ function SystemNotice({
   );
 }
 
-/** Memoised: the log re-renders as messages arrive, but a message only when its own props change. */
+/** Memoised: the log re-renders as messages arrive, but a message only when its own properties change. */
 export const Message = memo(function Message({
   m,
   header,
@@ -169,10 +175,10 @@ export const Message = memo(function Message({
   canGo = false,
   quickRoll = false,
   onMenu,
-  ...props
-}: MessageProps) {
-  const { campaign, mine } = props;
-  const menu = useMemo(() => onMenu && menuTrigger((x, y) => onMenu(x, y, m.id)), [onMenu, m.id]);
+  ...properties
+}: MessageProperties) {
+  const { campaign, mine } = properties;
+  const menu = useMemo(() => onMenu && menuTrigger((x, y) => { onMenu(x, y, m.id); }), [onMenu, m.id]);
   const arriving = useArrival(m.id, fresh, mine, quickRoll);
   const pinned = useQuery(campaign.messageState, () => isPinned(campaign, m.id));
   if (m.kind === "system")
@@ -196,16 +202,16 @@ export const Message = memo(function Message({
           </time>
         </header>
       )}
-      <MessageBody m={m} arriving={arriving} quickRoll={quickRoll} {...props} />
+      <MessageBody m={m} arriving={arriving} quickRoll={quickRoll} {...properties} />
     </article>
   );
 });
 
 function TextBody({ campaign, m, mine }: { campaign: Campaign; m: TextMessage; mine: boolean }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const state = useTextState(campaign, m.id);
   const text = editedText(state, m.text);
-  const editing = useQuery(ctx.table.editingMessage);
+  const editing = useQuery(context.table.editingMessage);
   if (editing === m.id) return <EditBox campaign={campaign} id={m.id} text={text} />;
   return (
     <div className="chat-text" data-emote={m.emote}>
@@ -254,14 +260,14 @@ function PinnedText({ campaign, m }: { campaign: Campaign; m: TextMessage }) {
 }
 
 function Rich({ campaign, content }: { campaign: Campaign; content: ChatContent }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const rendered = renderToReactElement({
-    extensions: chatContentExtensions(ctx),
+    extensions: chatContentExtensions(context),
     content,
     options: {
       nodeMapping: {
         [LINK_NODE]: ({ node }) => {
-          const attrs = node.attrs as {
+          const attributes = node.attrs as {
             kind: LinkKind;
             id: string;
             text?: string | null;
@@ -269,9 +275,9 @@ function Rich({ campaign, content }: { campaign: Campaign; content: ChatContent 
           return (
             <LinkChip
               campaign={campaign}
-              kind={attrs.kind}
-              id={attrs.id}
-              text={attrs.text ?? undefined}
+              kind={attributes.kind}
+              id={attributes.id}
+              text={attributes.text ?? undefined}
             />
           );
         },

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
-import { DEFAULT_GRID, hexCentre, type Grid } from "../grid";
+import { DEFAULT_GRID, hexCentre  } from "../grid";
+import type {Grid} from "../grid";
 import { formatDistance, inRange, measure, steps, tokenCells, tokenDistance } from "../measure";
 
 const square: Grid = { ...DEFAULT_GRID, type: "square", size: 50 };

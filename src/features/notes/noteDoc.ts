@@ -1,4 +1,4 @@
-import * as Y from "yjs";
+import type * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
 import { dataName } from "../../platform/dataEpoch";
 
@@ -18,23 +18,23 @@ const REPORT_MS = 800;
 export class NoteDoc {
   readonly doc: Y.Doc;
   readonly body: Y.XmlFragment;
-  private persistence: IndexeddbPersistence;
+  private readonly persistence: IndexeddbPersistence;
   private report: (() => void) | null = null;
   private reportTimer: ReturnType<typeof setTimeout> | undefined;
 
-  private constructor(doc: Y.Doc) {
-    this.doc = doc;
-    this.body = doc.getXmlFragment("body");
-    this.persistence = new IndexeddbPersistence(noteDbName(doc.guid), doc);
+  private constructor(document: Y.Doc) {
+    this.doc = document;
+    this.body = document.getXmlFragment("body");
+    this.persistence = new IndexeddbPersistence(noteDbName(document.guid), document);
   }
 
   /**
    * Load the note. `onText` hears its text as stored, then again shortly
    * after each change and on closing, whoever made the change.
    */
-  static async open(doc: Y.Doc, onText?: (body: Y.XmlFragment) => void): Promise<NoteDoc> {
-    doc.load();
-    const n = new NoteDoc(doc);
+  static async open(document: Y.Doc, onText?: (body: Y.XmlFragment) => void): Promise<NoteDoc> {
+    document.load();
+    const n = new NoteDoc(document);
     await n.persistence.whenSynced;
     if (onText) {
       n.report = () => {

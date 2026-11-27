@@ -1,6 +1,8 @@
 import type { Campaign } from "../../campaign/campaign";
 import type { SlotLook } from "../../campaign/schema";
 import { device } from "../../platform/device";
+import { IS_MAC } from "../../platform/os";
+
 export type { SlotLook } from "../../campaign/schema";
 
 /*
@@ -21,7 +23,7 @@ export function setSlotLook(campaign: Campaign, id: string, patch: SlotLook) {
   if (!entry) return;
   const next: SlotLook = { ...slotLook(campaign, id), ...patch };
   for (const k of Object.keys(next) as (keyof SlotLook)[]) if (!next[k]) delete next[k];
-  if (Object.keys(next).length) entry.ensure("hotbarLooks").set(id, next);
+  if (Object.keys(next).length > 0) entry.ensure("hotbarLooks").set(id, next);
   else entry.get("hotbarLooks")?.delete(id);
 }
 
@@ -66,7 +68,7 @@ export function actionForCombo(all: Record<string, string>, combo: string): stri
   return Object.keys(all).find((id) => all[id] === combo);
 }
 
-const MODIFIERS = ["Control", "Alt", "Shift", "Meta", "CapsLock", "Fn", "OS"];
+const MODIFIERS = new Set(["Control", "Alt", "Shift", "Meta", "CapsLock", "Fn", "OS"]);
 
 /**
  * A key press as a combo like `Ctrl+Shift+R`, or null for a lone modifier.
@@ -74,13 +76,10 @@ const MODIFIERS = ["Control", "Alt", "Shift", "Meta", "CapsLock", "Fn", "OS"];
  * types ®) is still Alt+R.
  */
 export function comboOf(
-  e: Pick<KeyboardEvent, "key" | "code" | "ctrlKey" | "altKey" | "shiftKey" | "metaKey">,
+  e: Pick<KeyboardEvent, "altKey" | "code" | "ctrlKey" | "key" | "metaKey" | "shiftKey">,
 ): string | null {
-  if (MODIFIERS.includes(e.key)) return null;
-  const letter = /^Key([A-Z])$/.exec(e.code)?.[1];
-  const digit = /^(?:Digit|Numpad)(\d)$/.exec(e.code)?.[1];
-  let key =
-    letter ?? digit ?? (e.key === " " ? "Space" : e.key.length === 1 ? e.key.toUpperCase() : e.key);
+  if (MODIFIERS.has(e.key)) return null;
+  let key = keyName(e);
   if (!key || key === "Unidentified" || key === "Dead") return null;
   if (key.startsWith("Arrow")) key = key.slice(5);
   const parts = [];
@@ -91,13 +90,19 @@ export function comboOf(
   return [...parts, key].join("+");
 }
 
+/** The key of a press, without modifiers: letters and digits by physical key. */
+function keyName(e: Pick<KeyboardEvent, "code" | "key">): string {
+  const physical = /^Key([A-Z])$/.exec(e.code)?.[1] ?? /^(?:Digit|Numpad)(\d)$/.exec(e.code)?.[1];
+  if (physical) return physical;
+  if (e.key === " ") return "Space";
+  return e.key.length === 1 ? e.key.toUpperCase() : e.key;
+}
+
 /** Whether a combo should still fire while typing in a field: only with Ctrl or Cmd held. */
 export const firesWhileTyping = (combo: string) => /(^|\+)(Ctrl|Meta)\+/.test(combo);
 
-const MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
-
 /** A built-in combo for this platform: `Mod` is Cmd on a Mac and Ctrl elsewhere, kept in `comboOf`'s order. */
-export function platformCombo(combo: string, mac = MAC): string {
+export function platformCombo(combo: string, mac = IS_MAC): string {
   if (!combo.includes("Mod+")) return combo;
   const parts = combo.split("+");
   const key = parts.at(-1)!;
@@ -108,7 +113,7 @@ const MAC_GLYPHS: Record<string, string> = { Ctrl: "⌃", Alt: "⌥", Shift: "�
 const ARROWS: Record<string, string> = { Up: "↑", Down: "↓", Left: "←", Right: "→" };
 
 /** A combo as people read it: ⌥⇧R on a Mac, Alt+Shift+R elsewhere. */
-export function showCombo(combo: string, mac = MAC): string {
+export function showCombo(combo: string, mac = IS_MAC): string {
   const parts = combo.split("+");
   // "+" itself is a key: `Shift++`.
   if (combo.endsWith("++")) parts.splice(-2, 2, "+");

@@ -23,7 +23,7 @@ import { flat } from "./style";
  * tints its particles, and its opacity is how strong the effect is.
  */
 
-type Sprite = "dot" | "streak" | "puff" | "star";
+type Sprite = "dot" | "puff" | "star" | "streak";
 
 /** One drift of particles in an effect, all alike. */
 interface Drift {
@@ -159,12 +159,12 @@ interface Seed {
 
 /** A repeatable random sequence, so an effect looks the same each time it's drawn. */
 function random(seed: string): () => number {
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  let h = 2_166_136_261;
+  for (let index = 0; index < seed.length; index++) h = Math.imul(h ^ seed.charCodeAt(index), 16_777_619);
   return () => {
-    h = Math.imul(h ^ (h >>> 15), 2246822507);
-    h = Math.imul(h ^ (h >>> 13), 3266489909);
-    return ((h ^= h >>> 16) >>> 0) / 4294967296;
+    h = Math.imul(h ^ (h >>> 15), 2_246_822_507);
+    h = Math.imul(h ^ (h >>> 13), 3_266_489_909);
+    return ((h ^= h >>> 16) >>> 0) / 4_294_967_296;
   };
 }
 
@@ -194,10 +194,10 @@ class EdgeFade {
     const cos = Math.cos(-rot);
     const sin = Math.sin(-rot);
     let deepest = 0;
-    for (let j = 0; j < this.rows; j++) {
-      for (let i = 0; i < this.cols; i++) {
-        const wx = i * cell - box.w / 2;
-        const wy = j * cell - box.h / 2;
+    for (let index = 0; index < this.rows; index++) {
+      for (let index_ = 0; index_ < this.cols; index_++) {
+        const wx = index_ * cell - box.w / 2;
+        const wy = index * cell - box.h / 2;
         const p = { x: wx * cos - wy * sin, y: wx * sin + wy * cos };
         if (!insidePolygon(outline, p)) continue;
         let d = Infinity;
@@ -206,7 +206,7 @@ class EdgeFade {
           const b = outline[(k + 1) % outline.length]!;
           d = Math.min(d, distanceToSegment(p.x, p.y, a.x, a.y, b.x, b.y));
         }
-        depth[j * this.cols + i] = d;
+        depth[index * this.cols + index_] = d;
         deepest = Math.max(deepest, d);
       }
     }
@@ -217,10 +217,10 @@ class EdgeFade {
 
   /** At a point relative to the zone's centre. */
   at(x: number, y: number): number {
-    const i = Math.round((x + this.box.w / 2) / this.cell);
-    const j = Math.round((y + this.box.h / 2) / this.cell);
-    if (i < 0 || j < 0 || i >= this.cols || j >= this.rows) return 0;
-    return this.values[j * this.cols + i]!;
+    const index = Math.round((x + this.box.w / 2) / this.cell);
+    const index_ = Math.round((y + this.box.h / 2) / this.cell);
+    if (index < 0 || index_ < 0 || index >= this.cols || index_ >= this.rows) return 0;
+    return this.values[index_ * this.cols + index]!;
   }
 }
 
@@ -257,9 +257,9 @@ class DriftView {
     const next = random(`${this.id}:${d.sprite}`);
     const start = { u: next(), v: next() };
     // Spread evenly over the zone (an R2 sequence), so there are no clumps or gaps.
-    this.seeds = Array.from({ length: count }, (_, i) => ({
-      u: fract(start.u + i * 0.7548776662),
-      v: fract(start.v + i * 0.569840291),
+    this.seeds = Array.from({ length: count }, (_, index) => ({
+      u: fract(start.u + index * 0.754_877_666_2),
+      v: fract(start.v + index * 0.569_840_291),
       size: lerp(d.size[0], d.size[1], next()),
       alpha: lerp(d.alpha[0], d.alpha[1], next()),
       phase: next(),
@@ -276,17 +276,17 @@ class DriftView {
   draw(time: number, tint: number, strength: number) {
     const d = this.drift;
     const { w, h } = this.box;
-    const fade = this.fade;
+    const {fade} = this;
     if (!fade) return;
     const angle = Math.atan2(d.velocity.y, d.velocity.x) - Math.PI / 2;
-    for (let i = 0; i < this.particles.length; i++) {
-      const s = this.seeds[i]!;
-      const p = this.particles[i]!;
+    for (let index = 0; index < this.particles.length; index++) {
+      const s = this.seeds[index]!;
+      const p = this.particles[index]!;
       // A particle with a life starts its next one somewhere else.
       const age = d.life ? time / d.life + s.phase : 0;
       const cycle = Math.floor(age);
-      const u = fract(s.u + cycle * 0.618034);
-      const v = fract(s.v + cycle * 0.414214);
+      const u = fract(s.u + cycle * 0.618_034);
+      const v = fract(s.v + cycle * 0.414_214);
       const sway = d.sway ? d.sway[0] * Math.sin((time * d.sway[1] + s.phase) * Math.PI * 2) : 0;
       const x = fract((u * w + d.velocity.x * time + sway) / w) * w - w / 2;
       const y = fract((v * h + d.velocity.y * time) / h) * h - h / 2;
@@ -312,17 +312,17 @@ export class EffectView {
   private readonly drifts: DriftView[];
   private colour = new Color();
 
-  constructor(private readonly el: EffectElement) {
-    this.drifts = DRIFTS[el.effect].map((d) => new DriftView(d, el.id));
+  constructor(private readonly element: EffectElement) {
+    this.drifts = DRIFTS[element.effect].map((d) => new DriftView(d, element.id));
     this.root.addChild(...this.drifts.map((d) => d.container), this.outline);
   }
 
   /** Move or resize the zone, or change its colour while one is being picked. */
   apply(t: Transform) {
-    const { colour } = { ...this.el, ...t } as EffectElement;
+    const { colour } = { ...this.element, ...t } as EffectElement;
     this.colour = new Color(colour);
     this.root.position.set(t.x, t.y);
-    const outline = shapeOutline(this.el, t.w, t.h);
+    const outline = shapeOutline(this.element, t.w, t.h);
     for (const d of this.drifts) d.fit(outline, t);
     // Its particles have no bounds of their own, so it's culled by its box.
     const r = Math.hypot(t.w, t.h) / 2;
@@ -382,9 +382,10 @@ function spot(g: CanvasRenderingContext2D, x: number, y: number, r: number, alph
 
 function paintSprite(g: CanvasRenderingContext2D, sprite: Sprite, w: number, h: number) {
   switch (sprite) {
-    case "dot":
+    case "dot": {
       spot(g, w / 2, h / 2, w / 2);
       return;
+    }
     case "streak": {
       const grad = g.createLinearGradient(0, 0, 0, h);
       grad.addColorStop(0, "rgba(255,255,255,0)");
@@ -397,7 +398,7 @@ function paintSprite(g: CanvasRenderingContext2D, sprite: Sprite, w: number, h: 
     case "puff": {
       // A lumpy cloud: soft spots clustered about the middle.
       const next = random("puff");
-      for (let i = 0; i < 9; i++) {
+      for (let index = 0; index < 9; index++) {
         const a = next() * Math.PI * 2;
         const d = next() * w * 0.18;
         spot(g, w / 2 + Math.cos(a) * d, h / 2 + Math.sin(a) * d, w * (0.22 + next() * 0.12), 0.35);
@@ -408,9 +409,9 @@ function paintSprite(g: CanvasRenderingContext2D, sprite: Sprite, w: number, h: 
       spot(g, w / 2, h / 2, w / 2, 0.5);
       g.fillStyle = "#fff";
       g.beginPath();
-      for (let i = 0; i < 8; i++) {
-        const r = i % 2 ? w * 0.08 : w * 0.48;
-        const a = (i / 8) * Math.PI * 2;
+      for (let index = 0; index < 8; index++) {
+        const r = index % 2 ? w * 0.08 : w * 0.48;
+        const a = (index / 8) * Math.PI * 2;
         g.lineTo(w / 2 + Math.cos(a) * r, h / 2 + Math.sin(a) * r);
       }
       g.fill();

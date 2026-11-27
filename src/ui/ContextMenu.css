@@ -7,8 +7,9 @@
     display: grid;
     min-width: 220px;
     padding: var(--space-1);
-    background: var(--window-sheen), var(--surface-solid);
-    border: 1px solid var(--hairline);
+    background: var(--grain), var(--window-sheen), var(--surface-solid);
+    border: 1px solid var(--gilt-lo);
+    border-image: var(--frame-tight);
     background-clip: padding-box;
     box-shadow: var(--window-shadow), var(--window-rim);
     /* Menus grow out of the point or button that opened them. */

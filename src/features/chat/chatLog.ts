@@ -1,12 +1,14 @@
-import { store } from "../../lib/store";
 import * as Y from "yjs";
 import { IndexeddbPersistence } from "y-indexeddb";
+import { store } from "../../lib/store";
 import { HybridClock } from "../../lib/hlc";
 import { newId } from "../../lib/ids";
-import { dataName } from "../../platform/dataEpoch";
+import { compareCodeUnits } from "../../lib/order";
+import { dataName, deleteData } from "../../platform/dataEpoch";
 import { device } from "../../platform/device";
 import { colourOf } from "../../scene/presence";
-import { list, rootOf, type List } from "../../data/schema";
+import { list, rootOf  } from "../../data/schema";
+import type {List} from "../../data/schema";
 import type { ChatMessage } from "./types";
 
 /*
@@ -28,7 +30,7 @@ export const chatDbName = (guid: string) => dataName("chat", guid);
 
 /** Remove this device's copy of every chunk listed in a campaign's chat log. */
 export function deleteChatData(chunks: List<Y.Doc>) {
-  for (const chunk of chunks.toArray()) indexedDB.deleteDatabase(chatDbName(chunk.guid));
+  for (const chunk of chunks.toArray()) deleteData(chatDbName(chunk.guid));
 }
 
 /** A chunk of the log: up to CHUNK_SIZE messages, in the order they were posted. */
@@ -43,7 +45,7 @@ interface LoadedChunk {
 
 export type NewMessage = ChatMessage extends infer M
   ? M extends ChatMessage
-    ? Omit<M, "id" | "hlc" | "author" | "name" | "colour">
+    ? Omit<M, "author" | "colour" | "hlc" | "id" | "name">
     : never
   : never;
 
@@ -62,7 +64,9 @@ export class ChatLog {
   /** Index in `chunks` of the oldest chunk to keep loaded. */
   private from = Infinity;
   private destroyed = false;
-  private stopRoot: () => void;
+  private readonly stopRoot: () => void;
+  /** Posts not yet written, so they go in one at a time, in order. */
+  private queue: Promise<unknown> = Promise.resolve();
 
   constructor(chunks: List<Y.Doc>, campaignId: string, deviceId: string) {
     this.chunks = chunks;
@@ -89,22 +93,22 @@ export class ChatLog {
     this.hasEarlier.value = this.from > 0;
     this.earlierCount.value = this.from * CHUNK_SIZE;
     const waits: Promise<unknown>[] = [];
-    this.chunks.toArray().forEach((doc, i) => {
-      if (i >= this.from && !this.loaded.has(doc.guid)) waits.push(this.loadChunk(doc));
-    });
+    for (const [index_, document] of this.chunks.toArray().entries()) {
+      if (index_ >= this.from && !this.loaded.has(document.guid)) waits.push(this.loadChunk(document));
+    }
     await Promise.all(waits);
   }
 
-  private async loadChunk(doc: Y.Doc) {
+  private async loadChunk(document: Y.Doc) {
     if (this.destroyed) return;
-    doc.load();
-    const { messages } = rootOf(doc, chunkShape);
-    const persistence = new IndexeddbPersistence(chatDbName(doc.guid), doc);
-    this.loaded.set(doc.guid, {
-      doc,
+    document.load();
+    const { messages } = rootOf(document, chunkShape);
+    const persistence = new IndexeddbPersistence(chatDbName(document.guid), document);
+    this.loaded.set(document.guid, {
+      doc: document,
       messages,
       persistence,
-      stop: messages.observe(() => this.refresh()),
+      stop: messages.observe(() => { this.refresh(); }),
     });
     await persistence.whenSynced;
     this.refresh();
@@ -113,26 +117,26 @@ export class ChatLog {
   private refresh() {
     const all: ChatMessage[] = [];
     for (const { messages } of this.loaded.values()) all.push(...messages.toArray());
-    all.sort((a, b) => (a.hlc < b.hlc ? -1 : a.hlc > b.hlc ? 1 : 0));
+    all.sort((a, b) => compareCodeUnits(a.hlc, b.hlc));
     // Later local stamps must sort after everything seen.
-    const last = all[all.length - 1];
+    const last = all.at(-1);
     if (last) this.clock.receive(last.hlc);
     this.messages.value = all;
   }
 
   /** The chunk new messages go into, starting one if needed. */
   private async currentChunk(): Promise<LoadedChunk> {
-    const last = this.chunks.at(this.chunks.length - 1) ?? null;
+    const last = this.chunks.at(- 1) ?? null;
     if (last) {
       if (!this.loaded.has(last.guid)) await this.loadChunk(last);
       const chunk = this.loaded.get(last.guid)!;
       if (chunk.messages.length < CHUNK_SIZE) return chunk;
     }
-    const doc = new Y.Doc({ guid: `${this.campaignId}/chat/${newId()}` });
-    this.chunks.push(doc);
+    const document = new Y.Doc({ guid: `${this.campaignId}/chat/${newId()}` });
+    this.chunks.push(document);
     // The chunks observer starts loading it; wait for that to finish.
     await this.loadFrom(this.chunks.length - 1);
-    return this.loaded.get(doc.guid)!;
+    return this.loaded.get(document.guid)!;
   }
 
   /** Append a message from this device. Posts go one at a time, in order. */
@@ -158,17 +162,15 @@ export class ChatLog {
     return next;
   }
 
-  private queue: Promise<unknown> = Promise.resolve();
-
   /**
    * Delete a message from the shared log, for everyone. Callers check who may
    * (see canDelete); like other GM rules this is enforced in the UI only.
    */
   remove(id: string): boolean {
     for (const { messages } of this.loaded.values()) {
-      const i = messages.toArray().findIndex((m) => m.id === id);
-      if (i >= 0) {
-        messages.delete(i);
+      const index = messages.toArray().findIndex((m) => m.id === id);
+      if (index !== -1) {
+        messages.delete(index);
         return true;
       }
     }

@@ -16,7 +16,7 @@ import { SRD_FEATS } from "./srdFeats";
 
 export interface Species extends OptionDef {
   speed: number;
-  size: "small" | "medium";
+  size: "medium" | "small";
   /** Effects that always apply. */
   effects?: Effect[];
   /** Hit point maximum added per character level (Dwarven Toughness). */
@@ -139,7 +139,7 @@ export const BACKGROUNDS: Background[] = [
 ];
 
 export interface Feat extends OptionDef {
-  category: "origin" | "general" | "fighting-style" | "epic";
+  category: "epic" | "fighting-style" | "general" | "origin";
   /** Effects that always apply. */
   effects?: Effect[];
   /** Hit point maximum added per character level (Tough). */

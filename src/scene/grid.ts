@@ -5,13 +5,13 @@
  * tokens of the same size.
  */
 
-export type GridType = "none" | "square" | "hex";
+export type GridType = "hex" | "none" | "square";
 
 /**
  * How a square grid counts a diagonal step: always one cell (5.5e's default),
  * alternately one and two cells, or its true length.
  */
-export type DiagonalRule = "one" | "alternate" | "euclid";
+export type DiagonalRule = "alternate" | "euclid" | "one";
 
 export interface Grid {
   type: GridType;
@@ -41,6 +41,11 @@ export interface Point {
 }
 
 const SQRT3 = Math.sqrt(3);
+
+/** One cell's size, or `fallback` px on a scene without a grid. */
+export function cellOr(grid: Grid, fallback: number): number {
+  return grid.type === "none" ? fallback : grid.size;
+}
 
 /** Circumradius of a hex whose width is `size`. */
 export const hexRadius = (size: number) => size / SQRT3;
@@ -74,8 +79,8 @@ export function hexAt(grid: Grid, p: Point): { q: number; r: number } {
 /** Corners of a pointy-topped hex, clockwise from the upper right. */
 export function hexCorners(c: Point, size: number): Point[] {
   const R = hexRadius(size);
-  return Array.from({ length: 6 }, (_, i) => {
-    const a = (Math.PI / 180) * (60 * i - 30);
+  return Array.from({ length: 6 }, (_, index) => {
+    const a = (Math.PI / 180) * (60 * index - 30);
     return { x: c.x + R * Math.cos(a), y: c.y + R * Math.sin(a) };
   });
 }
@@ -95,6 +100,14 @@ export function snapPoint(grid: Grid, p: Point, cells = 1): Point {
   const snap = (v: number, offset: number) =>
     offset + half + Math.round((v - offset - half) / grid.size) * grid.size;
   return { x: snap(p.x, grid.offsetX), y: snap(p.y, grid.offsetY) };
+}
+
+/** The nearest point to p on a lattice `step` px apart, lined up with the grid's corners. */
+export function snapToLattice(grid: Grid, p: Point, step: number): Point {
+  return {
+    x: grid.offsetX + Math.round((p.x - grid.offsetX) / step) * step,
+    y: grid.offsetY + Math.round((p.y - grid.offsetY) / step) * step,
+  };
 }
 
 /** Round a token's size to a whole number of cells (at least one). */

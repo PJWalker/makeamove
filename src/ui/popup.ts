@@ -2,7 +2,8 @@ import type * as React from "react";
 
 import { leave, originRect, releaseMorph, showFromOrigin } from "./morph";
 import { nextZ } from "./windows";
-import { RESIZE_CURSORS, resizeRect, type ResizeDir } from "./resizeRect";
+import { RESIZE_CURSORS, resizeRect  } from "./resizeRect";
+import type {ResizeDir} from "./resizeRect";
 import { trackPointer } from "./pointer";
 
 /*
@@ -19,10 +20,10 @@ const KEEP_VISIBLE = 80;
 const whole = (v: number) => Math.round(v);
 const CASCADE = 28;
 
-function place(el: HTMLElement, x: number, y: number) {
-  const { width } = el.getBoundingClientRect();
-  el.style.left = `${whole(Math.min(innerWidth - KEEP_VISIBLE, Math.max(KEEP_VISIBLE - width, x)))}px`;
-  el.style.top = `${whole(Math.min(innerHeight - 40, Math.max(0, y)))}px`;
+function place(element: HTMLElement, x: number, y: number) {
+  const { width } = element.getBoundingClientRect();
+  element.style.left = `${whole(Math.min(innerWidth - KEEP_VISIBLE, Math.max(KEEP_VISIBLE - width, x)))}px`;
+  element.style.top = `${whole(Math.min(innerHeight - 40, Math.max(0, y)))}px`;
 }
 
 /** How far a pop-up opening over its spawner keeps from the window's edges. */
@@ -34,14 +35,14 @@ const MARGIN = 8;
  * its bottom edge up. It's draggable from then on, so this sets plain
  * coordinates rather than anchoring it (see ui/anchor.ts).
  */
-function placeOver(el: HTMLElement, from: DOMRect) {
-  const w = el.offsetWidth;
-  const h = el.offsetHeight;
+function placeOver(element: HTMLElement, from: DOMRect) {
+  const w = element.offsetWidth;
+  const h = element.offsetHeight;
   const down = innerHeight - MARGIN - from.top;
   const up = from.bottom - MARGIN;
   const y = h <= down || down >= up ? from.top : from.bottom - h;
-  el.style.left = `${whole(Math.max(MARGIN, Math.min(from.left, innerWidth - w - MARGIN)))}px`;
-  el.style.top = `${whole(Math.max(MARGIN, Math.min(y, innerHeight - h - MARGIN)))}px`;
+  element.style.left = `${whole(Math.max(MARGIN, Math.min(from.left, innerWidth - w - MARGIN)))}px`;
+  element.style.top = `${whole(Math.max(MARGIN, Math.min(y, innerHeight - h - MARGIN)))}px`;
 }
 
 /** Bring a pop-up in front of every other window. */
@@ -122,8 +123,8 @@ export function resizePopup(
     h: dialog.offsetHeight,
   };
   dialog.dataset["sized"] = "true";
-  trackPointer(RESIZE_CURSORS[dir], (ev) => {
-    const next = resizeRect(start, dir, ev.clientX - e.clientX, ev.clientY - e.clientY);
+  trackPointer(RESIZE_CURSORS[dir], (event) => {
+    const next = resizeRect(start, dir, event.clientX - e.clientX, event.clientY - e.clientY);
     Object.assign(dialog.style, {
       left: `${next.x}px`,
       top: `${next.y}px`,
@@ -146,7 +147,7 @@ export function dragPopup(dialog: HTMLElement, e: PointerEvent | React.PointerEv
   dialog.dataset["lifted"] = "true";
   trackPointer(
     "grabbing",
-    (ev) => place(dialog, ev.clientX - dx, ev.clientY - dy),
+    (event) => { place(dialog, event.clientX - dx, event.clientY - dy); },
     () => delete dialog.dataset["lifted"],
   );
 }

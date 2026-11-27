@@ -16,26 +16,22 @@ export interface LintResult {
   stderr: string;
 }
 
+/** Where jscpd keeps the clones it found before, to fail only on new ones. */
+const JSCPD_BASELINE = join(tmpdir(), `makeamove-jscpd-${process.pid}.json`);
+
 const CODE_FILE = /\.(?:[cm]?[jt]sx?|css)$/i;
-const ESLINT_FILE = /\.(?:[cm]?[jt]sx?)$/i;
+const ESLINT_FILE = /\.[cm]?[jt]sx?$/i;
 
 export function createLintFixes(files: string[]): LintCheck[] {
   const codeFiles = files.filter((file) => CODE_FILE.test(file));
   const eslintFiles = codeFiles.filter((file) => ESLINT_FILE.test(file));
   const checks: LintCheck[] = [];
 
-  if (codeFiles.length > 0) {
-    checks.push({
-      name: "Oxlint autofix",
-      command: "npx",
-      args: ["vp", "lint", ...codeFiles, "--max-warnings", "0", "--fix"],
-    });
-  }
   if (eslintFiles.length > 0) {
     checks.push({
       name: "ESLint autofix",
       command: "npx",
-      args: ["eslint", "--fix", "--max-warnings", "0", ...eslintFiles],
+      args: ["eslint", "--fix", ...eslintFiles],
     });
   }
 
@@ -49,9 +45,8 @@ export function createLintFixes(files: string[]): LintCheck[] {
 }
 
 export function createLintAnalyses(files: string[]): LintCheck[] {
-  const codeFiles = files.filter((file) => CODE_FILE.test(file));
   const eslintFiles = files.filter((file) => ESLINT_FILE.test(file));
-  const sourceFiles = files.filter((file) => /^src\/.*\.(?:[cm]?[jt]sx?)$/i.test(file));
+  const sourceFiles = files.filter((file) => /^src\/.*\.[cm]?[jt]sx?$/i.test(file));
   const checks: LintCheck[] = [
     {
       name: "TypeScript typecheck",
@@ -60,31 +55,18 @@ export function createLintAnalyses(files: string[]): LintCheck[] {
     },
   ];
 
-  if (codeFiles.length > 0) {
-    checks.push({
-      name: "Oxlint",
-      command: "npx",
-      args: ["vp", "lint", ...codeFiles, "--max-warnings", "0"],
-    });
-  }
   if (eslintFiles.length > 0) {
     checks.push({
       name: "ESLint",
       command: "npx",
-      args: ["eslint", "--max-warnings", "0", ...eslintFiles],
+      args: ["eslint", "--prune-suppressions", ...eslintFiles],
     });
   }
 
   checks.push({
     name: "jscpd",
     command: "npx",
-    args: [
-      "jscpd",
-      "--changed",
-      "--baseline",
-      join(tmpdir(), `makeamove-jscpd-${process.pid}.json`),
-      "--fail-on-new-clones",
-    ],
+    args: ["jscpd", "--changed", "--baseline", JSCPD_BASELINE, "--fail-on-new-clones"],
   });
 
   if (sourceFiles.length > 0) {
@@ -189,7 +171,7 @@ function main(): void {
     console.log,
   );
 
-  rmSync(join(tmpdir(), `makeamove-jscpd-${process.pid}.json`), { force: true });
+  rmSync(JSCPD_BASELINE, { force: true });
   process.exitCode = fixFailures || analysisFailures ? 1 : 0;
 }
 

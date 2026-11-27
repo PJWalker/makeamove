@@ -1,13 +1,14 @@
 import type { DataValue } from "../../data/types";
 import {
-  atLevel,
-  type ChoiceDef,
-  type CreationDef,
-  type OptionDef,
-  type ScoreMethods,
-  type ScoreRule,
-  type StatDef,
+  atLevel
+  
+  
+  
+  
+  
+  
 } from "../../systems/types";
+import type {ChoiceDef, CreationDef, OptionDef, ScoreMethods, ScoreRule, StatDef} from "../../systems/types";
 import { commaListOf } from "../../lib/list";
 
 /*
@@ -23,7 +24,7 @@ export const CLASS_FIELD = "classId";
 /** Choices available at creation or a system-defined advancement point. */
 export function choicesAt(
   creation: CreationDef | undefined,
-  at: "create" | number,
+  at: number | "create",
   data: Record<string, DataValue> = {},
   scores: Record<string, number> = {},
 ): ChoiceDef[] {
@@ -70,7 +71,7 @@ export function choicesAt(
 
 export function previewChoices(
   creation: CreationDef | undefined,
-  at: "create" | number,
+  at: number | "create",
   data: Record<string, DataValue>,
   scores: Record<string, number>,
   picked: Record<string, string>,
@@ -113,7 +114,7 @@ const listed = (items: string[], last: string) =>
   items.length > 1 ? `${items.slice(0, -1).join(", ")} ${last} ${items.at(-1)}` : (items[0] ?? "");
 
 /** The alternatives a rule allows; one empty alternative when it has none. */
-const alternativesOf = (rule: ScoreRule) => (rule.oneOf.length ? rule.oneOf : [{}]);
+const alternativesOf = (rule: ScoreRule) => (rule.oneOf.length > 0 ? rule.oneOf : [{}]);
 
 /** Scores that meet a rule: its set stats, its first alternative, then the remaining values in stat order. */
 export function ruleStartingScores(rule: ScoreRule, stats: StatDef[]): Record<string, number> {
@@ -148,11 +149,11 @@ export function scoreRuleProblems(
       .map(([stat, value]) => `${abbr(stat)} ${signed(value)}`)
       .join(" with ");
   const problems = Object.entries(rule.fixed).flatMap(([stat, value]) =>
-    scores[stat] !== value ? [`${abbr(stat)} must be ${signed(value)}.`] : [],
+    scores[stat] === value ? [] : [`${abbr(stat)} must be ${signed(value)}.`],
   );
   const alternatives = alternativesOf(rule).filter(holds);
-  if (!alternatives.length) problems.push(`Choose ${listed(rule.oneOf.map(describe), "or")}.`);
-  if (problems.length) return problems;
+  if (alternatives.length === 0) problems.push(`Choose ${listed(rule.oneOf.map(describe), "or")}.`);
+  if (problems.length > 0) return problems;
   const remainingMet = alternatives.some((alternative) => {
     const set = { ...rule.fixed, ...alternative };
     const others = stats.flatMap((stat) => (stat.id in set ? [] : [scores[stat.id] ?? 0]));
@@ -172,10 +173,10 @@ export function boostFrom(
   const amounts = option?.boost?.amounts[pattern];
   if (!option?.boost || !amounts) return {};
   const out: Record<string, number> = {};
-  amounts.forEach((n, i) => {
-    const stat = order[i];
+  for (const [index, n] of amounts.entries()) {
+    const stat = order[index];
     if (n && stat) out[stat] = (out[stat] ?? 0) + n;
-  });
+  }
   return out;
 }
 
@@ -232,8 +233,7 @@ export function dataFrom(
 ): Record<string, DataValue> {
   const out: Record<string, DataValue> = {};
   const add = (field: string, value: DataValue) => {
-    if (listFields.includes(field) && out[field]) out[field] = `${out[field]},${value}`;
-    else out[field] = value;
+    out[field] = listFields.includes(field) && out[field] ? `${out[field]},${value}` : value;
   };
   for (const c of choices) {
     const option = c.options.find((o) => o.id === picked[c.id]);

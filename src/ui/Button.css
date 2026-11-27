@@ -1,10 +1,10 @@
 @layer components {
   /*
    * Buttons come in four looks:
-   *  - raised (secondary): a dark key standing off the surface;
+   *  - raised (secondary): a dark leather key in a bronze rim, gilt under the pointer;
    *  - quiet (ghost, icon, danger): flat on the surface until the pointer
    *    finds them, then raised like secondary;
-   *  - primary: a gold key;
+   *  - primary: a key of polished gilt, its label engraved;
    *  - selected (aria-pressed, and other chosen options): glossy, tinted
    *    gold unless --selected-tint says otherwise.
    * Backgrounds are set by longhand so each keeps its clip: dark buttons stop
@@ -19,8 +19,8 @@
     gap: var(--space-2);
     min-height: var(--control-height);
     padding: 0 var(--space-4);
-    border: 1px solid #fff4;
-    border-image: var(--shine);
+    border: 1px solid var(--bronze);
+    border-image: var(--bronze-edge);
     background-color: transparent;
     background-clip: padding-box;
     box-shadow: var(--raised-shadow);
@@ -53,8 +53,12 @@
   .btn-secondary,
   :is(.btn-ghost, .btn-icon):hover:not(:disabled, [aria-pressed="true"]) {
     background-color: var(--surface-raised);
-    background-image: var(--raised-sheen);
+    background-image: var(--grain), var(--raised-sheen);
     color: var(--text);
+  }
+  /* Under the pointer the rim catches the light and turns to gilt. */
+  :is(.btn-secondary, .btn-ghost, .btn-icon):hover:not(:disabled, [aria-pressed="true"]) {
+    border-image: var(--gilt-edge);
   }
   .btn:active:not(:disabled, .btn-primary, [aria-pressed="true"]) {
     background-color: var(--surface-sunken-hover);
@@ -96,31 +100,26 @@
     color: var(--accent);
   }
 
-  /* Primary: gold catches a brighter edge than the dark surfaces. */
+  /* Primary: the same gilt, tinted-metal finish as a selected segmented control. */
   .btn-primary {
-    background-color: var(--accent);
-    background-image: var(--raised-sheen);
-    background-clip: border-box;
-    color: var(--accent-ink);
     font-weight: 600;
+    text-shadow: var(--engraved);
   }
   .btn-primary:not(:active) {
     box-shadow: var(--edge-glow), var(--edge-shade), var(--raised-drop);
   }
   .btn-primary:hover:not(:disabled, :active) {
-    background-color: var(--accent-hover);
     box-shadow: var(--edge-glow-strong), var(--edge-shade), var(--raised-drop-hover);
   }
   .btn-primary:active:not(:disabled) {
-    background-color: var(--accent-press);
-    background-image: none;
+    filter: none;
   }
 
   /* Selected */
-  :is(.btn[aria-pressed="true"]:not([role="tab"]), .segment[data-selected]) {
+  :is(.btn-primary, .btn[aria-pressed="true"]:not([role="tab"]), .segment[data-selected]) {
     --tint: var(--selected-tint, var(--accent));
-    border-color: oklch(100% 0 0 / 0.35);
-    border-image: linear-gradient(to bottom right, #fff9, #fff3 50%, #0002) 1;
+    border-color: var(--gilt);
+    border-image: var(--gilt-edge);
     background:
       linear-gradient(115deg, transparent 20%, #fff4 43%, transparent 65%),
       linear-gradient(

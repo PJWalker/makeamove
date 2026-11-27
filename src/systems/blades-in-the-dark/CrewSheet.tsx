@@ -2,17 +2,18 @@ import { useState } from "react";
 import { commaListOf } from "../../lib/list";
 import { systemOf } from "../../features/characters/api";
 import { getState } from "../../features/chat/messageState";
-import { systemCampaignData, type Campaign } from "../../campaign/campaign";
+import { systemCampaignData  } from "../../campaign/campaign";
+import type {Campaign} from "../../campaign/campaign";
 import { useQuery } from "../../ui/useQuery";
 import { Button } from "../../ui/Button";
 import { Counter } from "../../workspace/sheetParts";
-import { crewTierCost } from "./progression";
-import { advanceCrew, advanceTier, buyUpgrade } from "./commands";
 import { useCampaign } from "../../workspace/campaignContext";
 import { bumpSystemCounter } from "../../workspace/commands/chat";
 import { can } from "../../workspace/commands/views";
+import { advanceCrew, advanceTier, buyUpgrade } from "./commands";
+import { crewTierCost } from "./progression";
 
-type Choice = { id: string; label: string };
+interface Choice { id: string; label: string }
 
 /** The `<option>`s the crew doesn't own yet. */
 function UnownedOptions({ options, owned }: { options: readonly Choice[]; owned: Set<string> }) {
@@ -37,7 +38,7 @@ function canAdvanceTier(state: Record<string, unknown>, cost: { rep: number; coi
 }
 
 export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [reward, setReward] = useState("upgrades");
   const [upgrade, setUpgrade] = useState("");
   const system = systemOf(campaign);
@@ -56,7 +57,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
   const cost = crewTierCost(campaign);
   const upgradeCost = UPGRADE_COSTS[upgrade] ?? 1;
   // The crew is the GM's to advance.
-  const gm = can(ctx, advanceTier, undefined);
+  const gm = can(context, advanceTier, undefined);
   return (
     <section className="dialog-section" aria-label="Crew advancement">
       <h3 className="dialog-heading">Crew advancement</h3>
@@ -65,14 +66,14 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         value={xp}
         max={counter.max}
         disabled={!gm}
-        onChange={(by) => void ctx.execute(bumpSystemCounter, { counter: counter.id, by })}
+        onChange={(by) => void context.execute(bumpSystemCounter, { counter: counter.id, by })}
       />
       <label className="field">
         Crew advance
         <select
           disabled={!gm}
           value={reward}
-          onChange={(event) => setReward(event.currentTarget.value)}
+          onChange={(event) => { setReward(event.currentTarget.value); }}
         >
           <option value="upgrades">Two crew upgrades</option>
           <UnownedOptions options={abilities} owned={ownedAbilityIds} />
@@ -80,7 +81,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
       </label>
       <Button
         disabled={!gm || xp < (counter.max ?? 10)}
-        onClick={() => ctx.execute(advanceCrew, { reward })}
+        onClick={() => context.execute(advanceCrew, { reward })}
       >
         Advance Crew
       </Button>
@@ -89,7 +90,7 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
         <select
           disabled={!gm}
           value={upgrade}
-          onChange={(event) => setUpgrade(event.currentTarget.value)}
+          onChange={(event) => { setUpgrade(event.currentTarget.value); }}
         >
           <option value="">Choose an upgrade</option>
           <UnownedOptions options={upgrades} owned={ownedUpgradeIds} />
@@ -97,17 +98,17 @@ export function BladesCrewControls({ campaign }: { campaign: Campaign }) {
       </label>
       <Button
         disabled={!gm || !upgrade || Number(state["crewUpgradePoints"] ?? 0) < upgradeCost}
-        onClick={() => ctx.execute(buyUpgrade, { upgrade })}
+        onClick={() => context.execute(buyUpgrade, { upgrade })}
       >
         Buy Upgrade ({upgradeCost})
       </Button>
       <Button
         disabled={!gm || !canAdvanceTier(state, cost)}
-        onClick={() => ctx.execute(advanceTier, undefined)}
+        onClick={() => context.execute(advanceTier, undefined)}
       >
         {state["crewHold"] === "weak"
-          ? `Strengthen hold (${cost.rep} rep)`
-          : `Increase Tier (${cost.rep} rep, ${cost.coin} coin)`}
+          ? `Strengthen Hold (${cost.rep} Rep)`
+          : `Increase Tier (${cost.rep} Rep, ${cost.coin} Coin)`}
       </Button>
     </section>
   );

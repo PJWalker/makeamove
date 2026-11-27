@@ -10,10 +10,10 @@ import type { CharacterView, ItemInstance } from "../features/characters/types";
 import type { RichText } from "../data/richText";
 import type { DataValue } from "../data/types";
 import type { Migrate } from "../data/migrate";
-import type { SystemCampaignRec, SystemCharacterRec } from "./schema";
 import type { Roll } from "../features/dice/notation";
 import type { DiagonalRule } from "../scene/grid";
 import type { Range } from "../scene/measure";
+import type { SystemCampaignRec, SystemCharacterRec } from "./schema";
 import type { EffectSource, Resolved } from "./effects";
 import type { Effect, EffectActive } from "./effectTypes";
 
@@ -34,7 +34,7 @@ export interface DataField {
   id: string;
   default: DataValue;
   /** Only on player characters, or only on NPCs. */
-  for?: "pc" | "npc";
+  for?: "npc" | "pc";
 }
 
 /** A system-owned value shared by everyone in a campaign rather than one character. */
@@ -42,7 +42,7 @@ export interface CampaignFieldDef {
   id: string;
   label: string;
   default: DataValue;
-  type: "text" | "number" | "select" | "multiselect";
+  type: "multiselect" | "number" | "select" | "text";
   options?: { id: string; label: string }[];
   min?: number;
   max?: number;
@@ -57,7 +57,7 @@ export interface SystemCounterDef {
 }
 
 /** Events that refill resources: rests, and in combat the start of the character's turn. */
-export type ResetEvent = "short-rest" | "long-rest" | "turn";
+export type ResetEvent = "long-rest" | "short-rest" | "turn";
 
 /** A counter with a maximum: hit points, spell slots, a system resource. */
 export interface ResourceDef {
@@ -128,7 +128,7 @@ export interface ResultDef {
   /** Shown on the card; empty to show no result line. */
   label: string;
   /** How the card colours it. */
-  tone?: "good" | "mixed" | "bad";
+  tone?: "bad" | "good" | "mixed";
 }
 
 /** Another way to make the base roll, offered before a check: "Advantage". */
@@ -180,10 +180,7 @@ export interface CheckStep {
 }
 
 export type CheckDifficulty =
-  | { kind: "fixed"; value: number }
-  | { kind: "derived"; value: string }
-  | { kind: "prompt"; prompt: string; initial?: number; min?: number; max?: number }
-  | { kind: "target"; value: string };
+  { kind: "derived"; value: string } | { kind: "fixed"; value: number } | { kind: "prompt"; prompt: string; initial?: number; min?: number; max?: number } | { kind: "target"; value: string };
 
 /**
  * Ask each target to roll one of their own actions (a saving throw) against
@@ -223,7 +220,7 @@ export interface TargetSpec {
  * cube by its side, a cone or line by its length (and a line's width).
  */
 export interface AreaSpec {
-  shape: "sphere" | "emanation" | "cube" | "cone" | "line";
+  shape: "cone" | "cube" | "emanation" | "line" | "sphere";
   size: number;
   width?: number;
 }
@@ -238,7 +235,7 @@ export interface ActionDef {
   /** The system's grouping, for filters. */
   category: string;
   /** A move limited per character or per campaign session. */
-  sessionUse?: "character" | "campaign";
+  sessionUse?: "campaign" | "character";
   /** When it applies, in a line. */
   trigger: string;
   /** The full rules text. */
@@ -320,7 +317,7 @@ export interface ArtifactDef {
   track: string;
   capacity: number;
   unlocks: { id: string; name: string; text?: string }[];
-  unlockMode: "choose" | "sequential" | "sequential-replace";
+  unlockMode: "choose" | "sequential-replace" | "sequential";
   requiresEquipped?: boolean;
 }
 
@@ -356,8 +353,8 @@ export interface NpcFieldDef {
   id: string;
   label: string;
   /** 'longtext' is rich text, kept apart from the other fields (see workspace/CharacterText.tsx). */
-  type: "text" | "number" | "longtext";
-  default?: string | number;
+  type: "longtext" | "number" | "text";
+  default?: number | string;
   /** A text field holding dice, like "d8+2": the sheet offers to roll it. */
   rollable?: boolean;
 }
@@ -369,7 +366,7 @@ export interface MonsterDef {
   description: string;
   hp: number;
   scores?: Record<string, number>;
-  fields: Record<string, string | number>;
+  fields: Record<string, number | string>;
   size?: string;
 }
 
@@ -383,7 +380,7 @@ export interface TokenStat {
   /** CSS colour of the filled part. */
   colour: string;
   /** Where on the character the value is kept: a resource (HP) or a field of the system's (stress). */
-  source: { resource: string } | { data: string };
+  source: { data: string } | { resource: string };
 }
 
 /** A kind of damage, which a creature may resist (half), be vulnerable to (double) or be immune to. */
@@ -434,7 +431,7 @@ export interface OptionDef {
  * A number that can change with level: a plain number, or the value from each
  * level on ({ 1: 2, 5: 3, 10: 4 } is 2 until level 5, then 3, then 4 from 10).
  */
-export type ByLevel = number | Record<number, number>;
+export type ByLevel = Record<number, number> | number;
 
 /** A ByLevel value at a level: the entry for the highest level at or below it. */
 export function atLevel(value: ByLevel, level: number): number {
@@ -458,7 +455,7 @@ export interface ChoiceDef {
   field: string;
   options: OptionDef[];
   /** Made at creation, or at a system-defined advancement point. */
-  at: "create" | "advance" | number;
+  at: number | "advance" | "create";
   /** Advancement choices the player may skip. */
   optional?: boolean;
 }
@@ -560,7 +557,7 @@ export type SheetSection =
       items: {
         field: string;
         label: string;
-        type: "text" | "number";
+        type: "number" | "text";
         min?: number;
         max?: number;
       }[];
@@ -605,13 +602,12 @@ export type SheetSection =
 
 /** A number on a sheet: a resource or data field, with an optional maximum (a derived value). */
 export type SheetCounter =
-  | { label: string; resource: string; max?: string }
-  | {
+  {
       label: string;
       data: string;
       max?: string;
       /** A plain number field instead of − and + buttons. */ input?: boolean;
-    };
+    } | { label: string; resource: string; max?: string };
 
 /** A character's effective numbers, worked out by the system. */
 export interface Derived {
@@ -627,16 +623,12 @@ export interface Derived {
  * An entry in a system's own Libraries layout: one of its items or moves by
  * id, or a rules entity (a class, a path, a struggle) that can hold others.
  */
-export type LibraryNode = (
-  | { item: string }
-  | { move: string }
-  | { entity: { id: string; name: string; text: string; icon?: string } }
-) & {
+export type LibraryNode = {
   /** A few words on when or how it applies: "Level 5+", "Starting move". */
   note?: string;
   /** What it holds, under headings: a class's paths, a path's moves. */
   groups?: LibraryNodeGroup[];
-};
+} & ({ entity: { id: string; name: string; text: string; icon?: string } } | { item: string } | { move: string });
 
 export interface LibraryNodeGroup {
   id: string;

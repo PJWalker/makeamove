@@ -1,5 +1,5 @@
-import { arrayOf, isObject, isString, objectOf } from "../../data/guards";
-import type { Guard } from "../../data/schema";
+import { arrayOf, isObject, isString, objectOf } from "../../lib/guards";
+import type { Guard } from "../../lib/guards";
 import type { SceneElement } from "../../scene/types";
 import {
   IconAdd,
@@ -13,11 +13,13 @@ import {
   IconToBack,
   IconToFront,
   IconToken,
-  IconUnlock,
-  type Icon,
+  IconUnlock
+  
 } from "../../ui/icons";
+import type {Icon} from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
-import { command, type CommandTargets, type Offer } from "./types";
+import { command   } from "./types";
+import type {CommandTargets, Offer} from "./types";
 
 /*
  * What can be done with what's selected on the open scene, and with an
@@ -32,14 +34,14 @@ const isSelection = objectOf({ sceneId: isString, ids: arrayOf(isString) });
 const isSelectionOrNow: Guard<Selection | undefined> = (v): v is Selection | undefined =>
   v === undefined || isSelection(v);
 
-const open = (ctx: CampaignContext, sceneId?: string) => {
-  const o = ctx.canvas.canvasCommands.value;
+const open = (context: CampaignContext, sceneId?: string) => {
+  const o = context.canvas.canvasCommands.value;
   return o && (!sceneId || o.sceneId === sceneId) ? o : null;
 };
 
 /** The elements a call is about, as they are now. */
-function chosen(ctx: CampaignContext, p: Selection | undefined): SceneElement[] {
-  const o = open(ctx, p?.sceneId);
+function chosen(context: CampaignContext, p: Selection | undefined): SceneElement[] {
+  const o = open(context, p?.sceneId);
   if (!o) return [];
   const ids = p?.ids ?? o.controller.selection.value;
   return ids.flatMap((id) => o.scene.get(id) ?? []);
@@ -52,13 +54,13 @@ function chosen(ctx: CampaignContext, p: Selection | undefined): SceneElement[] 
 const selectionCommand = (
   id: string,
   look: { title: string; icon: Icon; keys?: string[]; danger?: boolean },
-  section: "arrange" | "edit" | "delete",
-  edit: (ctx: CampaignContext, ids: string[]) => void,
+  section: "arrange" | "delete" | "edit",
+  edit: (context: CampaignContext, ids: string[]) => void,
   {
     available,
     offered,
   }: {
-    available?: (els: SceneElement[]) => true | string;
+    available?: (els: SceneElement[]) => string | true;
     offered?: (els: SceneElement[]) => boolean;
   } = {},
 ) =>
@@ -68,17 +70,17 @@ const selectionCommand = (
     ...look,
     section,
     transact: false,
-    available: (ctx, p) => {
-      const els = chosen(ctx, p);
-      return !els.length ? "Nothing selected" : (available?.(els) ?? true);
+    available: (context, p) => {
+      const els = chosen(context, p);
+      return els.length === 0 ? "Nothing selected" : (available?.(els) ?? true);
     },
     menu: {
-      selection: (ctx, t): Offer<Selection | undefined>[] =>
-        !offered || offered(chosen(ctx, t)) ? [{ params: t }] : [],
+      selection: (context, t): Offer<Selection | undefined>[] =>
+        !offered || offered(chosen(context, t)) ? [{ params: t }] : [],
     },
-    run: (ctx, p) => {
-      const ids = chosen(ctx, p).map((el) => el.id);
-      if (ids.length) edit(ctx, ids);
+    run: (context, p) => {
+      const ids = chosen(context, p).map((element) => element.id);
+      if (ids.length > 0) edit(context, ids);
     },
   });
 
@@ -88,32 +90,32 @@ export const bringToFront = selectionCommand(
   "selection.toFront",
   { title: "Bring to Front", icon: IconToFront },
   "arrange",
-  (ctx, ids) => open(ctx)?.controller.restack(ids, "front"),
+  (context, ids) => open(context)?.controller.restack(ids, "front"),
 );
 
 export const sendToBack = selectionCommand(
   "selection.toBack",
   { title: "Send to Back", icon: IconToBack },
   "arrange",
-  (ctx, ids) => open(ctx)?.controller.restack(ids, "back"),
+  (context, ids) => open(context)?.controller.restack(ids, "back"),
 );
 
 export const duplicate = selectionCommand(
   "selection.duplicate",
   { title: "Duplicate", icon: IconDuplicate, keys: ["Mod+D"] },
   "edit",
-  (ctx, ids) => open(ctx)?.controller.duplicate(ids),
+  (context, ids) => open(context)?.controller.duplicate(ids),
 );
 
 export const lock = selectionCommand(
   "selection.lock",
   { title: "Lock", icon: IconLock },
   "edit",
-  (ctx, ids) => open(ctx)?.controller.setLocked(ids, true),
+  (context, ids) => open(context)?.controller.setLocked(ids, true),
   {
-    available: (els) => !els.every((el) => el.locked) || "Already locked",
+    available: (els) => !els.every((element) => element.locked) || "Already locked",
     // Lock and Unlock share a place in the menu: only the one that applies.
-    offered: (els) => !els.every((el) => el.locked),
+    offered: (els) => !els.every((element) => element.locked),
   },
 );
 
@@ -121,10 +123,10 @@ export const unlock = selectionCommand(
   "selection.unlock",
   { title: "Unlock", icon: IconUnlock },
   "edit",
-  (ctx, ids) => open(ctx)?.controller.setLocked(ids, false),
+  (context, ids) => open(context)?.controller.setLocked(ids, false),
   {
-    available: (els) => els.some((el) => el.locked) || "Not locked",
-    offered: (els) => els.every((el) => el.locked),
+    available: (els) => els.some((element) => element.locked) || "Not locked",
+    offered: (els) => els.every((element) => element.locked),
   },
 );
 
@@ -132,69 +134,69 @@ export const deleteSelection = selectionCommand(
   "selection.delete",
   { title: "Delete", icon: IconDelete, keys: ["Delete", "Backspace"], danger: true },
   "delete",
-  (ctx, ids) => open(ctx)?.controller.remove(ids),
-  { available: (els) => !els.every((el) => el.locked) || "Locked" },
+  (context, ids) => open(context)?.controller.remove(ids),
+  { available: (els) => !els.every((element) => element.locked) || "Locked" },
 );
 
-const one = (ctx: CampaignContext, p: Selection | undefined) => {
-  const els = chosen(ctx, p);
-  return els.length === 1 ? els[0]! : null;
+/** The one selected element, if just one is selected and it `fits`. */
+const one = (
+  context: CampaignContext,
+  p: Selection | undefined,
+  fits: (element: SceneElement) => boolean,
+) => {
+  const els = chosen(context, p);
+  return els.length === 1 && fits(els[0]!) ? els[0]! : null;
 };
 
-export const tokenOptions = command<Selection | undefined>({
-  id: "token.options",
-  params: isSelectionOrNow,
-  title: "Token Options…",
-  icon: IconRename,
-  section: "open",
-  transact: false,
-  available: (ctx, p) => one(ctx, p)?.type === "token" || "Select one token",
-  menu: {
-    selection: (ctx, t) => (one(ctx, t)?.type === "token" ? [{ params: t }] : []),
-  },
-  run: (ctx, p) => {
-    const el = one(ctx, p);
-    if (el?.type === "token") open(ctx)?.tokenOptions(el.id, "token");
-  },
-});
-
-export const useAsToken = command<Selection | undefined>({
-  id: "map.useAsToken",
-  params: isSelectionOrNow,
-  title: "Use as Token",
-  icon: IconToken,
-  section: "act",
-  transact: false,
-  available: (ctx, p) => one(ctx, p)?.type === "map" || "Select one map",
-  menu: { selection: (ctx, t) => (one(ctx, t)?.type === "map" ? [{ params: t }] : []) },
-  run: (ctx, p) => {
-    const el = one(ctx, p);
-    if (el) open(ctx)?.controller.convert(el.id, "token");
-  },
-});
-
-export const useAsMap = command<Selection | undefined>({
-  id: "token.useAsMap",
-  params: isSelectionOrNow,
-  title: "Use as Map",
-  icon: IconMap,
-  section: "act",
-  transact: false,
-  available: (ctx, p) => {
-    const el = one(ctx, p);
-    return (el?.type === "token" && !!el.image) || "Select one token with an image";
-  },
-  menu: {
-    selection: (ctx, t) => {
-      const el = one(ctx, t);
-      return el?.type === "token" && el.image ? [{ params: t }] : [];
+/** Something done with one selected element of a kind; its menu lists it only for that. */
+const oneElementCommand = (
+  id: string,
+  look: { title: string; icon: Icon },
+  section: "act" | "open",
+  fits: (element: SceneElement) => boolean,
+  unfit: string,
+  act: (context: CampaignContext, id: string) => void,
+) =>
+  command<Selection | undefined>({
+    id,
+    params: isSelectionOrNow,
+    ...look,
+    section,
+    transact: false,
+    available: (context, p) => !!one(context, p, fits) || unfit,
+    menu: { selection: (context, t) => (one(context, t, fits) ? [{ params: t }] : []) },
+    run: (context, p) => {
+      const element = one(context, p, fits);
+      if (element) act(context, element.id);
     },
-  },
-  run: (ctx, p) => {
-    const el = one(ctx, p);
-    if (el) open(ctx)?.controller.convert(el.id, "map");
-  },
-});
+  });
+
+export const tokenOptions = oneElementCommand(
+  "token.options",
+  { title: "Token Options…", icon: IconRename },
+  "open",
+  (element) => element.type === "token",
+  "Select one token",
+  (context, id) => open(context)?.tokenOptions(id, "token"),
+);
+
+export const useAsToken = oneElementCommand(
+  "map.useAsToken",
+  { title: "Use as Token", icon: IconToken },
+  "act",
+  (element) => element.type === "map",
+  "Select one map",
+  (context, id) => open(context)?.controller.convert(id, "token"),
+);
+
+export const useAsMap = oneElementCommand(
+  "token.useAsMap",
+  { title: "Use as Map", icon: IconMap },
+  "act",
+  (element) => element.type === "token" && !!element.image,
+  "Select one token with an image",
+  (context, id) => open(context)?.controller.convert(id, "map"),
+);
 
 // An empty place on the scene
 
@@ -204,6 +206,9 @@ const isPlace = objectOf({
   at: (v): v is { x: number; y: number } => isObject(v),
 });
 
+const sceneOpen = (context: CampaignContext, { sceneId }: Place) =>
+  !!open(context, sceneId) || "Open the scene first";
+
 export const addTokenHere = command<Place>({
   id: "canvas.addToken",
   params: isPlace,
@@ -211,9 +216,9 @@ export const addTokenHere = command<Place>({
   icon: IconAdd,
   section: "open",
   transact: false,
-  available: (ctx, { sceneId }) => !!open(ctx, sceneId) || "Open the scene first",
+  available: sceneOpen,
   menu: { canvas: (_, t) => [{ params: t }] },
-  run: (ctx, { sceneId, at }) => open(ctx, sceneId)?.controller.addToken(at),
+  run: (context, { sceneId, at }) => open(context, sceneId)?.controller.addToken(at),
 });
 
 export const addImageHere = command<Place>({
@@ -223,9 +228,9 @@ export const addImageHere = command<Place>({
   icon: IconImage,
   section: "open",
   transact: false,
-  available: (ctx, { sceneId }) => !!open(ctx, sceneId) || "Open the scene first",
+  available: sceneOpen,
   menu: { canvas: (_, t) => [{ params: t }] },
-  run: (ctx, { sceneId, at }) => open(ctx, sceneId)?.importImagesAt(at),
+  run: (context, { sceneId, at }) => open(context, sceneId)?.importImagesAt(at),
 });
 
 export const sceneSettings = command<Place>({
@@ -236,7 +241,7 @@ export const sceneSettings = command<Place>({
   section: "edit",
   transact: false,
   menu: { canvas: (_, t) => [{ params: t }] },
-  run: (ctx) => ctx.canvas.sceneSettingsOpen.set(true),
+  run: (context) => { context.canvas.sceneSettingsOpen.set(true); },
 });
 
 export const selectionCommands = [

@@ -2,7 +2,8 @@ import { actingCharacterId, canEdit, getCharacter, systemOf } from "../features/
 import type { LibraryEntry } from "../features/library";
 import type { Campaign } from "../campaign/campaign";
 import type { MenuItem } from "../ui/ContextMenu";
-import { IconAdd, IconGive, type Icon } from "../ui/icons";
+import { IconAdd, IconGive  } from "../ui/icons";
+import type {Icon} from "../ui/icons";
 import { useQuery } from "../ui/useQuery";
 import { makeVerb } from "./actionPresentation";
 import { useCampaign } from "./campaignContext";
@@ -10,7 +11,7 @@ import { acquireItem, npcFromMonster, startMove } from "./commands/characters";
 import { can } from "./commands/views";
 
 /** Something the acting character can do with a library entry: get an item, make a move, create an NPC. */
-export type EntryAction = {
+export interface EntryAction {
   label: string;
   Icon: Icon;
   /** Who it is done as, shown after the label on a button. */
@@ -19,11 +20,11 @@ export type EntryAction = {
   /** Why it can't be done, when it can't. */
   reason?: string | undefined;
   onSelect: () => void;
-};
+}
 
 /** What a library entry offers the character this device is playing; one definition for its buttons and its menu. */
 export function useLibraryActions(campaign: Campaign) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const system = systemOf(campaign);
   const meId = useQuery(campaign.members, () => actingCharacterId(campaign));
   const me = useQuery(campaign.characters, () => getCharacter(campaign, meId));
@@ -32,7 +33,7 @@ export function useLibraryActions(campaign: Campaign) {
   const actionsFor = (e: LibraryEntry): EntryAction[] => {
     if (e.kind === "item") {
       const allowed = me
-        ? ctx.commands.check(acquireItem, { characterId: me.id, item: e.item.id })
+        ? context.commands.check(acquireItem, { characterId: me.id, item: e.item.id })
         : "Choose a character first";
       return [
         {
@@ -41,9 +42,9 @@ export function useLibraryActions(campaign: Campaign) {
             (me ? `Give to ${me.name}` : "Choose a Character"),
           Icon: IconGive,
           disabled: allowed !== true,
-          reason: allowed === true ? undefined : String(allowed),
+          reason: allowed === true ? undefined : allowed,
           onSelect: () =>
-            me && void ctx.execute(acquireItem, { characterId: me.id, item: e.item.id }),
+            me && void context.execute(acquireItem, { characterId: me.id, item: e.item.id }),
         },
       ];
     }
@@ -56,7 +57,7 @@ export function useLibraryActions(campaign: Campaign) {
           as: me?.name,
           disabled: !canAct,
           onSelect: () =>
-            me && void ctx.execute(startMove, { characterId: me.id, move: e.move.id }),
+            me && void context.execute(startMove, { characterId: me.id, move: e.move.id }),
         },
       ];
     }
@@ -65,8 +66,8 @@ export function useLibraryActions(campaign: Campaign) {
         {
           label: "Create NPC",
           Icon: IconAdd,
-          disabled: !can(ctx, npcFromMonster, { monster: e.monster.id }),
-          onSelect: () => void ctx.execute(npcFromMonster, { monster: e.monster.id }),
+          disabled: !can(context, npcFromMonster, { monster: e.monster.id }),
+          onSelect: () => void context.execute(npcFromMonster, { monster: e.monster.id }),
         },
       ];
     return [];

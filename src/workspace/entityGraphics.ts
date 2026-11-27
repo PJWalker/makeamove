@@ -34,7 +34,8 @@ export function getDefaultEntityGraphic(
 ): EntityGraphic {
   const system = systemOf(campaign);
   let name = defaultIcon ?? DEFAULT_ICON[kind] ?? "bag";
-  if (kind === "character") {
+  switch (kind) {
+  case "character": {
     const character = getCharacter(campaign, id);
     if (character?.base) {
       const inherited = campaign.entityGraphics.get(entityGraphicKey(kind, character.base));
@@ -48,11 +49,21 @@ export function getDefaultEntityGraphic(
           ),
         )
         .find((icon) => !!icon) ?? name;
-  } else if (kind === "item") {
+
+  break;
+  }
+  case "item": {
     name = system.items.find((item) => item.id === id)?.icon ?? name;
-  } else if (kind === "move") {
+
+  break;
+  }
+  case "move": {
     const move = system.actions.find((action) => action.id === id);
     if (move) name = move.category === "class" ? "class-move" : "move";
+
+  break;
+  }
+  // No default
   }
   return { kind: "icon", name };
 }

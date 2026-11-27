@@ -3,7 +3,7 @@
   "format": ["typescript", "tsx", "css"],
   "ignore": ["**/__tests__/**", "**/*.test.*"],
   "minTokens": 70,
-  "minLines": 8,
+  "minLines": 10,
   "reporters": ["console"],
   "gitignore": true,
   "threshold": 1

@@ -9,7 +9,7 @@ import {
 } from "../features/characters/creation";
 import type { GameSystem, ScoreMethods, ScoreRule } from "../systems/types";
 
-export { pointsSpent };
+
 
 /** What's been picked for one choice, and how its boost is placed. */
 export interface Picked {
@@ -20,7 +20,7 @@ export interface Picked {
   order: string[];
 }
 
-export type ScoreMethod = "array" | "buy" | "roll" | "manual";
+export type ScoreMethod = "array" | "buy" | "manual" | "roll";
 
 export const emptyPick = (): Picked => ({ option: "", pattern: 0, order: [] });
 
@@ -69,7 +69,7 @@ export function creationResult(
   const pickedOptions = Object.fromEntries(
     Object.entries(picks).map(([id, pick]) => [id, pick.option]),
   );
-  const pickedData: Record<string, string | number | boolean> = {};
+  const pickedData: Record<string, boolean | number | string> = {};
   for (const choice of system.creation?.choices ?? []) {
     const option = choice.options.find((item) => item.id === pickedOptions[choice.id]);
     if (!option) continue;
@@ -103,3 +103,5 @@ export const listFieldsOf = (system: GameSystem) => [
 /** Each stat's highest score. */
 export const scoreCapsOf = (system: GameSystem) =>
   Object.fromEntries(system.stats.map((stat) => [stat.id, stat.max ?? SCORE_CAP]));
+
+export {pointsSpent} from "../features/characters/creation";

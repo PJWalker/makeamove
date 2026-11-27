@@ -16,7 +16,7 @@
 /** A right-button press opened a menu; its `contextmenu` event is still to come. */
 let pressOpened = false;
 
-window.addEventListener(
+globalThis.addEventListener(
   "contextmenu",
   (e) => {
     if (pressOpened || document.querySelector("[data-context-menu]")) {
@@ -27,8 +27,8 @@ window.addEventListener(
   { capture: true },
 );
 
-type PointerInput = Pick<PointerEvent, "button" | "pointerType" | "clientX" | "clientY">;
-type MouseInput = Pick<MouseEvent, "clientX" | "clientY" | "preventDefault" | "defaultPrevented">;
+type PointerInput = Pick<PointerEvent, "button" | "clientX" | "clientY" | "pointerType">;
+type MouseInput = Pick<MouseEvent, "clientX" | "clientY" | "defaultPrevented" | "preventDefault">;
 
 export function menuTrigger(open: (x: number, y: number) => void): {
   onPointerDown: (event: PointerInput) => void;

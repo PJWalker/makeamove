@@ -1,5 +1,6 @@
 import { Graphics } from "pixi.js";
-import { type Rect, visibleWorld } from "../camera";
+import {  visibleWorld } from "../camera";
+import type {Rect} from "../camera";
 import { hexCellsIn, hexCentre, hexCorners, squareLines } from "../grid";
 import type { RenderState } from "./state";
 
@@ -20,7 +21,7 @@ export class GridLayer {
 
   draw(s: RenderState) {
     const g = this.view;
-    const grid = s.grid;
+    const {grid} = s;
     // Fade the grid out as cells get too small to read; hexes sooner, as
     // they're busier.
     const cell = grid.size * s.camera.zoom;
@@ -66,7 +67,7 @@ export class GridLayer {
     }
     // A dark line and a light one on the same pixels read on maps of any
     // brightness.
-    g.stroke({ color: 0x000000, alpha: 0.3, pixelLine: true });
-    g.stroke({ color: 0xffffff, alpha: 0.14, pixelLine: true });
+    g.stroke({ color: 0x00_00_00, alpha: 0.3, pixelLine: true });
+    g.stroke({ color: 0xFF_FF_FF, alpha: 0.14, pixelLine: true });
   }
 }

@@ -30,10 +30,10 @@ export const USER_COLOUR_LIMITS = {
 
 const toLinear = (v: number) => {
   const s = v / 255;
-  return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  return s <= 0.040_45 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
 };
 const fromLinear = (v: number) => {
-  const s = v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055;
+  const s = v <= 0.003_130_8 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055;
   return Math.round(Math.min(1, Math.max(0, s)) * 255);
 };
 
@@ -42,34 +42,34 @@ export function rgbToOklab(r8: number, g8: number, b8: number): Oklab {
   const r = toLinear(r8);
   const g = toLinear(g8);
   const b = toLinear(b8);
-  const l_ = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
-  const m_ = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
-  const s_ = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  const l_ = Math.cbrt(0.412_221_470_8 * r + 0.536_332_536_3 * g + 0.051_445_992_9 * b);
+  const m_ = Math.cbrt(0.211_903_498_2 * r + 0.680_699_545_1 * g + 0.107_396_956_6 * b);
+  const s_ = Math.cbrt(0.088_302_461_9 * r + 0.281_718_837_6 * g + 0.629_978_700_5 * b);
   return {
-    L: 0.2104542553 * l_ + 0.793617785 * m_ - 0.0040720468 * s_,
-    a: 1.9779984951 * l_ - 2.428592205 * m_ + 0.4505937099 * s_,
-    b: 0.0259040371 * l_ + 0.7827717662 * m_ - 0.808675766 * s_,
+    L: 0.210_454_255_3 * l_ + 0.793_617_785 * m_ - 0.004_072_046_8 * s_,
+    a: 1.977_998_495_1 * l_ - 2.428_592_205 * m_ + 0.450_593_709_9 * s_,
+    b: 0.025_904_037_1 * l_ + 0.782_771_766_2 * m_ - 0.808_675_766 * s_,
   };
 }
 
 function linearRgbFromOklab({ L, a, b }: Oklab): [number, number, number] {
-  const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
-  const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
-  const s_ = L - 0.0894841775 * a - 1.291485548 * b;
+  const l_ = L + 0.396_337_777_4 * a + 0.215_803_757_3 * b;
+  const m_ = L - 0.105_561_345_8 * a - 0.063_854_172_8 * b;
+  const s_ = L - 0.089_484_177_5 * a - 1.291_485_548 * b;
   const l = l_ ** 3;
   const m = m_ ** 3;
   const s = s_ ** 3;
   return [
-    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+    4.076_741_662_1 * l - 3.307_711_591_3 * m + 0.230_969_929_2 * s,
+    -1.268_438_004_6 * l + 2.609_757_401_1 * m - 0.341_319_396_5 * s,
+    -0.004_196_086_3 * l - 0.703_418_614_7 * m + 1.707_614_701 * s,
   ];
 }
 
 /** OKLab → sRGB hex, clipping out-of-gamut channels. */
 export function oklabToHex(lab: Oklab): string {
   const rgb = linearRgbFromOklab(lab).map(fromLinear);
-  return "#" + rgb.map((v) => v.toString(16).padStart(2, "0")).join("");
+  return `#${rgb.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 
 const oklchToOklab = ({ l, c, h }: Oklch, chroma = c): Oklab => {
@@ -162,7 +162,7 @@ export function oklchToSrgbHex(colour: Oklch): string {
 }
 
 function hexToRgb(hex: string): [number, number, number] {
-  const n = parseInt(hex.replace("#", ""), 16);
+  const n = Number.parseInt(hex.replace("#", ""), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
@@ -181,7 +181,7 @@ export function clampUserColour(hex: string): string {
 }
 
 /** sRGB hex → okLCH. Used to tint the UI from a scene colour. */
-export function hexToOklch(hex: string): { l: number; c: number; h: number } {
+export function hexToOklch(hex: string): Oklch {
   const { L, a, b } = rgbToOklab(...hexToRgb(hex));
   const h = (Math.atan2(b, a) * 180) / Math.PI;
   return { l: L, c: Math.hypot(a, b), h: h < 0 ? h + 360 : h };
@@ -195,7 +195,7 @@ export function sceneOklchFromHex(hex: string): Oklch {
 /** Stable hue for a string, e.g. to colour a member's avatar. */
 export function hueFromString(s: string): number {
   let hash = 0;
-  for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) | 0;
+  for (let index = 0; index < s.length; index++) hash = (hash * 31 + s.charCodeAt(index)) | 0;
   return Math.abs(hash) % 360;
 }
 
@@ -217,18 +217,17 @@ export function backdropColour(hex: string, maxL = 0.34, maxC = 0.07): string {
  */
 export function dominantColour(rgba: Uint8ClampedArray, k = 5, iterations = 8): string {
   const px: Oklab[] = [];
-  for (let i = 0; i < rgba.length; i += 4) {
-    if (i + 3 >= rgba.length) break;
-    if (rgba[i + 3]! < 128) continue;
-    px.push(rgbToOklab(rgba[i]!, rgba[i + 1]!, rgba[i + 2]!));
+  for (let index = 0; index + 3 < rgba.length; index += 4) {
+    if (rgba[index + 3]! < 128) continue;
+    px.push(rgbToOklab(rgba[index]!, rgba[index + 1]!, rgba[index + 2]!));
   }
-  if (!px.length) return "#000000";
+  if (px.length === 0) return "#000000";
 
   // Deterministic seeds spread through the pixels keep results stable.
   const clusterCount = Math.max(1, Math.min(k, px.length));
   let centres = Array.from(
     { length: clusterCount },
-    (_, i) => px[Math.floor((i * px.length) / clusterCount)]!,
+    (_, index) => px[Math.floor((index * px.length) / clusterCount)]!,
   );
   let counts: number[] = [];
   for (let it = 0; it < iterations; it++) {
@@ -237,27 +236,27 @@ export function dominantColour(rgba: Uint8ClampedArray, k = 5, iterations = 8): 
     for (const p of px) {
       let best = 0;
       let bestD = Infinity;
-      centres.forEach((c, j) => {
+      for (const [index, c] of centres.entries()) {
         const d = (p.L - c.L) ** 2 + (p.a - c.a) ** 2 + (p.b - c.b) ** 2;
         if (d < bestD) {
           bestD = d;
-          best = j;
+          best = index;
         }
-      });
+      }
       const sum = sums[best]!;
       sum.L += p.L;
       sum.a += p.a;
       sum.b += p.b;
       counts[best] = counts[best]! + 1;
     }
-    centres = centres.map((c, j) => {
-      const count = counts[j]!;
-      const sum = sums[j]!;
+    centres = centres.map((c, index) => {
+      const count = counts[index]!;
+      const sum = sums[index]!;
       return count ? { L: sum.L / count, a: sum.a / count, b: sum.b / count } : c;
     });
   }
 
-  const order = centres.map((c, j) => ({ c, n: counts[j]! })).sort((x, y) => y.n - x.n);
+  const order = centres.map((c, index) => ({ c, n: counts[index]! })).sort((x, y) => y.n - x.n);
   const colourful = order.find(({ c, n }) => Math.hypot(c.a, c.b) >= 0.03 && n >= px.length * 0.1);
   return oklabToHex((colourful ?? order[0]!).c);
 }

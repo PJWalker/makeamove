@@ -1,8 +1,10 @@
-import { createContext, useContext, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useMemo  } from "react";
+import type {ReactNode} from "react";
 import type { Node } from "@tiptap/pm/model";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import type { Campaign } from "../campaign/campaign";
-import { TRACKER_NODE, type RichText, type TrackerButton } from "../data/richText";
+import { TRACKER_NODE   } from "../data/richText";
+import type {RichText, TrackerButton} from "../data/richText";
 import { getCharacter } from "../features/characters/api";
 import { trackerBlock } from "../features/characters/trackers";
 import { useQuery } from "../ui/useQuery";
@@ -16,6 +18,7 @@ const RichTextContext = createContext<{
   characterId: string | null;
   searchTerm: string;
 } | null>(null);
+RichTextContext.displayName = "RichTextContext";
 
 type RichTextNode = Node;
 
@@ -49,9 +52,10 @@ export function SearchHighlight({ text, term }: { text: string; term: string }) 
   if (!term) return text;
   return (
     <>
-      {text.split(new RegExp(`(${RegExp.escape(term)})`, "ig")).map((part, i) =>
+      {text.split(new RegExp(`(${RegExp.escape(term)})`, "ig")).map((part, index) =>
         part.toLowerCase() === term.toLowerCase() ? (
-          <mark key={i} className="search-hit">
+          // eslint-disable-next-line react-doctor/no-array-index-key -- The pieces of fixed text never reorder, and may repeat.
+          <mark key={index} className="search-hit">
             {part}
           </mark>
         ) : (
@@ -72,7 +76,7 @@ export function TrackerButtonView({
   characterId: string | null;
   b: TrackerButton;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   // Pressable or not follows the character's numbers as they change.
   const blocked = useQuery(campaign.characters, () => {
     void getCharacter(campaign, characterId ?? undefined);
@@ -85,7 +89,7 @@ export function TrackerButtonView({
       aria-disabled={blocked ? true : undefined}
       data-tip={trackerTip(campaign, characterId, b)}
       onClick={(e) => {
-        if (blocked || !characterId || !ctx.execute(pressTrackerButton, { characterId, button: b }))
+        if (blocked || !characterId || !context.execute(pressTrackerButton, { characterId, button: b }))
           shake(e.currentTarget);
       }}
     >
@@ -108,13 +112,13 @@ export function RichTextView({
   className?: string;
   searchTerm?: string;
 }) {
-  const ctx = useCampaign();
+  const context_ = useCampaign();
   const context = useMemo(
     () => ({ campaign, characterId, searchTerm }),
     [campaign, characterId, searchTerm],
   );
   const rendered = renderToReactElement({
-    extensions: ruleTextExtensions(ctx),
+    extensions: ruleTextExtensions(context_),
     content: text,
     options: {
       nodeMapping: {

@@ -28,32 +28,35 @@ const PHASE = { set: 0, add: 1, multiply: 2, min: 3, max: 3 } as const;
 export function resolveEffects(base: Record<string, number>, sources: EffectSource[]): Resolved {
   const values = { ...base };
   const why: Record<string, string[]> = {};
-  const out: Resolved = { values, why, moves: [], tags: [], bonuses: [] };
   const moves = new Set<string>();
   const tags = new Set<string>();
+  const bonuses: Resolved["bonuses"] = [];
 
-  type Mod = Extract<Effect, { type: "modify" }> & { from: string; order: number };
-  const mods: Mod[] = [];
+  type Module = Extract<Effect, { type: "modify" }> & { from: string; order: number };
+  const mods: Module[] = [];
   for (const s of sources) {
     for (const e of s.effects) {
-      if (e.type === "modify") mods.push({ ...e, from: s.name, order: mods.length });
-      else if (e.type === "grantMove") {
-        if (!moves.has(e.move)) {
-          moves.add(e.move);
-          out.moves.push(e.move);
-        }
-      } else if (e.type === "grantTag") {
-        if (!tags.has(e.tag)) {
-          tags.add(e.tag);
-          out.tags.push(e.tag);
-        }
-      } else
-        out.bonuses.push({
+      switch (e.type) {
+      case "modify": {
+      mods.push({ ...e, from: s.name, order: mods.length });
+      break;
+      }
+      case "grantMove": {
+      moves.add(e.move);
+      break;
+      }
+      case "grantTag": {
+      tags.add(e.tag);
+      break;
+      }
+      default: { bonuses.push({
           source: s.name,
           ...(e.stat ? { stat: e.stat } : {}),
           ...(e.moves ? { moves: e.moves } : {}),
           value: e.value,
         });
+      }
+      }
     }
   }
 
@@ -65,24 +68,29 @@ export function resolveEffects(base: Record<string, number>, sources: EffectSour
     const before = values[m.path] ?? 0;
     let after = before;
     switch (m.op) {
-      case "set":
+      case "set": {
         after = m.value;
         break;
-      case "add":
+      }
+      case "add": {
         after = before + m.value;
         break;
-      case "multiply":
+      }
+      case "multiply": {
         after = before * m.value;
         break;
-      case "min":
+      }
+      case "min": {
         after = Math.max(before, m.value);
         break;
-      case "max":
+      }
+      case "max": {
         after = Math.min(before, m.value);
         break;
+      }
     }
     values[m.path] = after;
     if (after !== before) (why[m.path] ??= []).push(`${m.from}: ${before} → ${after}`);
   }
-  return out;
+  return { values, why, moves: [...moves], tags: [...tags], bonuses };
 }

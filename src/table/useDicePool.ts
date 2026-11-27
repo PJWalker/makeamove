@@ -3,8 +3,10 @@ import { newId } from "../lib/ids";
 import { useCampaign } from "../workspace/campaignContext";
 import { addToChatRoll, roll } from "../workspace/commands/chat";
 import type { RollVisibility } from "../features/chat/types";
-import { NotationError, roll as rollDice, seededDie, type Roll } from "../features/dice/notation";
-import { poolFormula, samePick, type TrayPick } from "../features/dice/pool";
+import { NotationError, roll as rollDice, seededDie  } from "../features/dice/notation";
+import type {Roll} from "../features/dice/notation";
+import { poolFormula, samePick  } from "../features/dice/pool";
+import type {TrayPick} from "../features/dice/pool";
 import { trackPointer } from "../ui/pointer";
 import { holdNewPick } from "./rollDieHelpers";
 import { markTrayRolled, unmarkTrayRolled } from "./quickRolls";
@@ -43,7 +45,7 @@ export function useDicePool({
   onQuickRollMessage: (id: string | null) => void;
   onError: (message: string) => void;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [pool, setPool] = useState<TrayPick[]>([]);
   const [releasedRoll, setReleasedRoll] = useState<{
     roll: Roll;
@@ -60,8 +62,8 @@ export function useDicePool({
     landed: Set<number>;
     resolve: () => void;
   } | null>(null);
-  const poolTimer = useRef(0);
-  const rollPoolRef = useRef<(transition?: boolean) => Promise<void>>(async () => {});
+  const poolTimer = useRef<ReturnType<typeof globalThis.setTimeout> | undefined>(undefined);
+  const rollPoolReference = useRef<(transition?: boolean) => Promise<void>>(async () => {});
 
   function pendingDieLanded(index: number) {
     const release = releaseLanded.current;
@@ -88,14 +90,14 @@ export function useDicePool({
   }
 
   useLayoutEffect(() => {
-    if (!pool.length || releasedRoll) return;
+    if (pool.length === 0 || releasedRoll) return;
     const tray = diceTray.current;
     const card = pendingRollCard.current;
     if (!tray || !card) return;
     const trayBounds = tray.getBoundingClientRect();
     const width = Math.max(0, trayBounds.width - 2 * 12);
     card.style.width = `${width}px`;
-    const height = card.getBoundingClientRect().height;
+    const {height} = card.getBoundingClientRect();
     card.style.left = `${trayBounds.left + 12}px`;
     card.style.top = `${trayBounds.top - height + 6}px`;
   }, [pool, releasedRoll]);
@@ -119,21 +121,21 @@ export function useDicePool({
     try {
       const result = rollDice(formula, seededDie(seed));
       if (!transition) {
-        await ctx.execute(roll, { formula, visibility, seed });
+        await context.execute(roll, { formula, visibility, seed });
         setPool([]);
         return;
       }
       markTrayRolled(messageId);
       onQuickRollMessage(messageId);
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      const message = await ctx.execute(roll, { formula, visibility, seed, messageId });
+      await new Promise<void>((resolve) => requestAnimationFrame(() => { resolve(); }));
+      const message = await context.execute(roll, { formula, visibility, seed, messageId });
       if (!message) {
         unmarkTrayRolled(messageId);
         return;
       }
       messagePosted = true;
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await new Promise<void>((resolve) => requestAnimationFrame(() => { resolve(); }));
+      await new Promise<void>((resolve) => requestAnimationFrame(() => { resolve(); }));
       const card = pendingRollCard.current;
       const destination = document.querySelector<HTMLElement>(
         ".chat-log .roll-card[data-quick-roll-active]",
@@ -173,8 +175,8 @@ export function useDicePool({
       card.dataset["inFeed"] = "true";
       await landed;
       setPool([]);
-    } catch (e) {
-      if (e instanceof NotationError) onError(e.message);
+    } catch (error) {
+      if (error instanceof NotationError) onError(error.message);
     } finally {
       entryWait.current = null;
       if (!messagePosted) unmarkTrayRolled(messageId);
@@ -186,7 +188,7 @@ export function useDicePool({
   }
   // The pool's timer rolls whatever is in it by then.
   useLayoutEffect(() => {
-    rollPoolRef.current = rollPool;
+    rollPoolReference.current = rollPool;
   });
 
   function setPoolAndTimer(next: TrayPick[]) {
@@ -196,10 +198,10 @@ export function useDicePool({
     const activeKeys = dieEntryKeys(next);
     enteredDice.current = new Set([...enteredDice.current].filter((key) => activeKeys.has(key)));
     clearTimeout(poolTimer.current);
-    poolTimer.current = 0;
-    if (next.length)
-      poolTimer.current = window.setTimeout(() => {
-        void rollPoolRef.current();
+    poolTimer.current = undefined;
+    if (next.length > 0)
+      poolTimer.current = globalThis.setTimeout(() => {
+        void rollPoolReference.current();
       }, POOL_MS);
   }
 
@@ -209,9 +211,9 @@ export function useDicePool({
 
   /** Right-click while pooling: take one of these picks back out. */
   function removePick(pick: TrayPick) {
-    const i = pool.findLastIndex((picked) => samePick(picked, pick));
-    if (i < 0) return;
-    setPoolAndTimer(pool.filter((_, j) => j !== i));
+    const index = pool.findLastIndex((picked) => samePick(picked, pick));
+    if (index === -1) return;
+    setPoolAndTimer(pool.filter((_, index_) => index_ !== index));
   }
   /**
    * Dragging out of a die or token button carries off a new one: let go over
@@ -249,12 +251,12 @@ export function useDicePool({
         aim(null);
         if (!(end instanceof PointerEvent) || end.type !== "pointerup") return;
         if (card?.dataset["diceTarget"])
-          ctx.execute(addToChatRoll, { id: card.dataset["diceTarget"], pick });
+          context.execute(addToChatRoll, { id: card.dataset["diceTarget"], pick });
         else if (
           pick.kind === "die" &&
           !document.elementFromPoint(end.clientX, end.clientY)?.closest(".dice-tray")
         )
-          void ctx.execute(roll, { formula: `d${pick.sides}`, visibility });
+          void context.execute(roll, { formula: `d${pick.sides}`, visibility });
       },
     );
   }
@@ -263,10 +265,10 @@ export function useDicePool({
   useEffect(
     () => () => {
       clearTimeout(poolTimer.current);
-      poolTimer.current = 0;
+      poolTimer.current = undefined;
       entryWait.current?.resolve();
       entryWait.current = null;
-      void rollPoolRef.current(false);
+      void rollPoolReference.current(false);
     },
     [],
   );

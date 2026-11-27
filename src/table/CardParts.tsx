@@ -1,6 +1,7 @@
 import { getCharacter, systemOf } from "../features/characters/api";
 import { rollModesFor } from "../features/characters/moves";
-import { appliedField, saveField, type SaveAnswer } from "../features/chat/messageState";
+import { appliedField, saveField  } from "../features/chat/messageState";
+import type {SaveAnswer} from "../features/chat/messageState";
 import { useMessageState } from "../features/chat/messageState";
 import type { MoveMessage, MoveTarget, RollMessage } from "../features/chat/types";
 import type { Campaign } from "../campaign/campaign";
@@ -19,12 +20,12 @@ import { useCampaign } from "../workspace/campaignContext";
 
 /** One row per target of a check against targets: the roll, what it had to reach, and hit or miss. */
 export function TargetRolls({ campaign, m }: { campaign: Campaign; m: MoveMessage }) {
-  const results = systemOf(campaign).results;
+  const {results} = systemOf(campaign);
   return (
     <ul className="card-targets">
       {m.targets!.map((t) => {
         const label = results.find((r) => r.id === t.result)?.label;
-        const verdict = t.hit === undefined ? null : t.hit ? "Hit" : "Miss";
+        const verdict = t.hit === undefined ? null : (t.hit ? "Hit" : "Miss");
         return (
           <li key={t.id} className="card-target" data-hit={t.hit}>
             <span className="card-target-name">
@@ -57,9 +58,17 @@ export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessa
   const system = systemOf(campaign);
   const saveAction = system.actions.find((action) => action.id === save.action);
   const modes = saveAction ? rollModesFor(system, saveAction) : [];
-  const ctx = useCampaign();
+  const context = useCampaign();
   // Re-read as roles change.
   useQuery(campaign.members, () => campaign.isGm());
+  const answerFor = (target: MoveTarget, mode?: string) =>
+    context.execute(answerRollRequest, {
+      messageId: m.id,
+      target,
+      save,
+      ...(mode ? { mode } : {}),
+      concentration: m.concentration,
+    });
   return (
     <div className="card-save">
       <p className="card-save-head">
@@ -78,42 +87,20 @@ export function SaveRequests({ campaign, m }: { campaign: Campaign; m: MoveMessa
                   </span>
                   <span className="card-target-verdict">{answer.success ? "Saved" : "Failed"}</span>
                 </>
-              ) : can(ctx, answerRollRequest, { messageId: m.id, target: t, save }) ? (
+              ) : (can(context, answerRollRequest, { messageId: m.id, target: t, save }) ? (
                 <span className="card-target-actions">
-                  <Button
-                    variant="ghost"
-                    onClick={() =>
-                      ctx.execute(answerRollRequest, {
-                        messageId: m.id,
-                        target: t,
-                        save,
-                        concentration: m.concentration,
-                      })
-                    }
-                  >
+                  <Button variant="ghost" onClick={() => answerFor(t)}>
                     Roll
                   </Button>
                   {modes.map((mode) => (
-                    <Button
-                      key={mode.id}
-                      variant="ghost"
-                      onClick={() =>
-                        ctx.execute(answerRollRequest, {
-                          messageId: m.id,
-                          target: t,
-                          save,
-                          mode: mode.id,
-                          concentration: m.concentration,
-                        })
-                      }
-                    >
+                    <Button key={mode.id} variant="ghost" onClick={() => answerFor(t, mode.id)}>
                       {mode.label}
                     </Button>
                   ))}
                 </span>
               ) : (
                 <span className="muted">Waiting</span>
-              )}
+              ))}
             </li>
           );
         })}
@@ -133,16 +120,16 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
     m.id,
     damage.targets.map((t) => appliedField(t.id)),
   );
-  const ctx = useCampaign();
+  const context = useCampaign();
   // Re-read as roles change.
   useQuery(campaign.members, () => campaign.isGm());
+  const system = systemOf(campaign);
   const healing = damage.type === "healing";
-  const typeName =
-    systemOf(campaign).damageTypes?.find((d) => d.id === damage.type)?.name ?? damage.type;
-  const total = m.roll.total;
-  const armor = systemOf(campaign).damageArmor;
+  const typeName = system.damageTypes?.find((d) => d.id === damage.type)?.name ?? damage.type;
+  const {total} = m.roll;
+  const armor = system.damageArmor;
   const apply = (t: MoveTarget, n: number, useArmor = false) =>
-    ctx.execute(applyCardDamage, {
+    context.execute(applyCardDamage, {
       messageId: m.id,
       target: t,
       amount: n,
@@ -158,7 +145,7 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
           const applied: number | undefined = state[appliedField(t.id)];
           const targetCharacter = t.characterId ? getCharacter(campaign, t.characterId) : undefined;
           const shield = targetCharacter
-            ? systemOf(campaign).damageBlockers?.(targetCharacter, damage.type)[0]
+            ? system.damageBlockers?.(targetCharacter, damage.type)[0]
             : undefined;
           return (
             <li key={t.id} className="card-target">
@@ -171,7 +158,7 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
               )}
               {t.characterId &&
                 applied === undefined &&
-                can(ctx, applyCardDamage, {
+                can(context, applyCardDamage, {
                   messageId: m.id,
                   target: t,
                   amount: total,
@@ -201,18 +188,16 @@ export function DamageTargets({ campaign, m }: { campaign: Campaign; m: RollMess
                         >
                           ×2
                         </Button>
-                        {armor &&
-                          (getCharacter(campaign, t.characterId)?.resources[armor.resource] ?? 0) >
-                            0 && (
-                            <Button variant="ghost" onClick={() => apply(t, total, true)}>
-                              {armor.label}
-                            </Button>
-                          )}
+                        {armor && (targetCharacter?.resources[armor.resource] ?? 0) > 0 && (
+                          <Button variant="ghost" onClick={() => apply(t, total, true)}>
+                            {armor.label}
+                          </Button>
+                        )}
                         {shield && (
                           <Button
                             variant="ghost"
                             onClick={() =>
-                              ctx.execute(applyCardDamage, {
+                              context.execute(applyCardDamage, {
                                 messageId: m.id,
                                 target: t,
                                 amount: total,

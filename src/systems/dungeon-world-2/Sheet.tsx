@@ -1,25 +1,27 @@
 import { useMemo, useState } from "react";
 import {
   SheetFrame,
-  SheetSectionView,
-  type SheetDrop,
-  type SheetProps,
+  SheetSectionView
+  
+  
 } from "../../workspace/DeclarativeSheet";
+import type {SheetDrop, SheetProps as SheetProperties} from "../../workspace/DeclarativeSheet";
 import { useSheet } from "../../workspace/sheetModel";
 import { CharacterText } from "../../workspace/CharacterText";
 import type { DragEntity } from "../../workspace/entityDrag";
-import { STRUGGLES, struggleOfEntry } from "./struggles";
 import { Button } from "../../ui/Button";
 import { Counter } from "../../workspace/sheetParts";
-import { addTreasureBoxes, wealthTierForBoxes, MAX_TREASURE_BOXES } from "./wealth";
-import { DW2_GEAR, DW2_MAGIC_ITEMS } from "./gear";
 import { giveItem, setData } from "../../workspace/commands/characters";
-import { resolveCharacterStruggle, revealCharacterStruggle } from "./commands";
 import { useCampaign } from "../../workspace/campaignContext";
 import { parseInputNumber } from "../../lib/number";
+import { STRUGGLES, struggleOfEntry  } from "./struggles";
+import type {Struggle} from "./struggles";
+import { addTreasureBoxes, wealthTierForBoxes, MAX_TREASURE_BOXES } from "./wealth";
+import { DW2_GEAR, DW2_MAGIC_ITEMS } from "./gear";
+import { resolveCharacterStruggle, revealCharacterStruggle } from "./commands";
 
 function TreasureWealth({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const boxes = Number(sheet.c.data["treasureBoxes"] ?? 4);
   const wealth = wealthTierForBoxes(boxes);
   return (
@@ -32,7 +34,7 @@ function TreasureWealth({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
         max={MAX_TREASURE_BOXES}
         disabled={!sheet.editable}
         onChange={(by) =>
-          ctx.execute(setData, {
+          context.execute(setData, {
             id: sheet.c.id,
             key: "treasureBoxes",
             value: addTreasureBoxes(boxes, by),
@@ -43,18 +45,76 @@ function TreasureWealth({ sheet }: { sheet: ReturnType<typeof useSheet> }) {
   );
 }
 
-export function DungeonWorld2Sheet(props: SheetProps) {
-  const ctx = useCampaign();
-  const sheet = useSheet(props);
-  const struggle = sheet.c.data["struggleRevealed"]
+/** The character's revealed Struggle: its rules, its track, and notes on it. */
+function StruggleSection({
+  sheet,
+  struggle,
+}: {
+  sheet: ReturnType<typeof useSheet>;
+  struggle: Struggle;
+}) {
+  const context = useCampaign();
+  const {track} = struggle;
+  return (
+    <section className="form-section sheet-section" aria-label="Current Struggle">
+      <h3 className="sheet-heading">{struggle.name}</h3>
+      <details>
+        <summary>Struggle rules</summary>
+        <p>{struggle.text}</p>
+      </details>
+      {track && (
+        <label className="field">
+          {track.name}
+          <input
+            type="number"
+            min={0}
+            max={track.max}
+            step={1}
+            value={Number(sheet.c.data["struggleProgress"] ?? track.initial ?? 0)}
+            disabled={!sheet.editable}
+            onChange={(event) => {
+              const value = parseInputNumber(event.currentTarget.value);
+              if (
+                value !== undefined &&
+                Number.isInteger(value) &&
+                value >= 0 &&
+                value <= track.max
+              )
+                context.execute(setData, { id: sheet.c.id, key: "struggleProgress", value });
+            }}
+          />
+        </label>
+      )}
+      <CharacterText
+        campaign={sheet.campaign}
+        c={sheet.c}
+        field={`struggle:${struggle.id}`}
+        label="Struggle prompts and notes"
+        editable={sheet.editable}
+      />
+      <Button
+        variant="secondary"
+        disabled={!sheet.editable}
+        onClick={() => context.execute(resolveCharacterStruggle, { characterId: sheet.c.id })}
+      >
+        Resolve Struggle
+      </Button>
+    </section>
+  );
+}
+
+export function DungeonWorld2Sheet(properties: SheetProperties) {
+  const context = useCampaign();
+  const sheet = useSheet(properties);
+  const revealed = sheet.c.data["struggleRevealed"] === true;
+  const struggle = revealed
     ? STRUGGLES.find((entry) => entry.id === sheet.c.data["struggleId"])
     : undefined;
-  const revealed = sheet.c.data["struggleRevealed"] === true;
   const characterId = sheet.c.id;
   const isPc = sheet.c.kind === "pc";
   // A Struggle from the Libraries reveals it, while the character has none.
   const drop = useMemo<SheetDrop | undefined>(() => {
-    if (!isPc || revealed) return undefined;
+    if (!isPc || revealed) return;
     const dropped = (entity: DragEntity) =>
       entity.libraryEntry?.kind === "option" ? struggleOfEntry(entity.libraryEntry.id) : undefined;
     return {
@@ -62,11 +122,11 @@ export function DungeonWorld2Sheet(props: SheetProps) {
       drop: (entity) => {
         const struggle = dropped(entity);
         return (
-          !!struggle && ctx.execute(revealCharacterStruggle, { characterId, struggle: struggle.id })
+          !!struggle && context.execute(revealCharacterStruggle, { characterId, struggle: struggle.id })
         );
       },
     };
-  }, [isPc, revealed, ctx, characterId]);
+  }, [isPc, revealed, context, characterId]);
   return (
     <SheetFrame {...sheet} drop={drop}>
       <SheetSectionView {...sheet} section={{ kind: "header" }} />
@@ -82,52 +142,7 @@ export function DungeonWorld2Sheet(props: SheetProps) {
           ],
         }}
       />
-      {struggle && (
-        <section className="form-section sheet-section" aria-label="Current Struggle">
-          <h3 className="sheet-heading">{struggle.name}</h3>
-          <details>
-            <summary>Struggle rules</summary>
-            <p>{struggle.text}</p>
-          </details>
-          {struggle.track && (
-            <label className="field">
-              {struggle.track.name}
-              <input
-                type="number"
-                min={0}
-                max={struggle.track.max}
-                step={1}
-                value={Number(sheet.c.data["struggleProgress"] ?? struggle.track.initial ?? 0)}
-                disabled={!sheet.editable}
-                onChange={(event) => {
-                  const value = parseInputNumber(event.currentTarget.value);
-                  if (
-                    value !== undefined &&
-                    Number.isInteger(value) &&
-                    value >= 0 &&
-                    value <= struggle.track!.max
-                  )
-                    ctx.execute(setData, { id: sheet.c.id, key: "struggleProgress", value });
-                }}
-              />
-            </label>
-          )}
-          <CharacterText
-            campaign={sheet.campaign}
-            c={sheet.c}
-            field={`struggle:${struggle.id}`}
-            label="Struggle prompts and notes"
-            editable={sheet.editable}
-          />
-          <Button
-            variant="secondary"
-            disabled={!sheet.editable}
-            onClick={() => ctx.execute(resolveCharacterStruggle, { characterId: sheet.c.id })}
-          >
-            Resolve Struggle
-          </Button>
-        </section>
-      )}
+      {struggle && <StruggleSection sheet={sheet} struggle={struggle} />}
       <SheetSectionView
         {...sheet}
         section={{
@@ -206,9 +221,9 @@ function ItemAward({
   title,
 }: {
   sheet: ReturnType<typeof useSheet>;
-  field: "magicItemAward" | "artifactAward";
-  claimedField: "magicItemClaimed" | "artifactClaimed";
-  tag: "magic-item" | "artifact";
+  field: "artifactAward" | "magicItemAward";
+  claimedField: "artifactClaimed" | "magicItemClaimed";
+  tag: "artifact" | "magic-item";
   title: string;
 }) {
   const { options, selected, setSelected, pending, award } = useItemAward(
@@ -223,7 +238,7 @@ function ItemAward({
       <h3 className="sheet-heading">{title}</h3>
       <label className="field">
         Choose an item
-        <select value={selected} onChange={(event) => setSelected(event.currentTarget.value)}>
+        <select value={selected} onChange={(event) => { setSelected(event.currentTarget.value); }}>
           {options.map((item) => (
             <option key={item.id} value={item.id}>
               {item.name}
@@ -240,11 +255,11 @@ function ItemAward({
 
 function useItemAward(
   sheet: ReturnType<typeof useSheet>,
-  field: "magicItemAward" | "artifactAward",
-  claimedField: "magicItemClaimed" | "artifactClaimed",
-  tag: "magic-item" | "artifact",
+  field: "artifactAward" | "magicItemAward",
+  claimedField: "artifactClaimed" | "magicItemClaimed",
+  tag: "artifact" | "magic-item",
 ) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const options =
     tag === "magic-item"
       ? [...DW2_GEAR.filter((item) => item.tags.includes("magic")), ...DW2_MAGIC_ITEMS]
@@ -255,16 +270,16 @@ function useItemAward(
   const award = () => {
     const item = options.find((entry) => entry.id === selected);
     if (!item) return;
-    ctx.commands.batch(() => {
-      ctx.execute(giveItem, { characterId: sheet.c.id, item });
-      ctx.execute(setData, { id: sheet.c.id, key: claimedField, value: true });
+    context.commands.batch(() => {
+      context.execute(giveItem, { characterId: sheet.c.id, item });
+      context.execute(setData, { id: sheet.c.id, key: claimedField, value: true });
     });
   };
   return { options, selected, setSelected, pending, award };
 }
 
-export function DungeonWorld2NpcSheet(props: SheetProps) {
-  const sheet = useSheet(props);
+export function DungeonWorld2NpcSheet(properties: SheetProperties) {
+  const sheet = useSheet(properties);
   return (
     <SheetFrame {...sheet}>
       <SheetSectionView {...sheet} section={{ kind: "header" }} />

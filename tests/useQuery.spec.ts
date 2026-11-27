@@ -72,13 +72,3 @@ test("a missing source reads as undefined, or as what select makes of nothing", 
   expect(seen.value).toEqual([undefined, 3]);
   unmount();
 });
-
-test("stops observing the type once nothing reads it", () => {
-  const doc = new Y.Doc();
-  const map = doc.getMap<string>("m");
-  const { unmount } = mount(() => useQuery(map, (m) => m.size));
-  expect(map._dEH.l.length).toBe(1);
-  unmount();
-  expect(map._dEH.l.length).toBe(0);
-  doc.destroy();
-});

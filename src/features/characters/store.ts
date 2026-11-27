@@ -2,6 +2,7 @@ import type { Characters } from "../../campaign/schema";
 import type { Item, Plain } from "../../data/schema";
 import type { SystemCharacterRec } from "../../systems/schema";
 import { newId } from "../../lib/ids";
+import { byOrder } from "../../lib/order";
 import type { EffectSource } from "../../systems/effects";
 import type { ActionDef, Derived, GameSystem, ItemDef } from "../../systems/types";
 import type { DataValue } from "../../data/types";
@@ -14,7 +15,7 @@ import type { CharacterKind, CharacterView, ItemInstance } from "./types";
 
 export type CharacterRec = Item<typeof characterEntry>;
 /** The parts of a system's data kept as id -> value. */
-export type SystemPart = "data" | "scores" | "resources" | "modifiers" | "fields";
+export type SystemPart = "data" | "fields" | "modifiers" | "resources" | "scores";
 
 const readPart = (data: SystemCharacterRec | undefined, part: SystemPart) =>
   data?.get(part)?.read();
@@ -29,6 +30,25 @@ export const ensureSystemPart = <P extends SystemPart>(
   system: GameSystem,
   part: P,
 ) => m.ensure("ext").ensure(system.id).ensure(part);
+
+/** Every stat's score: the given one, else the stat's default. */
+function scoresOver(system: GameSystem, given: Record<string, number> | undefined) {
+  const scores: Record<string, number> = {};
+  for (const s of system.stats) scores[s.id] = given?.[s.id] ?? s.default ?? 10;
+  return scores;
+}
+
+/** Every field the system keeps for this kind of character: the given value, else its default. */
+function dataOver(
+  system: GameSystem,
+  kind: CharacterKind,
+  given: Record<string, DataValue> | undefined,
+) {
+  const data: Record<string, DataValue> = {};
+  for (const f of system.characterData)
+    if (!f.for || f.for === kind) data[f.id] = given?.[f.id] ?? f.default;
+  return data;
+}
 
 export function createCharacter(
   characters: Characters,
@@ -45,11 +65,8 @@ export function createCharacter(
 ): string {
   const id = newId();
   const kind = init.kind ?? "pc";
-  const scores: Record<string, number> = {};
-  for (const s of system.stats) scores[s.id] = init.scores?.[s.id] ?? s.default ?? 10;
-  const data: Record<string, DataValue> = {};
-  for (const f of system.characterData)
-    if (!f.for || f.for === kind) data[f.id] = init.data?.[f.id] ?? f.default;
+  const scores = scoresOver(system, init.scores);
+  const data = dataOver(system, kind, init.data);
   characters.transact(() => {
     characters.set(id, {
       name: init.name,
@@ -100,29 +117,20 @@ export function characterView(
       ...readPart(own, part),
     }) as Plain<SystemCharacterRec["shape"][P]>;
   const kind: CharacterKind = get("kind") === "npc" ? "npc" : "pc";
-  const storedScores = merged("scores");
-  const scores: Record<string, number> = {};
-  for (const s of system.stats) scores[s.id] = storedScores[s.id] ?? s.default ?? 10;
-  const storedData = merged("data");
-  const data: Record<string, DataValue> = {};
-  for (const f of system.characterData)
-    if (!f.for || f.for === kind) data[f.id] = storedData[f.id] ?? f.default;
   const storedFields = merged("fields");
-  const fields: Record<string, string | number> = {};
+  const fields: Record<string, number | string> = {};
   for (const f of system.npcFields)
     fields[f.id] = storedFields[f.id] ?? f.default ?? (f.type === "number" ? 0 : "");
   const inv = m.get("inventory") ?? base?.get("inventory");
-  const inventory = inv
-    ? inv.values().sort((a, b) => (a.order < b.order ? -1 : a.order > b.order ? 1 : 0))
-    : [];
+  const inventory = inv ? inv.values().sort(byOrder) : [];
   return {
     id,
     kind,
     folder: m.get("folder"),
     name: get("name") ?? "Unnamed",
     owner: get("owner") ?? "",
-    scores,
-    data,
+    scores: scoresOver(system, merged("scores")),
+    data: dataOver(system, kind, merged("data")),
     resources: merged("resources"),
     conditions: get("conditions") ?? [],
     lockedConditions: get("lockedConditions") ?? [],
@@ -149,10 +157,10 @@ export function itemActive(item: ItemInstance): boolean {
 export function effectSources(c: CharacterView, system: GameSystem): EffectSource[] {
   const activeConditions = new Set(c.conditions);
   const conditions = system.conditions.flatMap((k) =>
-    activeConditions.has(k.id) && k.effects.length ? [{ name: k.name, effects: k.effects }] : [],
+    activeConditions.has(k.id) && k.effects.length > 0 ? [{ name: k.name, effects: k.effects }] : [],
   );
-  const items = c.inventory.flatMap((i) =>
-    i.effects.length && itemActive(i) ? [{ name: i.name, effects: i.effects }] : [],
+  const items = c.inventory.flatMap((index) =>
+    index.effects.length > 0 && itemActive(index) ? [{ name: index.name, effects: index.effects }] : [],
   );
   return [...conditions, ...items];
 }

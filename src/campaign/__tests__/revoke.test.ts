@@ -36,7 +36,7 @@ describe("revoking a player", () => {
   it("keeps the removed player's device from adding itself back", async () => {
     const gm = await setUp();
     gm.revokeMember("pat");
-    const id = gm.id;
+    const {id} = gm;
     gm.destroy();
 
     as("pat", "Pat");

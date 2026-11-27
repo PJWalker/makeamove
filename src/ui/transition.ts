@@ -1,4 +1,5 @@
-const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+/** The player's reduced-motion preference, live: check `.matches` when animating. */
+export const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
 let running = 0;
 
@@ -18,7 +19,7 @@ interface ViewTransition {
 }
 
 interface ViewTransitionHost {
-  startViewTransition?: (callback: () => void | Promise<void>) => ViewTransition;
+  startViewTransition?: (callback: () => Promise<void> | void) => ViewTransition;
 }
 
 /**
@@ -30,13 +31,13 @@ interface ViewTransitionHost {
  * Resolves once the new state is showing and any animation has finished.
  */
 export async function withTransition(
-  update: () => void | Promise<void>,
+  update: () => Promise<void> | void,
   {
     rootClass,
     scope,
     home,
   }: {
-    rootClass?: string | string[];
+    rootClass?: string[] | string;
     scope?: HTMLElement;
     /**
      * Something a snapshot grows from or shrinks into without itself being

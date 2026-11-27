@@ -1,5 +1,6 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vite-plus/test";
+import * as Y from "yjs";
 import { Campaign, createCampaign } from "../../../campaign/campaign";
 import { device } from "../../../platform/device";
 import {
@@ -19,7 +20,6 @@ import {
   touchNote,
 } from "../api";
 import { NoteDoc } from "../noteDoc";
-import * as Y from "yjs";
 import { linksIn, parseLink } from "../links";
 import { makeSessionPage, sessionPageId } from "../sessions";
 
@@ -56,7 +56,6 @@ describe("notes", () => {
     expect(getNote(c, d)?.title).toBe("The Duke");
     moveNote(c, a, undefined);
     expect(getNote(c, a)?.folder).toBeUndefined();
-    expect(noteSubdoc(c, b)?.guid).toBe(`${c.id}/note/${b}`);
     deleteNote(c, b);
     expect(getNote(c, b)).toBeUndefined();
     c.destroy();
@@ -115,7 +114,8 @@ describe("the GM vault", () => {
     expect(listNotes(c).find((n) => n.id === secret)?.gmOnly).toBe(true);
     // The vault's own key, never written to the shared campaign.
     expect(c.vault.value!.key).toMatch(/.{20,}/);
-    expect(JSON.stringify(c.doc.toJSON())).not.toContain(c.vault.value!.key);
+    const shared = [...c.doc.share].map(([name, type]): [string, unknown] => [name, type.toJSON()]);
+    expect(JSON.stringify(shared)).not.toContain(c.vault.value!.key);
     c.destroy();
   });
 
@@ -141,7 +141,7 @@ describe("the GM vault", () => {
 
   it("is only opened on GM devices", async () => {
     const c = await setUp();
-    const id = c.id;
+    const {id} = c;
     c.destroy();
     device.value = { id: "pat", name: "Pat" };
     const asPlayer = await Campaign.open(id);

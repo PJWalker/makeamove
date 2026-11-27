@@ -6,22 +6,22 @@ import {
   renameSceneFolder,
 } from "../../campaign/sceneFolders";
 import type { SceneView } from "../../campaign/types";
-import { isObject, isString, objectOf, optional } from "../../data/guards";
+import { isObject, isString, objectOf, optional } from "../../lib/guards";
 import type { Grid } from "../../scene/grid";
 import type { SceneLighting } from "../../scene/sceneDoc";
 import { IconAdd, IconDelete, IconFolder, IconMap, IconMembers } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
-import { folderCommands } from "./folders";
+import { folderCommands, moveFolderOffers } from "./folders";
 import { command } from "./types";
 
 /* Scenes: making them, going to them, filing and deleting them. Only the GM changes them. */
 
 const isId = objectOf({ id: isString });
-const scene = (ctx: CampaignContext, id: string) =>
-  ctx.campaign.sceneViews().find((s) => s.id === id);
-const exists = (ctx: CampaignContext, { id }: { id: string }) =>
-  !!scene(ctx, id) || "That scene is gone";
-const seen = (ctx: CampaignContext, s: SceneView) => s.visibility === "everyone" || ctx.isGm();
+const scene = (context: CampaignContext, id: string) =>
+  context.campaign.sceneViews().find((s) => s.id === id);
+const exists = (context: CampaignContext, { id }: { id: string }) =>
+  !!scene(context, id) || "That scene is gone";
+const seen = (context: CampaignContext, s: SceneView) => s.visibility === "everyone" || context.isGm();
 
 export const newScene = command<{ folder?: string | undefined }, string>({
   id: "scene.create",
@@ -42,22 +42,22 @@ export const openScene = command<{ id: string }>({
   id: "scene.open",
   params: isId,
   kind: "entry",
-  title: (ctx, { id }) => scene(ctx, id)?.name ?? "Scene",
-  detail: (ctx, { id }) => (id === ctx.campaign.activeSceneId() ? "Current scene" : "Go to scene"),
+  title: (context, { id }) => scene(context, id)?.name ?? "Scene",
+  detail: (context, { id }) => (id === context.campaign.activeSceneId() ? "Current scene" : "Go to scene"),
   source: "Scenes",
   icon: IconMap,
   section: "open",
-  permission: (ctx, { id }) => {
-    const s = scene(ctx, id);
-    return !s || seen(ctx, s) || "Hidden from players";
+  permission: (context, { id }) => {
+    const s = scene(context, id);
+    return !s || seen(context, s) || "Hidden from players";
   },
   available: exists,
   // Going somewhere isn't an edit to take back.
   undoGroup: false,
-  offers: (ctx) =>
-    ctx.campaign.sceneViews().map((s) => ({ params: { id: s.id }, group: "scene" as const })),
+  offers: (context) =>
+    context.campaign.sceneViews().map((s) => ({ params: { id: s.id }, group: "scene" as const })),
   menu: { scene: (_, { id }) => [{ params: { id }, title: "Open Scene" }] },
-  run: ({ campaign }, { id }) => campaign.setActiveScene(id),
+  run: ({ campaign }, { id }) => { campaign.setActiveScene(id); },
 });
 
 export const pullPlayers = command<{ id: string }>({
@@ -70,7 +70,7 @@ export const pullPlayers = command<{ id: string }>({
   section: "play",
   undoGroup: false,
   menu: { scene: (_, { id }) => [{ params: { id } }] },
-  run: ({ campaign }, { id }) => campaign.pullPlayersToScene(id),
+  run: ({ campaign }, { id }) => { campaign.pullPlayersToScene(id); },
 });
 
 export const moveScene = command<{ id: string; folder?: string | undefined }>({
@@ -82,20 +82,10 @@ export const moveScene = command<{ id: string; folder?: string | undefined }>({
   available: exists,
   section: "file",
   menu: {
-    scene: (ctx, { id }) => {
-      const s = scene(ctx, id);
-      const folders = listSceneFolders(ctx.campaign.sceneFolders);
-      return [
-        ...folders.flatMap((f) =>
-          f.id === s?.folder ? [] : [{ params: { id, folder: f.id }, title: `Move to ${f.name}` }],
-        ),
-        ...(s?.folder && folders.some((f) => f.id === s.folder)
-          ? [{ params: { id }, title: "Remove from Folder" }]
-          : []),
-      ];
-    },
+    scene: (context, { id }) =>
+      moveFolderOffers(id, scene(context, id)?.folder, listSceneFolders(context.campaign.sceneFolders)),
   },
-  run: ({ campaign }, { id, folder }) => moveSceneToFolder(campaign.scenes, id, folder),
+  run: ({ campaign }, { id, folder }) => { moveSceneToFolder(campaign.scenes, id, folder); },
 });
 
 export const updateScene = command<{ id: string; patch: Partial<Omit<SceneView, "id">> }>({
@@ -105,24 +95,26 @@ export const updateScene = command<{ id: string; patch: Partial<Omit<SceneView, 
   permission: "gm",
   available: exists,
   // Dragging through colours, or typing a name, is one step.
-  undoGroup: ({ id, patch }) => `scene.update ${id} ${Object.keys(patch).sort().join()}`,
-  run: ({ campaign }, { id, patch }) => campaign.updateScene(id, patch),
+  undoGroup: ({ id, patch }) => `scene.update ${id} ${Object.keys(patch).sort().join(',')}`,
+  run: ({ campaign }, { id, patch }) => { campaign.updateScene(id, patch); },
 });
 
 /** The open scene's grid and lighting, kept in the scene itself, so undone with its own steps. */
-const sceneDocOf = (ctx: CampaignContext, id: string) => {
-  const o = ctx.canvas.canvasCommands.value;
+const sceneDocumentOf = (context: CampaignContext, id: string) => {
+  const o = context.canvas.canvasCommands.value;
   return o?.sceneId === id ? o.scene : null;
 };
+const sceneOpen = (context: CampaignContext, { id }: { id: string }) =>
+  !!sceneDocumentOf(context, id) || "Open the scene first";
 
 export const setGrid = command<{ id: string; patch: Partial<Grid> }>({
   id: "scene.setGrid",
   params: objectOf({ id: isString, patch: isObject<Partial<Grid>> }),
   title: "Change Grid",
   permission: "gm",
-  available: (ctx, { id }) => !!sceneDocOf(ctx, id) || "Open the scene first",
+  available: sceneOpen,
   transact: false,
-  run: (ctx, { id, patch }) => sceneDocOf(ctx, id)?.setGrid(patch),
+  run: (context, { id, patch }) => sceneDocumentOf(context, id)?.setGrid(patch),
 });
 
 export const setLighting = command<{ id: string; patch: Partial<SceneLighting> }>({
@@ -130,9 +122,9 @@ export const setLighting = command<{ id: string; patch: Partial<SceneLighting> }
   params: objectOf({ id: isString, patch: isObject<Partial<SceneLighting>> }),
   title: "Change Lighting",
   permission: "gm",
-  available: (ctx, { id }) => !!sceneDocOf(ctx, id) || "Open the scene first",
+  available: sceneOpen,
   transact: false,
-  run: (ctx, { id, patch }) => sceneDocOf(ctx, id)?.setLighting(patch),
+  run: (context, { id, patch }) => sceneDocumentOf(context, id)?.setLighting(patch),
 });
 
 export const deleteScene = command<{ id: string }>({
@@ -142,15 +134,15 @@ export const deleteScene = command<{ id: string }>({
   icon: IconDelete,
   danger: true,
   permission: "gm",
-  available: (ctx, p) =>
-    ctx.campaign.sceneViews().length < 2 ? "A campaign needs a scene" : exists(ctx, p),
+  available: (context, p) =>
+    context.campaign.sceneViews().length < 2 ? "A campaign needs a scene" : exists(context, p),
   section: "delete",
   // Its drawings and tokens go with it.
   undoGroup: false,
-  confirm: (ctx, { id }) => {
-    const name = scene(ctx, id)?.name ?? "this scene";
+  confirm: (context, { id }) => {
+    const name = scene(context, id)?.name ?? "this scene";
     return {
-      title: "Delete scene",
+      title: "Delete Scene",
       body: `Delete ${name}? Its maps, tokens and drawings are gone for everyone. This can’t be undone.`,
       subject: name,
       confirmLabel: "Delete",
@@ -158,14 +150,14 @@ export const deleteScene = command<{ id: string }>({
     };
   },
   menu: { scene: (_, { id }) => [{ params: { id } }] },
-  run: ({ campaign }, { id }) => campaign.removeScene(id),
+  run: ({ campaign }, { id }) => { campaign.removeScene(id); },
 });
 
 export const sceneFolders = folderCommands("scene", {
   permission: "gm",
   create: ({ campaign }, name) => createSceneFolder(campaign.sceneFolders, name),
-  rename: ({ campaign }, id, name) => renameSceneFolder(campaign.sceneFolders, id, name),
-  remove: ({ campaign }, id) => deleteSceneFolder(campaign.scenes, campaign.sceneFolders, id),
+  rename: ({ campaign }, id, name) => { renameSceneFolder(campaign.sceneFolders, id, name); },
+  remove: ({ campaign }, id) => { deleteSceneFolder(campaign.scenes, campaign.sceneFolders, id); },
   newHere: [newScene],
 });
 

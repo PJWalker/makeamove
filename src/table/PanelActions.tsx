@@ -4,15 +4,17 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
-  type ReactNode,
+  useState
+  
 } from "react";
+import type {ReactNode} from "react";
 import { createPortal } from "react-dom";
 
 const PanelActionsContext = createContext<{
   target: HTMLDivElement | null;
   setTarget: (target: HTMLDivElement | null) => void;
 } | null>(null);
+PanelActionsContext.displayName = "PanelActionsContext";
 
 export function PanelActionsProvider({ children }: { children: ReactNode }) {
   const [target, setTarget] = useState<HTMLDivElement | null>(null);
@@ -28,9 +30,9 @@ export function PanelActionsProvider({ children }: { children: ReactNode }) {
 export function PanelActionsSlot() {
   const context = useContext(PanelActionsContext);
   const row = context?.target;
-  const slotRef = useRef<HTMLDivElement>(null);
+  const slotReference = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const slot = slotRef.current;
+    const slot = slotReference.current;
     const header = slot?.parentElement;
     if (!slot || !header || !row) return;
     // Measured with the labels showing, then compacted only if they overflow.
@@ -42,10 +44,10 @@ export function PanelActionsSlot() {
     const observer = new ResizeObserver(fit);
     observer.observe(header);
     observer.observe(row);
-    return () => observer.disconnect();
+    return () => { observer.disconnect(); };
   }, [row]);
   return (
-    <div className="panel-actions" ref={slotRef}>
+    <div className="panel-actions" ref={slotReference}>
       <div className="panel-actions-row" ref={context?.setTarget} />
     </div>
   );

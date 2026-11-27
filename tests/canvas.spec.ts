@@ -175,6 +175,7 @@ test("scene-tinted surfaces follow scene chroma and lightness", async ({ page })
     });
   const toolbarColours = colours(pixels.toolbar);
   const surfaceColours = colours(pixels.surface);
+  expect(pixels.surface).toEqual(pixels.toolbar);
   expect(toolbarColours[0]!.c).toBeLessThanOrEqual(0.025);
   expect(toolbarColours[1]!.c).toBeLessThanOrEqual(0.075);
   expect(toolbarColours[1]!.c).toBeGreaterThan(0.055);
@@ -225,7 +226,7 @@ test("the hotbar shares edge-bar sizing and clears the sidebars when expanded", 
     .poll(centre)
     .toBe((left.getBoundingClientRect().right + right.getBoundingClientRect().left) / 2);
 
-  await page.getByRole("button", { name: "Command palette (Ctrl/Cmd+K)" }).click();
+  await page.getByRole("button", { name: "Command Palette (Ctrl/Cmd+K)" }).click();
   const search = page.getByRole("combobox", { name: "Search actions" });
   await search.fill("Draw");
   await search.press("Alt+Enter");
@@ -242,7 +243,7 @@ test("the hotbar shares edge-bar sizing and clears the sidebars when expanded", 
   for (const sidebar of page.locator(".table").element().querySelectorAll(".sidebar"))
     expect(sidebar.getBoundingClientRect().bottom).toBe(bounds.top);
   await expect(
-    hotbar.getByRole("button", { name: "Command palette (Ctrl/Cmd+K)" }),
+    hotbar.getByRole("button", { name: "Command Palette (Ctrl/Cmd+K)" }),
   ).toBeInViewport();
 
   await page.getByRole("tab", { name: "Chat", exact: true }).press("Enter");
@@ -302,7 +303,7 @@ test("the canvas takes clicks once a campaign opens", async ({ page }) => {
 
 test("the canvas still takes clicks after the campaign is left and reopened", async ({ page }) => {
   await createCampaign(page, "Canvas reopen test");
-  await page.getByRole("button", { name: "Campaign menu" }).click();
+  await page.getByRole("button", { name: "Campaign Menu" }).click();
   await page.getByRole("menuitem", { name: "Back to Campaigns" }).click();
   await page
     .getByRole("button", { name: /^Canvas reopen test/ })

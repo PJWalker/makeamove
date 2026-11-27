@@ -1,13 +1,15 @@
-import { useEffect, useRef, useState, type ComponentProps } from "react";
+import { useEffect, useRef, useState  } from "react";
+import type {ComponentProps} from "react";
 import {
   canEdit,
   listCharacters,
   listFolders,
-  type FolderView,
+  
   getCharacter,
   viewedCharacterId,
-  systemOf,
+  systemOf
 } from "../features/characters/api";
+import type {FolderView} from "../features/characters/api";
 import type { CharacterView } from "../features/characters/types";
 import type { Campaign, MemberView } from "../campaign/campaign";
 import { device } from "../platform/device";
@@ -17,27 +19,27 @@ import { HintedField } from "../ui/HintedField";
 import { Button } from "../ui/Button";
 import { menuTrigger } from "../ui/menuTrigger";
 import { CLASS_FIELD, choicesAt } from "../features/characters/creation";
-import { ChoiceField, ScoreFields, type Picked } from "../workspace/CreationParts";
+import { ChoiceField, ScoreFields  } from "../workspace/CreationParts";
+import type {Picked} from "../workspace/CreationParts";
 import {
   creationResult,
   emptyPick,
   scoreMethods,
   scoresReady,
-  startingScores,
-  type ScoreMethod,
+  startingScores
+  
 } from "../workspace/creationModel";
+import type {ScoreMethod} from "../workspace/creationModel";
 import { IconAdd, IconNewFolder } from "../ui/icons";
 import { Segmented } from "../ui/Segmented";
 import { TwoPane } from "../ui/TwoPane";
 import { usePaneLevel } from "../ui/paneLevel";
 import { ListRow } from "../ui/List";
-import { ContextMenu, type MenuItem } from "../ui/ContextMenu";
+import { ContextMenu  } from "../ui/ContextMenu";
+import type {MenuItem} from "../ui/ContextMenu";
 import { dragEntity } from "../workspace/entityDrag";
 import { entity } from "../workspace/dragEntities";
 import { CampaignEntityGraphic } from "../workspace/EntityGraphic";
-import { CharacterSheet } from "./sheets";
-import { FolderTree } from "./FolderTree";
-import { charactersLayout } from "./panelLayouts";
 import { useCampaign } from "../workspace/campaignContext";
 import {
   characterFolders,
@@ -47,15 +49,19 @@ import {
   viewSheet,
 } from "../workspace/commands/characters";
 import { menuFor } from "../workspace/commands/views";
+import { isString } from "../lib/guards";
+import { charactersLayout } from "./panelLayouts";
+import { FolderTree } from "./FolderTree";
+import { CharacterSheet } from "./sheets";
 
 export function CharactersPanel({ campaign }: { campaign: Campaign }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const system = systemOf(campaign);
   const characters = useQuery(campaign.characters, () => listCharacters(campaign));
   const folders = useQuery(campaign.characterFolders, () => listFolders(campaign));
   const selectedId = useQuery(campaign.members, () => viewedCharacterId(campaign));
   const [creating, setCreating] = useState(false);
-  const [creationFolder, setCreationFolder] = useState<string | undefined>(undefined);
+  const [creationFolder, setCreationFolder] = useState<string | undefined>();
   // Copies (a template's tokens) aren't listed, but selecting one's token opens its sheet.
   const selected = useQuery(campaign.characters, () => getCharacter(campaign, selectedId));
   // One at a time: which level shows, the list or the sheet.
@@ -75,7 +81,7 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
       level={level}
       title={creating ? "New character" : (selected?.name ?? "Characters")}
       backLabel="Back to the character list"
-      onBack={() => go("list")}
+      onBack={() => { go("list"); }}
       resizeLabel="Resize character list"
       list={
         <CharacterList
@@ -91,7 +97,7 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
           onPick={(id) => {
             setCreating(false);
             go("detail");
-            ctx.execute(viewSheet, { id });
+            context.execute(viewSheet, { id });
           }}
           showList={() => show("list")}
         />
@@ -109,11 +115,11 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
                 setCreationFolder(undefined);
               }}
             />
-          ) : selected ? (
+          ) : (selected ? (
             <CharacterSheet campaign={campaign} system={system} c={selected} />
           ) : (
             <p className="empty">Create a character, or pick one to see its sheet.</p>
-          )}
+          ))}
         </div>
       }
     />
@@ -122,8 +128,15 @@ export function CharactersPanel({ campaign }: { campaign: Campaign }) {
 
 /** Who plays a character, as the list shows it. */
 function tagFor(player: MemberView | undefined) {
-  if (!player) return undefined;
+  if (!player) return;
   return player.id === device.value.id ? "You" : player.name;
+}
+
+/** A character row's tooltip: its name, and who plays it or that it's an NPC. */
+function tipFor(character: CharacterView, player: MemberView | undefined) {
+  if (character.kind === "npc") return `${character.name} (NPC)`;
+  if (player) return `${character.name}, played by ${tagFor(player)}`;
+  return character.name;
 }
 
 /** The left pane: characters, filed in folders. Drag a character onto a folder to file it. */
@@ -144,45 +157,39 @@ function CharacterList({
   onPick: (id: string) => void;
   showList: () => Promise<void>;
 }) {
-  const ctx = useCampaign();
+  const context = useCampaign();
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
   const members = useQuery(campaign.members, () => campaign.memberViews());
   const playedBy = new Map(members.flatMap((m) => (m.playing ? [[m.playing, m] as const] : [])));
 
   const row = (c: CharacterView) => {
     const mine = canEdit(campaign, c);
-    const dragged = entity(ctx, "character", c.id, c.name);
-    if (mine) dragged.folder = (folder) => void ctx.execute(fileCharacter, { id: c.id, folder });
+    const dragged = entity(context, "character", c.id, c.name);
+    if (mine) dragged.folder = (folder) => void context.execute(fileCharacter, { id: c.id, folder });
     else delete dragged.folder;
-    const trigger = menuTrigger((x, y) =>
-      setMenu({ x, y, items: menuFor(ctx, { kind: "character", id: c.id }) }),
+    const player = playedBy.get(c.id);
+    const trigger = menuTrigger((x, y) => { setMenu({ x, y, items: menuFor(context, { kind: "character", id: c.id }) }); },
     );
     return (
       <ListRow
         key={c.id}
         lead={<CampaignEntityGraphic campaign={campaign} kind="character" id={c.id} size={22} />}
         name={c.name}
-        tag={c.kind === "npc" ? "NPC" : (tagFor(playedBy.get(c.id)) ?? null)}
+        tag={c.kind === "npc" ? "NPC" : (tagFor(player) ?? null)}
         selected={c.id === selectedId}
-        onPick={() => onPick(c.id)}
+        onPick={() => { onPick(c.id); }}
         row={{
-          "data-tip":
-            c.kind === "npc"
-              ? `${c.name} (NPC)`
-              : playedBy.has(c.id)
-                ? `${c.name}, played by ${tagFor(playedBy.get(c.id))}`
-                : c.name,
+          "data-tip": tipFor(c, player),
           "data-tip-side": true,
         }}
         pick={{
-          onDoubleClick: (e) =>
-            ctx.linkPopups.show({ kind: "character", id: c.id }, e.currentTarget),
+          onDoubleClick: (e) => { context.linkPopups.show({ kind: "character", id: c.id }, e.currentTarget); },
           "data-kind": c.kind,
           "data-item-drop": mine ? c.id : undefined,
           "data-move-drop": mine ? c.id : undefined,
           onPointerDown: (e) => {
             trigger.onPointerDown(e);
-            dragEntity(ctx.canvas, e, dragged);
+            dragEntity(context.canvas, e, dragged);
           },
           onContextMenu: trigger.onContextMenu,
         }}
@@ -201,7 +208,7 @@ function CharacterList({
         renderItem={row}
         renderActions={(newFolder) => (
           <>
-            <Button icon={IconAdd} onClick={() => onNew()}>
+            <Button icon={IconAdd} onClick={() => { onNew(); }}>
               New
             </Button>
             <Button variant="ghost" icon={IconNewFolder} onClick={newFolder}>
@@ -212,21 +219,21 @@ function CharacterList({
         tree="character"
         folderCommands={characterFolders}
         folderMenuItems={(folder) => [
-          { label: "New Character Here", onSelect: () => onNew(folder.id) },
+          { label: "New Character Here", onSelect: () => { onNew(folder.id); } },
         ]}
         showList={showList}
         emptyContent={
-          !characters.length && !folders.length ? (
+          characters.length === 0 && folders.length === 0 ? (
             <p className="empty-inline">No characters yet.</p>
           ) : null
         }
       />
-      {menu && <ContextMenu {...menu} onClose={() => setMenu(null)} />}
+      {menu && <ContextMenu {...menu} onClose={() => { setMenu(null); }} />}
     </>
   );
 }
 
-type RelationshipDraft = { to: string; text: string; depth: string };
+interface RelationshipDraft { to: string; text: string; depth: string }
 
 /** The free-text lines that describe a new character. */
 function IdentityFields({
@@ -249,7 +256,7 @@ function IdentityFields({
             <input
               {...input}
               value={values[field] ?? ""}
-              onInput={(event) => onChange({ ...values, [field]: event.currentTarget.value })}
+              onInput={(event) => { onChange({ ...values, [field]: event.currentTarget.value }); }}
             />
           )}
         </HintedField>
@@ -280,8 +287,8 @@ function RelationshipFields({
         <select
           required
           value={value.to}
-          onChange={(event) => onChange({ ...value, to: event.currentTarget.value })}
-          onInput={(event) => onChange({ ...value, to: event.currentTarget.value })}
+          onChange={(event) => { onChange({ ...value, to: event.currentTarget.value }); }}
+          onInput={(event) => { onChange({ ...value, to: event.currentTarget.value }); }}
         >
           <option value="">Choose a PC</option>
           {pcs.map((character) => (
@@ -297,7 +304,7 @@ function RelationshipFields({
             {...input}
             rows={2}
             value={value.text}
-            onInput={(event) => onChange({ ...value, text: event.currentTarget.value })}
+            onInput={(event) => { onChange({ ...value, text: event.currentTarget.value }); }}
           />
         )}
       </HintedField>
@@ -305,7 +312,7 @@ function RelationshipFields({
         Shared history
         <select
           value={value.depth}
-          onChange={(event) => onChange({ ...value, depth: event.currentTarget.value })}
+          onChange={(event) => { onChange({ ...value, depth: event.currentTarget.value }); }}
         >
           {depths.map((depth) => (
             <option key={depth.value} value={String(depth.value)}>
@@ -332,7 +339,7 @@ function FolderField({
   return (
     <label className="field field-inline">
       Folder
-      <select value={value} onChange={(e) => onChange(e.currentTarget.value)}>
+      <select value={value} onChange={(e) => { onChange(e.currentTarget.value); }}>
         <option value="">None</option>
         {folders.map((f) => (
           <option key={f.id} value={f.id}>
@@ -349,7 +356,7 @@ function initialPicks(system: GameSystem): Record<string, Picked> {
   return Object.fromEntries(
     (system.creation?.choices ?? []).flatMap((choice) => {
       const value = system.characterData.find((field) => field.id === choice.field)?.default;
-      return choice.at === "create" && typeof value === "string" && value
+      return choice.at === "create" && isString(value) && value
         ? [[choice.id, { option: value, pattern: 0, order: [] }]]
         : [];
     }),
@@ -363,7 +370,7 @@ function madeCharacter(
   picks: Record<string, Picked>,
   identity: Record<string, string>,
 ) {
-  if (!system.creation) return undefined;
+  if (!system.creation) return;
   const made = creationResult(system, scores, picks);
   for (const { field } of system.creation.identity?.fields ?? [])
     made.data[field] = (identity[field] ?? "").trim();
@@ -383,11 +390,11 @@ function deriveCreation({
   existingCharacters,
 }: {
   system: GameSystem;
-  kind: "pc" | "npc";
+  kind: "npc" | "pc";
   picks: Record<string, Picked>;
   existingCharacters: CharacterView[];
 }) {
-  const creation = system.creation;
+  const {creation} = system;
   const choiceData = Object.fromEntries(
     (creation?.choices ?? []).flatMap((choice) => {
       const option = choice.options.find((item) => item.id === picks[choice.id]?.option);
@@ -425,11 +432,11 @@ function deriveCreation({
 /** One of the choices made while creating a character, with a note when it repeats another PC's. */
 function CreationChoice({
   note,
-  ...props
+  ...properties
 }: ComponentProps<typeof ChoiceField> & { note: string | undefined }) {
   return (
     <>
-      <ChoiceField {...props} />
+      <ChoiceField {...properties} />
       {note && <output className="muted">{note}</output>}
     </>
   );
@@ -440,11 +447,11 @@ function KindField({
   kind,
   onChange,
 }: {
-  kind: "pc" | "npc";
-  onChange: (kind: "pc" | "npc") => void;
+  kind: "npc" | "pc";
+  onChange: (kind: "npc" | "pc") => void;
 }) {
-  const ctx = useCampaign();
-  if (ctx.commands.permits(newNpc, {}) !== true) return null;
+  const context = useCampaign();
+  if (context.commands.permits(newNpc, {}) !== true) return null;
   return (
     <div className="field field-inline">
       Type
@@ -517,7 +524,7 @@ function NewCharacter({
           <input
             {...input}
             value={name}
-            onInput={(event) => setName(event.currentTarget.value)}
+            onInput={(event) => { setName(event.currentTarget.value); }}
             // The field is the dialog's one input.
             // react-doctor-disable-next-line react-doctor/no-autofocus
             autoFocus
@@ -576,8 +583,8 @@ function useNewCharacter(
   initialFolder: string | undefined,
   onDone: () => void,
 ) {
-  const ctx = useCampaign();
-  const [kind, setKind] = useState<"pc" | "npc">("pc");
+  const context = useCampaign();
+  const [kind, setKind] = useState<"npc" | "pc">("pc");
   const [name, setName] = useState("");
   const [identity, setIdentity] = useState<Record<string, string>>({});
   const [relationship, setRelationship] = useState<RelationshipDraft>({
@@ -587,7 +594,7 @@ function useNewCharacter(
   });
   const [folder, setFolder] = useState(initialFolder ?? "");
   // The guided flow: the system's choices at creation, then ability scores.
-  const creation = system.creation;
+  const {creation} = system;
   const [picks, setPicks] = useState<Record<string, Picked>>(() => initialPicks(system));
   const [method, setMethod] = useState<ScoreMethod>(() =>
     creation ? scoreMethods(creation.scores)[0]!.id : "manual",
@@ -620,14 +627,14 @@ function useNewCharacter(
       choice={choice}
       value={picks[choice.id] ?? emptyPick()}
       note={repeat?.field === choice.field ? repeat.note : undefined}
-      onChange={(p) => setPicks({ ...picks, [choice.id]: p })}
+      onChange={(p) => { setPicks({ ...picks, [choice.id]: p }); }}
     />
   );
   const submit = () => {
     if (!ready) return;
-    if (kind === "npc") ctx.execute(newNpc, { name, folder: folder || undefined });
+    if (kind === "npc") context.execute(newNpc, { name, folder: folder || undefined });
     else {
-      ctx.execute(newCharacter, {
+      context.execute(newCharacter, {
         name,
         classId: String(choiceData[CLASS_FIELD] ?? ""),
         made: madeCharacter(system, scores, picks, identity),
@@ -650,9 +657,7 @@ function useNewCharacter(
     setFolder,
     creation,
     choiceData,
-    choices,
     existingPcs,
-    repeat,
     startingRelationship,
     scoreRule,
     hints,

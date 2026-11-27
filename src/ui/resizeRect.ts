@@ -6,7 +6,7 @@ export interface Rect {
 }
 
 /** Which edge or corner is being dragged: compass points, n = top. */
-export type ResizeDir = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+export type ResizeDir = "e" | "n" | "ne" | "nw" | "s" | "se" | "sw" | "w";
 
 export const RESIZE_DIRS: ResizeDir[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
 

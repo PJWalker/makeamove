@@ -1,4 +1,4 @@
-import type { FormEvent, ReactNode } from "react";
+import type { ReactNode, SubmitEvent } from "react";
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import {
   IconAdd,
@@ -17,7 +17,8 @@ import { importFromFolder } from "../campaign/folderBackup";
 import { canUseFolders } from "../platform/files";
 import { store } from "../lib/store";
 import { device, setDeviceName } from "../platform/device";
-import { campaigns, registryReady, type CampaignSummary } from "../campaign/registry";
+import { campaigns, registryReady  } from "../campaign/registry";
+import type {CampaignSummary} from "../campaign/registry";
 import { getSystem, listSystems, NO_SYSTEM_ID } from "../systems";
 import { Button } from "../ui/Button";
 import { ContextMenu } from "../ui/ContextMenu";
@@ -29,7 +30,7 @@ import { CaveBackdrop } from "./CaveBackdrop";
 const relative = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 
 function ago(ts: number): string {
-  const mins = Math.round((ts - Date.now()) / 60000);
+  const mins = Math.round((ts - Date.now()) / 60_000);
   if (mins > -60) return relative.format(mins, "minute");
   const hours = Math.round(mins / 60);
   if (hours > -24) return relative.format(hours, "hour");
@@ -46,7 +47,7 @@ let shownOrder: string[] | null = null;
 
 function stableOrder(list: CampaignSummary[]): CampaignSummary[] {
   if (shownOrder) {
-    const rank = new Map(shownOrder.map((id, i) => [id, i]));
+    const rank = new Map(shownOrder.map((id, index) => [id, index]));
     list = [...list].sort((a, b) => (rank.get(a.id) ?? -1) - (rank.get(b.id) ?? -1));
   }
   shownOrder = list.map((c) => c.id);
@@ -60,8 +61,8 @@ async function runBackup(act: () => Promise<unknown>) {
   backupError.value = null;
   try {
     await act();
-  } catch (e) {
-    backupError.value = e instanceof Error ? e.message : String(e);
+  } catch (error) {
+    backupError.value = error instanceof Error ? error.message : String(error);
   }
 }
 
@@ -71,7 +72,7 @@ export function Lobby({ error }: { error: string | null }) {
   const invite = useQuery(pendingInvite);
   const failed = useQuery(backupError);
   const [creating, setCreating] = useState(false);
-  const create = () => setCreating(true);
+  const create = () => { setCreating(true); };
 
   return (
     <main className="lobby">
@@ -87,10 +88,9 @@ export function Lobby({ error }: { error: string | null }) {
           </p>
         )}
 
-        {!ready ? null : list.length === 0 ? (
-          <Welcome onCreate={create} />
-        ) : (
-          <section className="panel lobby-section" aria-labelledby="your-campaigns">
+        {ready && list.length === 0 && <Welcome onCreate={create} />}
+        {ready && list.length > 0 && (
+          <section className="panel window lobby-section" aria-labelledby="your-campaigns">
             <div className="lobby-section-header">
               <h2 id="your-campaigns" className="eyebrow">
                 Your Campaigns
@@ -114,7 +114,7 @@ export function Lobby({ error }: { error: string | null }) {
         )}
         {ready && <ImportActions />}
 
-        {creating && <NewCampaignDialog onClose={() => setCreating(false)} />}
+        {creating && <NewCampaignDialog onClose={() => { setCreating(false); }} />}
         {invite && <JoinInviteDialog invite={invite} />}
       </div>
     </main>
@@ -186,13 +186,13 @@ function LobbyModal({
   // In a layout effect, so a menu item's morph catches it (ui/morph.ts).
   useLayoutEffect(() => {
     const d = dialog.current;
-    if (d) showFromOrigin(d, () => d.showModal());
+    if (d) showFromOrigin(d, () => { d.showModal(); });
   }, []);
 
   return (
     <dialog
       ref={dialog}
-      className="lobby-modal panel"
+      className="lobby-modal panel window"
       aria-labelledby={titleId}
       onCancel={(e) => {
         e.preventDefault();
@@ -211,13 +211,13 @@ function LobbyModal({
 /** Closes the modal the event's control sits in, shrinking it back into what opened it. */
 function closeModal(e: { currentTarget: Element }) {
   const d = e.currentTarget.closest("dialog");
-  if (d) void leave(d, () => d.close());
+  if (d) void leave(d, () => { d.close(); });
 }
 
 function CampaignRow({ c }: { c: CampaignSummary }) {
   const [confirming, setConfirming] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const trigger = menuTrigger((x, y) => setMenu({ x, y }));
+  const trigger = menuTrigger((x, y) => { setMenu({ x, y }); });
 
   return (
     <li className="campaign-row">
@@ -225,7 +225,7 @@ function CampaignRow({ c }: { c: CampaignSummary }) {
         type="button"
         className="campaign-open"
         data-campaign-id={c.id}
-        onClick={() => goToCampaign(c.id)}
+        onClick={() => { goToCampaign(c.id); }}
         {...trigger}
       >
         <span className="campaign-name">{c.name}</span>
@@ -249,16 +249,16 @@ function CampaignRow({ c }: { c: CampaignSummary }) {
               label: "Delete…",
               Icon: IconDelete,
               danger: true,
-              onSelect: () => setConfirming(true),
+              onSelect: () => { setConfirming(true); },
             },
           ]}
-          onClose={() => setMenu(null)}
+          onClose={() => { setMenu(null); }}
         />
       )}
       {confirming && (
         <DeleteCampaignDialog
           campaignName={c.name}
-          onClose={() => setConfirming(false)}
+          onClose={() => { setConfirming(false); }}
           onConfirm={() => void deleteLocalCampaign(c.id)}
         />
       )}
@@ -277,25 +277,23 @@ function DeleteCampaignDialog({
 }) {
   return (
     <LobbyModal title="Delete Campaign?" onClose={onClose}>
-      <>
-        <p>
-          Remove <strong>{campaignName}</strong> from this device? This cannot be undone.
-        </p>
-        <div className="form-actions">
-          <Button variant="ghost" autoFocus onClick={closeModal}>
-            Cancel
-          </Button>
-          <Button
-            variant="danger"
-            onClick={(e) => {
-              onConfirm();
-              closeModal(e);
-            }}
-          >
-            Delete from This Device
-          </Button>
-        </div>
-      </>
+      <p>
+        Remove <strong>{campaignName}</strong> from this device? This cannot be undone.
+      </p>
+      <div className="form-actions">
+        <Button variant="ghost" autoFocus onClick={closeModal}>
+          Cancel
+        </Button>
+        <Button
+          variant="danger"
+          onClick={(e) => {
+            onConfirm();
+            closeModal(e);
+          }}
+        >
+          Delete from This Device
+        </Button>
+      </div>
     </LobbyModal>
   );
 }
@@ -307,7 +305,7 @@ function NewCampaignDialog({ onClose }: { onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const system = listSystems().find((s) => s.id === systemId);
 
-  async function submit(e: FormEvent<HTMLFormElement>) {
+  async function submit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!name.trim() || !yourName.trim() || !system) return;
     setBusy(true);
@@ -322,8 +320,9 @@ function NewCampaignDialog({ onClose }: { onClose: () => void }) {
         <label className="field">
           Campaign name
           <input
+            name="name"
             value={name}
-            onInput={(e) => setName(e.currentTarget.value)}
+            onInput={(e) => { setName(e.currentTarget.value); }}
             placeholder="The Lost Barrows"
             // The field is the dialog's one input.
             // react-doctor-disable-next-line react-doctor/no-autofocus
@@ -331,19 +330,15 @@ function NewCampaignDialog({ onClose }: { onClose: () => void }) {
             required
           />
         </label>
-        <label className="field">
-          Your name
-          <input
-            value={yourName}
-            onInput={(e) => setYourName(e.currentTarget.value)}
-            placeholder="Robin"
-            autoComplete="name"
-            required
-          />
-        </label>
+        <YourNameField value={yourName} onChange={setYourName} />
         <label className="field">
           System
-          <select value={systemId} onChange={(e) => setSystemId(e.currentTarget.value)} required>
+          <select
+            name="system"
+            value={systemId}
+            onChange={(e) => { setSystemId(e.currentTarget.value); }}
+            required
+          >
             <option value="" disabled>
               Choose a system
             </option>
@@ -374,7 +369,7 @@ function NewCampaignDialog({ onClose }: { onClose: () => void }) {
 function JoinInviteDialog({ invite }: { invite: NonNullable<typeof pendingInvite.value> }) {
   const [yourName, setYourName] = useState(device.value.name);
 
-  function submit(e: FormEvent<HTMLFormElement>) {
+  function submit(e: SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!yourName.trim()) return;
     setDeviceName(yourName.trim());
@@ -385,32 +380,45 @@ function JoinInviteDialog({ invite }: { invite: NonNullable<typeof pendingInvite
 
   return (
     <LobbyModal title="Join a Campaign" onClose={() => (pendingInvite.value = null)}>
-      <>
-        <p>You&apos;ve been invited to a campaign.</p>
-        <form onSubmit={(e) => submit(e)}>
-          <label className="field">
-            Your name
-            <input
-              value={yourName}
-              onInput={(e) => setYourName(e.currentTarget.value)}
-              placeholder="Robin"
-              autoComplete="name"
-              // The field is the dialog's one input.
-              // react-doctor-disable-next-line react-doctor/no-autofocus
-              autoFocus
-              required
-            />
-          </label>
-          <div className="form-actions">
-            <Button variant="ghost" onClick={closeModal}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" disabled={!yourName.trim()}>
-              Join
-            </Button>
-          </div>
-        </form>
-      </>
+      <p>You&apos;ve been invited to a campaign.</p>
+      <form onSubmit={(e) => { submit(e); }}>
+        {/* The field is the dialog's one input. */}
+        <YourNameField value={yourName} onChange={setYourName} autoFocus />
+        <div className="form-actions">
+          <Button variant="ghost" onClick={closeModal}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" disabled={!yourName.trim()}>
+            Join
+          </Button>
+        </div>
+      </form>
     </LobbyModal>
+  );
+}
+
+/** The name this device goes by, asked for when making or joining a campaign. */
+function YourNameField({
+  value,
+  onChange,
+  autoFocus = false,
+}: {
+  value: string;
+  onChange: (name: string) => void;
+  autoFocus?: boolean;
+}) {
+  return (
+    <label className="field">
+      Your name
+      <input
+        value={value}
+        onInput={(e) => { onChange(e.currentTarget.value); }}
+        placeholder="Robin"
+        autoComplete="name"
+        // react-doctor-disable-next-line react-doctor/no-autofocus
+        autoFocus={autoFocus}
+        required
+      />
+    </label>
   );
 }

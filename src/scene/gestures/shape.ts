@@ -1,7 +1,9 @@
 import { tokensCovered } from "../geometry";
-import type { Point } from "../grid";
-import { formatDistance } from "../measure";
-import { SHAPE_WIDTH, TEMPLATE_STYLE, type SceneTools } from "../tools";
+import { snapToLattice  } from "../grid";
+import type {Point} from "../grid";
+import { formatDistance, toUnits } from "../measure";
+import { SHAPE_WIDTH, TEMPLATE_STYLE  } from "../tools";
+import type {SceneTools} from "../tools";
 import type {
   DraggedShapeKind,
   Layer,
@@ -12,7 +14,7 @@ import type {
 } from "../types";
 import type { Gesture, Placement, ToolContext, ToolPress } from "./types";
 
-type Keys = { shiftKey: boolean; altKey: boolean };
+interface Keys { shiftKey: boolean; altKey: boolean }
 
 /**
  * The Shapes tool: drag out the chosen shape, its size shown as it goes, or
@@ -42,7 +44,7 @@ export interface ShapePlan {
   /** Which sort of thing this is: a polygon's click for another sort starts afresh. */
   key: string;
   style: ShapeStyle;
-  place(geo: Transform & ShapeGeometry): void;
+  place(geo: ShapeGeometry & Transform): void;
 }
 
 /**
@@ -59,7 +61,7 @@ export function placeShape(
   if (kind !== "polygon")
     return dragShape(c, e, world, kind, {
       style: plan.style,
-      place: (t) => plan.place({ ...t, shape: kind }),
+      place: (t) => { plan.place({ ...t, shape: kind }); },
     });
   c.polygon.add(
     {
@@ -67,7 +69,7 @@ export function placeShape(
       paint: plan.style,
       width: plan.style.width,
       layer: plan.style.layer,
-      place: (frame) => plan.place({ shape: "polygon", ...frame }),
+      place: (frame) => { plan.place({ shape: "polygon", ...frame }); },
     },
     world,
     e,
@@ -96,7 +98,7 @@ export function placementPlan(c: ToolContext, fixed: Placement): DragPlan {
         template: true,
       })[0]!;
       c.placing.value = null;
-      const tokens = c.allElements().filter((el) => el.type === "token");
+      const tokens = c.allElements().filter((element) => element.type === "token");
       fixed.onPlaced({ id, covered: tokensCovered({ ...t, shape: fixed.shape }, tokens) });
     },
   };
@@ -121,7 +123,7 @@ export function dragShape(
   show(world, e);
   return {
     kind: "shape",
-    move: (e, world) => show(world, e),
+    move: (e, world) => { show(world, e); },
     end(e) {
       c.renderer.draft = null;
       c.renderer.invalidate("overlay", "presence");
@@ -135,14 +137,9 @@ export function dragShape(
 
 /** Where a shape starts: a grid corner for squares, a cell centre or corner for the rest (Alt places freely). */
 function snapShapePoint(c: ToolContext, p: Point, shape: DraggedShapeKind, e: PointerEvent): Point {
-  const grid = c.renderer.grid;
+  const {grid} = c.renderer;
   if (grid.type !== "square" || e.altKey) return p;
-  const half = grid.size / 2;
-  const step = shape === "rect" ? grid.size : half;
-  return {
-    x: grid.offsetX + Math.round((p.x - grid.offsetX) / step) * step,
-    y: grid.offsetY + Math.round((p.y - grid.offsetY) / step) * step,
-  };
+  return snapToLattice(grid, p, shape === "rect" ? grid.size : grid.size / 2);
 }
 
 /**
@@ -158,10 +155,10 @@ function shapeFrom(
   p: Point,
   e: Keys,
 ): Transform & { label: string } {
-  const grid = c.renderer.grid;
+  const {grid} = c.renderer;
   const step = grid.type === "none" || e.altKey ? 0 : grid.size;
   const round = (n: number) => (step ? Math.max(step, Math.round(n / step) * step) : n);
-  const units = (n: number) => formatDistance(grid, (n / grid.size) * grid.unit);
+  const units = (n: number) => formatDistance(grid, toUnits(grid, n));
   const dx = p.x - s.x;
   const dy = p.y - s.y;
   if (shape === "circle") {
@@ -200,14 +197,14 @@ function shapeFrom(
   // Lines and cones run from the start towards the pointer.
   const angle = Math.hypot(dx, dy) > 0 ? Math.atan2(dy, dx) : 0;
   const rot = e.shiftKey ? Math.round(angle / (Math.PI / 4)) * (Math.PI / 4) : angle;
-  const len = fixed ? fixed.length : round(Math.hypot(dx, dy));
-  const thick = shape === "cone" ? len : fixed ? fixed.width : grid.size;
+  const length = fixed ? fixed.length : round(Math.hypot(dx, dy));
+  const thick = shape === "cone" ? length : (fixed ? fixed.width : grid.size);
   return {
-    x: s.x + (Math.cos(rot) * len) / 2,
-    y: s.y + (Math.sin(rot) * len) / 2,
-    w: len,
+    x: s.x + (Math.cos(rot) * length) / 2,
+    y: s.y + (Math.sin(rot) * length) / 2,
+    w: length,
     h: thick,
     rot,
-    label: units(len),
+    label: units(length),
   };
 }

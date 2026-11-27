@@ -1,11 +1,12 @@
 import { Editor, Extension } from "@tiptap/core";
 import Placeholder from "@tiptap/extension-placeholder";
-import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
-import { contentFromText, emptyChatContent, type ChatContent } from "../features/chat/content";
+import { useEffect, useLayoutEffect, useRef  } from "react";
+import type {RefObject} from "react";
+import { contentFromText, emptyChatContent  } from "../features/chat/content";
+import type {ChatContent} from "../features/chat/content";
 import { LINK_NODE } from "../features/notes/links";
 import type { Campaign } from "../campaign/campaign";
 import { registerLinkDrop } from "../workspace/entityDrag";
-import { chatContentExtensions } from "./chatContentExtensions";
 
 /*
  * The chat's message box stores Tiptap JSON. Enter sends; Shift+Enter starts
@@ -13,10 +14,12 @@ import { chatContentExtensions } from "./chatContentExtensions";
  */
 
 import { useCampaign } from "../workspace/campaignContext";
+import { isString } from "../lib/guards";
+import { chatContentExtensions } from "./chatContentExtensions";
 
 export interface ChatInputHandle {
   /** Replace the current document with text or Tiptap JSON. */
-  set(content: string | ChatContent): void;
+  set(content: ChatContent | string): void;
   focus(): void;
 }
 
@@ -38,7 +41,7 @@ export function ChatInput({
   label: string;
   invalid: boolean;
   className?: string;
-  initialContent?: string | ChatContent;
+  initialContent?: ChatContent | string;
   /** The text as it changes, links as tokens. */
   onChange: (content: ChatContent) => void;
   onEnter: () => void;
@@ -47,17 +50,17 @@ export function ChatInput({
   onEscape: () => void;
   handleRef: RefObject<ChatInputHandle | null>;
 }) {
-  const ctx = useCampaign();
-  const hostRef = useRef<HTMLDivElement>(null);
+  const context = useCampaign();
+  const hostReference = useRef<HTMLDivElement>(null);
   const firstContent = useRef(initialContent);
   // Callbacks change every render; the editor reads the latest.
-  const cb = useRef({ onChange, onEnter, onUp, onEscape });
+  const callback = useRef({ onChange, onEnter, onUp, onEscape });
   useLayoutEffect(() => {
-    cb.current = { onChange, onEnter, onUp, onEscape };
+    callback.current = { onChange, onEnter, onUp, onEscape };
   });
 
   useEffect(() => {
-    const host = hostRef.current;
+    const host = hostReference.current;
     if (!host) return;
     const keys = Extension.create({
       name: "chatKeys",
@@ -68,17 +71,17 @@ export function ChatInput({
         return {
           Enter: () => {
             if (listOpen()) return false;
-            cb.current.onEnter();
+            callback.current.onEnter();
             return true;
           },
           ArrowUp: ({ editor }) => {
             if (!editor.isEmpty || listOpen()) return false;
-            cb.current.onUp();
+            callback.current.onUp();
             return true;
           },
           Escape: ({ editor }) => {
             if (editor.isEmpty || listOpen()) return false;
-            cb.current.onEscape();
+            callback.current.onEscape();
             return true;
           },
         };
@@ -86,7 +89,7 @@ export function ChatInput({
     });
     const editor = new Editor({
       element: host,
-      extensions: [...chatContentExtensions(ctx), Placeholder.configure({ placeholder }), keys],
+      extensions: [...chatContentExtensions(context), Placeholder.configure({ placeholder }), keys],
       editorProps: {
         attributes: {
           class: "chat-input-body",
@@ -95,21 +98,21 @@ export function ChatInput({
           "aria-multiline": "true",
         },
       },
-      onUpdate: ({ editor: ed }) => cb.current.onChange(ed.getJSON()),
+      onUpdate: ({ editor: ed }) => { callback.current.onChange(ed.getJSON()); },
     });
     const initial =
-      typeof firstContent.current === "string"
+      isString(firstContent.current)
         ? contentFromText(firstContent.current)
         : (firstContent.current ?? emptyChatContent());
     editor.commands.setContent(initial);
-    cb.current.onChange(editor.getJSON());
+    callback.current.onChange(editor.getJSON());
     handleRef.current = {
       set: (content) => {
         editor.commands.setContent(
-          typeof content === "string" ? contentFromText(content) : content,
+          isString(content) ? contentFromText(content) : content,
         );
         editor.commands.focus("end");
-        cb.current.onChange(editor.getJSON());
+        callback.current.onChange(editor.getJSON());
       },
       focus: () => editor.commands.focus(),
     };
@@ -134,7 +137,7 @@ export function ChatInput({
       handleRef.current = null;
       editor.destroy();
     };
-  }, [campaign, ctx, handleRef, label, placeholder]);
+  }, [campaign, context, handleRef, label, placeholder]);
 
-  return <div ref={hostRef} className={className} aria-invalid={invalid} />;
+  return <div ref={hostReference} className={className} aria-invalid={invalid} />;
 }
