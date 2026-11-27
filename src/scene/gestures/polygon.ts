@@ -82,7 +82,7 @@ export class PolygonDraft {
 
   /** Put down the polygon being placed, if it has at least three corners. */
   finish() {
-    const {draft} = this;
+    const { draft } = this;
     this.draft = null;
     this.c.renderer.draft = null;
     this.c.renderer.invalidate("overlay");

@@ -79,9 +79,18 @@ export interface SubdocField {
 }
 
 export type Field =
-  CollectionField<Field, unknown> | CounterField | ListField<unknown> | LwwField<unknown, boolean> | RecordField<Shape> | SubdocField | TextField | VariantField<string, Shape, Record<string, Shape>>;
+  | CollectionField<Field, unknown>
+  | CounterField
+  | ListField<unknown>
+  | LwwField<unknown, boolean>
+  | RecordField<Shape>
+  | SubdocField
+  | TextField
+  | VariantField<string, Shape, Record<string, Shape>>;
 
-export interface Shape { readonly [key: string]: Field }
+export interface Shape {
+  readonly [key: string]: Field;
+}
 
 /** Checks a collection item as it's read: its value, or why it can't be used. */
 export type Parse<I extends Field, T> = (item: Item<I>, id: string) => Invalid | T;
@@ -487,7 +496,9 @@ function transactOn(y: Slot, function_: () => void) {
 
 function observeDeep(y: Slot, function_: () => void): () => void {
   y.observeDeep(function_);
-  return () => { y.unobserveDeep(function_); };
+  return () => {
+    y.unobserveDeep(function_);
+  };
 }
 
 // Handles
@@ -538,7 +549,9 @@ export class Rec<S extends Shape> implements Observable {
 
   /** Set several value fields at once; `undefined` removes one. Unchanged values aren't rewritten. */
   patch(values: Patch<S>) {
-    this.transact(() => { patchSlots(this.y, this.shape, values); });
+    this.transact(() => {
+      patchSlots(this.y, this.shape, values);
+    });
   }
 
   /** Add to a counter. */
@@ -600,13 +613,13 @@ export class VariantRec<
 
   /** The fields of its case beside the base ones. */
   private fields(): Shape {
-    const {tag} = this;
+    const { tag } = this;
     return tag === undefined ? this.shape : { ...this.shape, ...this.variant.cases[tag] };
   }
 
   /** Every field of its case as plain values, its tag included; undefined for an unknown tag. */
   readCase(): PlainVariant<Tag, B, C> | undefined {
-    const {tag} = this;
+    const { tag } = this;
     if (tag === undefined) return undefined;
     return readPlain(this.y, this.fields(), { [this.variant.tag]: tag }) as PlainVariant<Tag, B, C>;
   }
@@ -614,7 +627,9 @@ export class VariantRec<
   /** Set any of its base or case fields; `undefined` removes one, and others are ignored. */
   patchCase(values: Readonly<Record<string, unknown>>) {
     const shape = this.fields();
-    this.transact(() => { patchSlots(this.y, shape, values, this.variant.tag); });
+    this.transact(() => {
+      patchSlots(this.y, shape, values, this.variant.tag);
+    });
   }
 }
 
@@ -717,7 +732,9 @@ export class Coll<I extends Field, T = Item<I>> implements Observable {
   }
 
   clear() {
-    this.transact(() => { this.y.clear(); });
+    this.transact(() => {
+      this.y.clear();
+    });
   }
 
   /** Call `fn` on any change to it or anything inside it. Returns a function that stops it. */
@@ -767,7 +784,9 @@ export class List<T> implements Observable {
 
   observe(function_: () => void): () => void {
     this.y.observe(function_);
-    return () => { this.y.unobserve(function_); };
+    return () => {
+      this.y.unobserve(function_);
+    };
   }
 }
 

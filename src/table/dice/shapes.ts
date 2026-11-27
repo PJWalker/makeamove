@@ -11,8 +11,8 @@ import {
   TetrahedronGeometry,
   Vector3,
 } from "three";
-import { discHull  } from "./physics";
-import type {DieHull} from "./physics";
+import { discHull } from "./physics";
+import type { DieHull } from "./physics";
 
 /*
  * The solids the dice are made of: their geometry, the hull the physics rolls,
@@ -92,7 +92,9 @@ function planesOf(geometry: BufferGeometry): Plane[] {
   const planes: Plane[] = [];
   geometry.clearGroups();
   for (let offset = 0; offset < position.count; offset += 3) {
-    const [a, b, c] = [0, 1, 2].map((index_) => new Vector3().fromBufferAttribute(position, offset + index_));
+    const [a, b, c] = [0, 1, 2].map((index_) =>
+      new Vector3().fromBufferAttribute(position, offset + index_),
+    );
     const normal = b!.clone().sub(a!).cross(c!.clone().sub(a!)).normalize();
     let index = planes.findIndex((plane) => plane.normal.distanceTo(normal) < 1e-4);
     if (index < 0) index = planes.push({ normal, points: [] }) - 1;
@@ -194,7 +196,9 @@ export const faceValue = (first: number, index: number, sides: number) =>
 
 /** The number the first face shows, so the face `rotation` turns most towards the viewer shows `value`. */
 export function firstFaceFor(sides: number, value: number, rotation: Quaternion) {
-  const towards = shapeFor(sides).faces.map((face) => face.normal.clone().applyQuaternion(rotation).z);
+  const towards = shapeFor(sides).faces.map(
+    (face) => face.normal.clone().applyQuaternion(rotation).z,
+  );
   const top = towards.indexOf(Math.max(...towards));
   return ((((value - 1 - top) % sides) + sides) % sides) + 1;
 }

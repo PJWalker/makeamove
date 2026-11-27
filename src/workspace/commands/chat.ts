@@ -1,5 +1,5 @@
-import { commandText, contentForCommand  } from "../../features/chat/content";
-import type {ChatContent} from "../../features/chat/content";
+import { commandText, contentForCommand } from "../../features/chat/content";
+import type { ChatContent } from "../../features/chat/content";
 import {
   counterValue,
   isPinned,
@@ -7,10 +7,9 @@ import {
   saveEdit,
   setCounter,
   setPinned,
-  workTimer
-  
+  workTimer,
 } from "../../features/chat/messages";
-import type {TimerAction} from "../../features/chat/messages";
+import type { TimerAction } from "../../features/chat/messages";
 import { rerollDie, rerollMessage, toggleRollDie } from "../../features/chat/rollState";
 import {
   addToRoll,
@@ -29,14 +28,8 @@ import {
   unquote,
   whisperTarget,
 } from "../../features/chat/slash";
-import {
-  canDelete,
-  canEditMessage,
-  canWork
-  
-  
-} from "../../features/chat/types";
-import type {ChatMessage, RollVisibility} from "../../features/chat/types";
+import { canDelete, canEditMessage, canWork } from "../../features/chat/types";
+import type { ChatMessage, RollVisibility } from "../../features/chat/types";
 import { seededDie } from "../../features/dice/notation";
 import type { TrayPick } from "../../features/dice/pool";
 import { systemOf } from "../../features/characters/api";
@@ -55,8 +48,8 @@ import type { Availability } from "../../kernel/commands";
 import { device } from "../../platform/device";
 import { IconDelete, IconDice, IconPin, IconRename } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
-import { command   } from "./types";
-import type {AnyTableCommand, SlashForm} from "./types";
+import { command } from "./types";
+import type { AnyTableCommand, SlashForm } from "./types";
 
 /*
  * The chat: what can be typed in it, and what can be done with messages once
@@ -259,7 +252,9 @@ export const session = command<{ action: "end" | "start" }>({
       },
     },
   ],
-  run: ({ campaign }, { action }) => { markSession(campaign, action); },
+  run: ({ campaign }, { action }) => {
+    markSession(campaign, action);
+  },
 });
 
 export const chatHelp = command({
@@ -267,16 +262,16 @@ export const chatHelp = command({
   params: isNothing,
   title: "Chat Commands",
   transact: false,
-  slash: [
-    { names: ["help", "?"], usage: "/help", help: "List these commands", parse: () => {} },
-  ],
-  run: (context) => { context.table.noteInChat(
+  slash: [{ names: ["help", "?"], usage: "/help", help: "List these commands", parse: () => {} }],
+  run: (context) => {
+    context.table.noteInChat(
       [
         "Commands:",
         ...slashForms(context).map(({ form }) => `${form.usage}  ${form.help}`),
         "Formulas: 2d6+1, 4d6kh3, 2d20kl1, d6!, 1d8+2[STR]",
       ].join("\n"),
-    ); },
+    );
+  },
 });
 
 /** Every way to type a command that this player may run, in the order registered. */
@@ -359,7 +354,9 @@ export const editMessage = command<{ id: string }>({
   transact: false,
   permission: ownMessage,
   menu: { chatMessage: (_, { id }) => [{ params: { id } }] },
-  run: (context, { id }) => { context.table.editingMessage.set(id); },
+  run: (context, { id }) => {
+    context.table.editingMessage.set(id);
+  },
 });
 
 export const saveMessageEdit = command<{ id: string; content: ChatContent }>({
@@ -367,7 +364,9 @@ export const saveMessageEdit = command<{ id: string; content: ChatContent }>({
   params: objectOf({ id: isString, content: isContent }),
   title: "Save Edit",
   permission: ownMessage,
-  run: ({ campaign }, { id, content }) => { saveEdit(campaign, id, content); },
+  run: ({ campaign }, { id, content }) => {
+    saveEdit(campaign, id, content);
+  },
 });
 
 export const pinChatMessage = command<{ id: string; pinned: boolean }>({
@@ -381,7 +380,9 @@ export const pinChatMessage = command<{ id: string; pinned: boolean }>({
   menu: {
     chatMessage: (context, { id }) => [{ params: { id, pinned: !isPinned(context.campaign, id) } }],
   },
-  run: ({ campaign }, { id, pinned }) => { setPinned(campaign, id, pinned); },
+  run: ({ campaign }, { id, pinned }) => {
+    setPinned(campaign, id, pinned);
+  },
 });
 
 export const deleteMessage = command<{ id: string }>({
@@ -397,7 +398,9 @@ export const deleteMessage = command<{ id: string }>({
   },
   undoGroup: false,
   menu: { chatMessage: (_, { id }) => [{ params: { id } }] },
-  run: ({ campaign }, { id }) => { removeMessage(campaign, id); },
+  run: ({ campaign }, { id }) => {
+    removeMessage(campaign, id);
+  },
 });
 
 export const timerControl = command<{ id: string; action: TimerAction }>({
@@ -453,7 +456,8 @@ export const bumpSystemCounter = command<{ counter: string; by: number }>({
   run: async (context, { counter, by }) => {
     const def = systemCounter(context, counter);
     const m = def && (await ensureSystemCounter(context.campaign, def));
-    if (m?.kind === "counter") setCounter(context.campaign, m, counterValue(context.campaign, m) + by);
+    if (m?.kind === "counter")
+      setCounter(context.campaign, m, counterValue(context.campaign, m) + by);
   },
 });
 
@@ -497,7 +501,9 @@ export const addToChatRoll = command<{ id: string; pick: TrayPick }>({
   title: "Add to Roll",
   permission: works,
   undoGroup: false,
-  run: ({ campaign }, { id, pick }) => { addToRoll(campaign, id, pick); },
+  run: ({ campaign }, { id, pick }) => {
+    addToRoll(campaign, id, pick);
+  },
 });
 
 export const chatCommands = [

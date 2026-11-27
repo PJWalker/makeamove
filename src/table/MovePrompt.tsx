@@ -11,8 +11,8 @@ import { inRange } from "../scene/measure";
 import { needsChoice } from "../features/characters/moves";
 import { getCharacter, systemOf } from "../features/characters/api";
 import { RichTextView } from "../workspace/RichTextView";
-import type {RichText} from "../data/richText";
-import { emptyRichText, plainText  } from "../data/richText";
+import type { RichText } from "../data/richText";
+import { emptyRichText, plainText } from "../data/richText";
 import { useQuery } from "../ui/useQuery";
 import type { ActionDef, AreaSpec } from "../systems/types";
 import type { MoveTarget } from "../features/chat/types";
@@ -40,7 +40,11 @@ const MARGIN = 8;
 /** A button this close to the bottom (the hotbar) gets the bubble above it. */
 const BOTTOM_BAND = 120;
 
-interface Request { kind: "ask" | "target"; moveId: string; characterId: string }
+interface Request {
+  kind: "ask" | "target";
+  moveId: string;
+  characterId: string;
+}
 
 const cancel = (context: CampaignContext) => {
   context.campaign.moves.clear();
@@ -81,7 +85,13 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
         <span className="eyebrow">
           {move.name} · {character.name}
         </span>
-        <Button variant="icon" label="Cancel" onClick={() => { cancel(ctx); }}>
+        <Button
+          variant="icon"
+          label="Cancel"
+          onClick={() => {
+            cancel(ctx);
+          }}
+        >
           <IconClose />
         </Button>
       </div>
@@ -109,7 +119,10 @@ export function MovePrompt({ campaign }: { campaign: Campaign }) {
 function useMovePrompt(campaign: Campaign) {
   const context = useCampaign();
   const target = useSelector(context.campaign.moves.actor, (snapshot) => snapshot.context.targets);
-  const requestedMove = useSelector(context.campaign.moves.actor, (snapshot) => snapshot.context.ask);
+  const requestedMove = useSelector(
+    context.campaign.moves.actor,
+    (snapshot) => snapshot.context.ask,
+  );
   const live = useMemo((): Request | null => {
     if (target) return { kind: "target", ...target };
     if (requestedMove) return { kind: "ask", ...requestedMove };
@@ -236,9 +249,16 @@ function useMovePrompt(campaign: Campaign) {
     };
     syncTargets();
     const stop = context.campaign.moves.actor.subscribe(syncTargets);
-    return () => { stop.unsubscribe(); };
+    return () => {
+      stop.unsubscribe();
+    };
   }, [context, campaign]);
-  useEffect(() => () => { cancel(context); }, [context]);
+  useEffect(
+    () => () => {
+      cancel(context);
+    },
+    [context],
+  );
 
   // Escape backs out, before the canvas uses it to clear the selection.
   useEffect(() => {
@@ -249,11 +269,15 @@ function useMovePrompt(campaign: Campaign) {
       cancel(context);
     };
     globalThis.addEventListener("keydown", onKey, true);
-    return () => { globalThis.removeEventListener("keydown", onKey, true); };
+    return () => {
+      globalThis.removeEventListener("keydown", onKey, true);
+    };
   }, [context, hasLive]);
 
   const request = shown;
-  const move = request ? systemOf(campaign).actions.find((m) => m.id === request.moveId) : undefined;
+  const move = request
+    ? systemOf(campaign).actions.find((m) => m.id === request.moveId)
+    : undefined;
   const character = request ? getCharacter(campaign, request.characterId) : undefined;
   return { ctx: context, hasLive, ref: reference, req: request, move, character };
 }
@@ -289,11 +313,13 @@ function TargetStep({
     }));
     context.execute(startMove, { characterId, move: move.id, targets: picked });
   };
-  const {area} = spec;
+  const { area } = spec;
   const request = useQuery(context.canvas.areaRequest);
   const placed = useQuery(context.canvas.placedArea);
   const placing = !!request;
-  const placeArea = () => { toggleAreaRequest(context.canvas, area!, characterId); };
+  const placeArea = () => {
+    toggleAreaRequest(context.canvas, area!, characterId);
+  };
   return (
     <div className="move-form">
       <p className="roll-prompt-text">{spec.prompt}</p>

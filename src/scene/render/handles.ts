@@ -1,5 +1,5 @@
-import {  toScreen } from "../camera";
-import type {Camera} from "../camera";
+import { toScreen } from "../camera";
+import type { Camera } from "../camera";
 import { corners } from "../geometry";
 import type { Point } from "../grid";
 import type { Transform } from "../types";

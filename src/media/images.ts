@@ -11,7 +11,9 @@ export interface BlobReference {
 }
 
 /** What an entity (a character, an item, a move) is pictured as: an image, or a built-in icon. */
-export type EntityGraphic = { kind: "icon"; name: string } | { kind: "image"; image: BlobReference };
+export type EntityGraphic =
+  | { kind: "icon"; name: string }
+  | { kind: "image"; image: BlobReference };
 
 /** The entity a token's graphic comes from. */
 export interface EntityGraphicReference {

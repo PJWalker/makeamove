@@ -1,4 +1,3 @@
-
 import type {
   InputEvent as ReactInputEvent,
   KeyboardEvent as ReactKeyboardEvent,
@@ -10,10 +9,9 @@ import { canEdit, getCharacter, listCharacters, systemOf } from "../features/cha
 import {
   relationshipNotes,
   relationshipsOf,
-  relationshipWeb
-  
+  relationshipWeb,
 } from "../features/characters/relationships";
-import type {Relationship} from "../features/characters/relationships";
+import type { Relationship } from "../features/characters/relationships";
 import type { CharacterView } from "../features/characters/types";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
@@ -75,7 +73,12 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
     <section ref={section} className="form-section sheet-section" aria-label="Relationships">
       <header className="sheet-section-header">
         <h3 className="sheet-heading">Relationships</h3>
-        <Button variant="ghost" onClick={() => { context.canvas.dialogRequest.set("relationships"); }}>
+        <Button
+          variant="ghost"
+          onClick={() => {
+            context.canvas.dialogRequest.set("relationships");
+          }}
+        >
           Web
         </Button>
       </header>
@@ -94,7 +97,9 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
                 editable={editable}
                 depth={depth}
                 expanded={open === r.to}
-                onOpenCharacter={() => { context.links.openCharacter(other.id); }}
+                onOpenCharacter={() => {
+                  context.links.openCharacter(other.id);
+                }}
                 onLabelChange={(label) =>
                   context.execute(setRelationship, { from: c.id, to: r.to, label })
                 }
@@ -107,7 +112,9 @@ export function RelationshipsSection({ campaign, c }: { campaign: Campaign; c: C
                     max: depth.max,
                   });
                 }}
-                onToggleNotes={() => { setOpen(open === r.to ? null : r.to); }}
+                onToggleNotes={() => {
+                  setOpen(open === r.to ? null : r.to);
+                }}
                 onRemove={() => context.execute(removeRelationship, { from: c.id, to: r.to })}
               />
             );
@@ -345,8 +352,12 @@ function useRelationshipPicker(
     setActive(0);
     setSuggesting(true);
   };
-  const handleFocus = () => { setSuggesting(adding.trim().length > 0); };
-  const handleBlur = () => { setSuggesting(false); };
+  const handleFocus = () => {
+    setSuggesting(adding.trim().length > 0);
+  };
+  const handleBlur = () => {
+    setSuggesting(false);
+  };
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape" && expanded) {
       event.preventDefault();
@@ -369,7 +380,9 @@ function useRelationshipPicker(
     open: expanded,
     ref: panel,
     anchor: input,
-    onDismiss: () => { setSuggesting(false); },
+    onDismiss: () => {
+      setSuggesting(false);
+    },
   });
 
   return {
@@ -470,7 +483,9 @@ function RelationshipSuggestionList({
             target={target}
             active={matchIndex === index}
             id={`${listId}-${target.id}`}
-            onSelect={() => { onSelect(target.id); }}
+            onSelect={() => {
+              onSelect(target.id);
+            }}
             onPointerDown={onPointerDown}
           />
         ))
@@ -543,7 +558,9 @@ export function RelationshipsDialog({
         <RelationshipWeb
           people={shown}
           edges={edges}
-          onOpenCharacter={(id) => { context.links.openCharacter(id); }}
+          onOpenCharacter={(id) => {
+            context.links.openCharacter(id);
+          }}
         />
       ) : (
         <p className="empty">No relationships yet. Add them from a character’s sheet.</p>

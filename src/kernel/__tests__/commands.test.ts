@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import * as Y from "yjs";
 import { isNothing, isNumber, objectOf } from "../../lib/guards";
 import { undoStack } from "../../data/undo";
-import { callKey, CommandRegistry, GM_ONLY   } from "../commands";
-import type {Command, CommandHost} from "../commands";
+import { callKey, CommandRegistry, GM_ONLY } from "../commands";
+import type { Command, CommandHost } from "../commands";
 import { UndoHistory } from "../undo";
 
 /** A host over one plain document, with a role that tests can change. */

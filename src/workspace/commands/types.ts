@@ -79,7 +79,9 @@ export interface TableCommand<P = void, R = unknown> extends Command<CampaignCon
   /** The calls listed in the palette and pinnable to the hotbar. */
   offers?: (context: CampaignContext) => Offer<P>[];
   /** The calls listed in the context menu of each kind of object it applies to. */
-  menu?: { [K in TargetKind]?: (context: CampaignContext, target: CommandTargets[K]) => Offer<P>[] };
+  menu?: {
+    [K in TargetKind]?: (context: CampaignContext, target: CommandTargets[K]) => Offer<P>[];
+  };
   section?: MenuSection;
   /** Ways to type it in the chat box, like `/r 2d6`. */
   slash?: SlashForm<P>[];

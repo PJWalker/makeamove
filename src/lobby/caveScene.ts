@@ -1,21 +1,8 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 import { seededRandom } from "../lib/seededRandom";
 import { flightPlan } from "./wispFlight";
-import {
-  add,
-  hex,
-  length,
-  MOTION,
-  normalize,
-  scale,
-  sub,
-  tangents,
-  times
-  
-  
-  
-} from "./splat";
-import type {Motion, Splat, Vec3} from "./splat";
+import { add, hex, length, MOTION, normalize, scale, sub, tangents, times } from "./splat";
+import type { Motion, Splat, Vec3 } from "./splat";
 
 /*
  * The lobby's backdrop, as a cloud of Gaussian splats: an adventuring party

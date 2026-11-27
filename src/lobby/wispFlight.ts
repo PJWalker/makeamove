@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-magic-numbers */
 import { seededRandom } from "../lib/seededRandom";
-import { add, scale  } from "./splat";
-import type {Vec3} from "./splat";
+import { add, scale } from "./splat";
+import type { Vec3 } from "./splat";
 
 /*
  * The wizard's wisp doesn't stay put: every so often it flies off down the

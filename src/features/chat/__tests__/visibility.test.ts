@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
 import { contentFromText } from "../content";
 import { roll } from "../../dice/notation";
-import { visibilityOf   } from "../types";
-import type {ChatMessage, RollVisibility} from "../types";
+import { visibilityOf } from "../types";
+import type { ChatMessage, RollVisibility } from "../types";
 
 const base = { id: "m", hlc: "0", author: "pat", name: "Pat" };
 const rollBy = (visibility: RollVisibility): ChatMessage => ({

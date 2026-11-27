@@ -5,20 +5,18 @@ import {
   ExtrudeGeometry,
   Group,
   IcosahedronGeometry,
-  
   Mesh,
   MeshStandardMaterial,
   MeshPhysicalMaterial,
-  
   PlaneGeometry,
   PointLight,
   Shape,
   SphereGeometry,
   TorusGeometry,
   TubeGeometry,
-  Vector3
+  Vector3,
 } from "three";
-import type {Material, Object3D} from "three";
+import type { Material, Object3D } from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import { drawnTexture, kit, part, place } from "../kit";
 import { outline, relief } from "../forms";
@@ -67,7 +65,12 @@ function blade(length: number, width: number, { leaf = 0, material = kit.steel()
   return new Group().add(mesh, place(fuller, [0, length * 0.38, 0.05]));
 }
 
-interface Hilt { guard: number; grip: number; guardMaterial?: Material; gripMaterial?: Material }
+interface Hilt {
+  guard: number;
+  grip: number;
+  guardMaterial?: Material;
+  gripMaterial?: Material;
+}
 
 /** Crossguard, wrapped grip and pommel, hanging below y = 0. */
 function hilt({
@@ -107,7 +110,7 @@ function haft(length: number, material: Material = kit.oak(12), radius = 0.12) {
 
 export function rations() {
   const group = new Group();
-  const meat = part(new SphereGeometry(0.7, 32, 24), kit.lacquer(0xA0_48_2A));
+  const meat = part(new SphereGeometry(0.7, 32, 24), kit.lacquer(0xa0_48_2a));
   meat.scale.set(1.15, 0.9, 0.8);
   group.add(place(meat, [-0.25, 0.2, 0]));
   const bone = kit.ivory();
@@ -155,7 +158,7 @@ export function gear() {
 export function potion() {
   const group = new Group();
   const glass = new MeshPhysicalMaterial({
-    color: 0xE8_F4_FF,
+    color: 0xe8_f4_ff,
     roughness: 0.05,
     transparent: true,
     opacity: 0.35,
@@ -182,8 +185,8 @@ export function potion() {
   const liquid = part(
     new SphereGeometry(0.62, 32, 24),
     new MeshPhysicalMaterial({
-      color: 0xD0_26_3A,
-      emissive: 0x80_10_1E,
+      color: 0xd0_26_3a,
+      emissive: 0x80_10_1e,
       emissiveIntensity: 0.4,
       clearcoat: 1,
       roughness: 0.15,
@@ -208,11 +211,11 @@ function leaf(colour: number, length = 1, width = 0.4) {
 
 export function herbs() {
   const group = new Group();
-  const stems = kit.matte(0x5D_7A_2E, 0.8);
+  const stems = kit.matte(0x5d_7a_2e, 0.8);
   for (const [angle, colour] of [
-    [-0.4, 0x4F_9A_3A],
-    [0, 0x3F_8A_32],
-    [0.4, 0x5F_A8_48],
+    [-0.4, 0x4f_9a_3a],
+    [0, 0x3f_8a_32],
+    [0.4, 0x5f_a8_48],
   ] as const) {
     const sprig = new Group();
     sprig.add(place(part(new CylinderGeometry(0.03, 0.03, 1.4, 8), stems), [0, 0.2, 0]));
@@ -227,7 +230,7 @@ export function herbs() {
   }
   group.add(
     place(
-      part(new TorusGeometry(0.13, 0.05, 8, 20), kit.lacquer(0xA3_20_1A)),
+      part(new TorusGeometry(0.13, 0.05, 8, 20), kit.lacquer(0xa3_20_1a)),
       [0, -0.5, 0.05],
       [Math.PI / 2, 0, 0],
     ),
@@ -237,7 +240,7 @@ export function herbs() {
 
 export function poultice() {
   const group = new Group();
-  const linen = kit.matte(0xDC_D2_B8, 0.9);
+  const linen = kit.matte(0xdc_d2_b8, 0.9);
   group.add(
     part(
       lathe([
@@ -255,12 +258,12 @@ export function poultice() {
   );
   group.add(
     place(
-      part(new TorusGeometry(0.22, 0.06, 8, 24), kit.lacquer(0xA3_20_1A)),
+      part(new TorusGeometry(0.22, 0.06, 8, 24), kit.lacquer(0xa3_20_1a)),
       [0, 1.05, 0],
       [Math.PI / 2, 0, 0],
     ),
   );
-  group.add(place(leaf(0x4F_9A_3A, 0.7, 0.3), [0.15, 1.15, 0.2], [0, 0, -0.5]));
+  group.add(place(leaf(0x4f_9a_3a, 0.7, 0.3), [0.15, 1.15, 0.2], [0, 0, -0.5]));
   return group;
 }
 
@@ -294,7 +297,7 @@ export const dagger = () =>
     guard: 0.55,
     grip: 0.45,
     guardMaterial: kit.brass(),
-    gripMaterial: kit.matte(0x2B_1D_17, 0.5),
+    gripMaterial: kit.matte(0x2b_1d_17, 0.5),
   });
 export const shortSword = () => sword(1.35, 0.42, { guard: 0.7, grip: 0.45 }, 0.2);
 export const longsword = () =>
@@ -323,7 +326,7 @@ export function spear() {
   group.add(place(blade(0.8, 0.42, { leaf: 0.5 }), [0, 1.85, 0]));
   group.add(
     place(
-      part(new ConeGeometry(0.14, 0.35, 12), kit.lacquer(0xA3_20_1A)),
+      part(new ConeGeometry(0.14, 0.35, 12), kit.lacquer(0xa3_20_1a)),
       [0, 1.78, 0],
       [Math.PI, 0, 0],
     ),
@@ -362,7 +365,7 @@ export function rapier() {
   );
   group.add(
     place(
-      part(new CylinderGeometry(0.06, 0.06, 0.45, 10), kit.matte(0x2B_1D_17, 0.5)),
+      part(new CylinderGeometry(0.06, 0.06, 0.45, 10), kit.matte(0x2b_1d_17, 0.5)),
       [0, -0.32, 0],
     ),
   );
@@ -401,7 +404,7 @@ function arrow() {
   fletch.lineTo(0.22, 0.5);
   fletch.lineTo(0, 0.32);
   for (const side of [1, -1]) {
-    const vane = extrude(fletch, 0.01, kit.lacquer(0xA3_20_1A), 0);
+    const vane = extrude(fletch, 0.01, kit.lacquer(0xa3_20_1a), 0);
     vane.scale.x = side;
     group.add(place(vane, [0, 0.05, 0]));
   }
@@ -441,7 +444,7 @@ export function shield() {
   const group = new Group();
   const face = part(new CylinderGeometry(1, 1, 0.16, 48), [
     kit.oak(19),
-    kit.lacquer(0x2C_4F_A8),
+    kit.lacquer(0x2c_4f_a8),
     kit.oak(19),
   ]);
   face.rotation.x = Math.PI / 2;
@@ -499,7 +502,7 @@ export function bag() {
   );
   group.add(
     place(
-      part(new TorusGeometry(0.32, 0.06, 8, 24), kit.lacquer(0xC8_A0_50)),
+      part(new TorusGeometry(0.32, 0.06, 8, 24), kit.lacquer(0xc8_a0_50)),
       [0, 1.33, 0],
       [Math.PI / 2 - 0.2, 0, 0],
     ),
@@ -543,7 +546,13 @@ export function flail() {
   const iron = kit.iron();
   for (let index = 0; index < 4; index++) {
     const link = part(new TorusGeometry(0.11, 0.045, 6, 16), iron);
-    group.add(place(link, [0.1 + index * 0.12, 1.2 + index * 0.1, 0], [0, ((index % 2) * Math.PI) / 2, 0.8]));
+    group.add(
+      place(
+        link,
+        [0.1 + index * 0.12, 1.2 + index * 0.1, 0],
+        [0, ((index % 2) * Math.PI) / 2, 0.8],
+      ),
+    );
   }
   group.add(place(spikedBall(0.48), [0.85, 1.85, 0]));
   return diagonal(group, Math.PI / 8);
@@ -578,15 +587,15 @@ export function staff() {
   const crystal = part(
     new ConeGeometry(0.28, 0.7, 6),
     new MeshPhysicalMaterial({
-      color: 0x5F_B8_FF,
-      emissive: 0x2F_80_FF,
+      color: 0x5f_b8_ff,
+      emissive: 0x2f_80_ff,
       emissiveIntensity: 0.6,
       clearcoat: 1,
       roughness: 0.1,
     }),
   );
   group.add(place(crystal, [0.05, 1.45, 0]));
-  group.add(place(glow(0.4, 0x8F_D0_FF, 0.5), [0.05, 1.4, 0.1]));
+  group.add(place(glow(0.4, 0x8f_d0_ff, 0.5), [0.05, 1.4, 0.1]));
   for (const side of [-1, 1])
     group.add(
       place(
@@ -625,7 +634,7 @@ export function torch() {
   const group = new Group();
   group.add(place(part(new CylinderGeometry(0.1, 0.07, 1.6, 10), kit.oak(25)), [0, -0.5, 0]));
   group.add(
-    place(part(new CylinderGeometry(0.2, 0.15, 0.4, 12), kit.matte(0x5A_46_30, 0.95)), [0, 0.4, 0]),
+    place(part(new CylinderGeometry(0.2, 0.15, 0.4, 12), kit.matte(0x5a_46_30, 0.95)), [0, 0.4, 0]),
   );
   const flame = part(
     lathe([
@@ -635,11 +644,11 @@ export function torch() {
       [0.08, 0.8],
       [0, 0.95],
     ]),
-    new MeshPhysicalMaterial({ color: 0xFF_A0_20, emissive: 0xFF_7A_10, emissiveIntensity: 1.1 }),
+    new MeshPhysicalMaterial({ color: 0xff_a0_20, emissive: 0xff_7a_10, emissiveIntensity: 1.1 }),
   );
   group.add(place(flame, [0, 0.55, 0]));
-  group.add(place(glow(0.5, 0xFF_A0_40, 0.45), [0, 0.95, 0.1]));
-  group.add(place(new PointLight(0xFF_A0_40, 5, 3, 1.5), [0, 0.9, 0.5]));
+  group.add(place(glow(0.5, 0xff_a0_40, 0.45), [0, 0.95, 0.1]));
+  group.add(place(new PointLight(0xff_a0_40, 5, 3, 1.5), [0, 0.9, 0.5]));
   return diagonal(group, -Math.PI / 8);
 }
 
@@ -651,8 +660,8 @@ export function wand() {
   const tip = part(
     new ConeGeometry(0.2, 0.45, 6),
     new MeshPhysicalMaterial({
-      color: 0x3F_D0_E0,
-      emissive: 0x20_A0_C0,
+      color: 0x3f_d0_e0,
+      emissive: 0x20_a0_c0,
       emissiveIntensity: 0.6,
       clearcoat: 1,
     }),
@@ -666,7 +675,7 @@ export function ring() {
   const group = new Group();
   group.add(part(new TorusGeometry(0.75, 0.14, 16, 48), kit.gold()));
   group.add(place(part(new CylinderGeometry(0.22, 0.16, 0.2, 12), kit.gold()), [0, 0.88, 0]));
-  const ruby = part(new SphereGeometry(0.24, 6, 4), kit.gem(0xD0_20_3A));
+  const ruby = part(new SphereGeometry(0.24, 6, 4), kit.gem(0xd0_20_3a));
   group.add(place(ruby, [0, 1.06, 0.05]));
   return group;
 }
@@ -703,9 +712,9 @@ export function lyre() {
 }
 
 export const ankh = armour("gi:ankh", kit.gold());
-export const oakLeaf = armour("gi:oak-leaf", kit.lacquer(0x4F_9A_3A));
+export const oakLeaf = armour("gi:oak-leaf", kit.lacquer(0x4f_9a_3a));
 export const thief = armour("gi:cloak-dagger", kit.leather("#6a5a88", 93));
-export const monk = armour("gi:monk-face", kit.lacquer(0xE0_88_2A));
+export const monk = armour("gi:monk-face", kit.lacquer(0xe0_88_2a));
 
 /** A heater shield in white enamel bearing a gold cross. */
 export function paladin() {
@@ -716,7 +725,7 @@ export function paladin() {
   shape.lineTo(0.85, 0.1);
   shape.quadraticCurveTo(0.8, -0.65, 0, -1.05);
   shape.quadraticCurveTo(-0.8, -0.65, -0.85, 0.1);
-  group.add(extrude(shape, 0.16, kit.enamel(0xF2_EE_E4), 0.06));
+  group.add(extrude(shape, 0.16, kit.enamel(0xf2_ee_e4), 0.06));
   const gold = kit.gold();
   group.add(place(part(new RoundedBoxGeometry(0.22, 1.4, 0.08, 2, 0.03), gold), [0, 0.05, 0.13]));
   group.add(place(part(new RoundedBoxGeometry(1.1, 0.22, 0.08, 2, 0.03), gold), [0, 0.35, 0.13]));
@@ -832,8 +841,8 @@ export function sorcerer() {
     part(
       new SphereGeometry(0.75, 48, 32),
       new MeshPhysicalMaterial({
-        color: 0xC0_2A_8A,
-        emissive: 0xA0_10_70,
+        color: 0xc0_2a_8a,
+        emissive: 0xa0_10_70,
         emissiveIntensity: 0.6,
         clearcoat: 1,
         roughness: 0.15,
@@ -841,8 +850,8 @@ export function sorcerer() {
     ),
   );
   for (const [tilt, colour] of [
-    [0.5, 0xFF_B0_E8],
-    [-0.7, 0xFF_80_C0],
+    [0.5, 0xff_b0_e8],
+    [-0.7, 0xff_80_c0],
   ] as const)
     group.add(
       place(
@@ -851,7 +860,7 @@ export function sorcerer() {
         [Math.PI / 2 + tilt, 0.3, 0],
       ),
     );
-  group.add(place(glow(0.5, 0xFF_9A_D8, 0.4), [-0.2, 0.25, 0.5]));
+  group.add(place(glow(0.5, 0xff_9a_d8, 0.4), [-0.2, 0.25, 0.5]));
   return group;
 }
 
@@ -863,7 +872,7 @@ export function warlock() {
   lids.quadraticCurveTo(0, 1, 1, 0);
   lids.quadraticCurveTo(0, -1, -1, 0);
   group.add(extrude(lids, 0.2, kit.leather("#2a2230", 95), 0.06));
-  const eye = part(new SphereGeometry(0.42, 32, 24), kit.gem(0x2F_C0_70));
+  const eye = part(new SphereGeometry(0.42, 32, 24), kit.gem(0x2f_c0_70));
   eye.scale.z = 0.5;
   group.add(place(eye, [0, 0, 0.15]));
   const pupil = part(new SphereGeometry(0.15, 16, 12), kit.matte(0x05_08_05, 0.3));
@@ -903,7 +912,7 @@ export function hero() {
   group.add(place(dome, [0, 0.1, 0]));
   const face = part(new CylinderGeometry(0.75, 0.66, 0.9, 48, 1, true), steel);
   group.add(place(face, [0, -0.45, 0]));
-  const slit = part(new RoundedBoxGeometry(0.9, 0.1, 0.3, 1, 0.03), kit.matte(0x0C_0A_0A, 0.9));
+  const slit = part(new RoundedBoxGeometry(0.9, 0.1, 0.3, 1, 0.03), kit.matte(0x0c_0a_0a, 0.9));
   group.add(place(slit, [0, -0.2, 0.68]));
   group.add(
     place(
@@ -919,7 +928,7 @@ export function hero() {
       [Math.PI / 2, 0, 0],
     ),
   );
-  const plume = part(new SphereGeometry(0.3, 24, 16), kit.matte(0xB3_24_2A, 0.85));
+  const plume = part(new SphereGeometry(0.3, 24, 16), kit.matte(0xb3_24_2a, 0.85));
   plume.scale.set(0.6, 1, 1.6);
   group.add(place(plume, [0, 0.95, -0.2], [-0.4, 0, 0]));
   return new Group().add(group);
@@ -947,7 +956,7 @@ export function tag() {
     kit.gold(),
   );
   group.add(plate);
-  const ink = kit.matte(0x5A_34_10, 0.6);
+  const ink = kit.matte(0x5a_34_10, 0.6);
   for (const [y, w] of [
     [0.15, 1],
     [-0.15, 0.7],
@@ -961,7 +970,7 @@ export function tag() {
     );
   group.add(
     place(
-      part(new TorusGeometry(0.3, 0.035, 8, 24), kit.lacquer(0xA3_20_1A)),
+      part(new TorusGeometry(0.3, 0.035, 8, 24), kit.lacquer(0xa3_20_1a)),
       [0.95, 0.15, 0.05],
       [0.4, 0.3, 0],
     ),
@@ -973,7 +982,7 @@ export function tag() {
 /** A purple d20 with its gilded numeral turned to the viewer. */
 export function move() {
   const group = new Group();
-  const die = part(new IcosahedronGeometry(0.75, 0), kit.lacquer(0x5B_2A_9A));
+  const die = part(new IcosahedronGeometry(0.75, 0), kit.lacquer(0x5b_2a_9a));
   die.rotation.set(0.35, 0.5, 0.15);
   group.add(die);
   const numeral = numberDecal(die, "20");
@@ -984,7 +993,7 @@ export function move() {
 /** Ink on the face of `die` that most faces the camera. */
 function numberDecal(die: Mesh, label: string): Object3D | undefined {
   die.updateMatrixWorld();
-  const {geometry} = die;
+  const { geometry } = die;
   const pos = geometry.getAttribute("position");
   const toCamera = new Vector3(0, 0.2, 1).normalize();
   let best: { centre: Vector3; normal: Vector3; score: number } | undefined;

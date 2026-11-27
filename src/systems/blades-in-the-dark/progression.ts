@@ -7,8 +7,8 @@ import {
 } from "../../features/characters/api";
 import { commaListOf, formatCommaList } from "../../lib/list";
 import { getState, setState } from "../../features/chat/messageState";
-import { systemCampaignData, setSystemCampaignData  } from "../../campaign/campaign";
-import type {Campaign} from "../../campaign/campaign";
+import { systemCampaignData, setSystemCampaignData } from "../../campaign/campaign";
+import type { Campaign } from "../../campaign/campaign";
 import { ATTRIBUTES } from "./index";
 
 export function advanceAttribute(
@@ -80,7 +80,7 @@ export function buyCrewUpgrade(campaign: Campaign, upgrade: string): boolean {
     ?.options?.some((option) => option.id === upgrade);
   const state = systemCampaignData(campaign);
   const owned = commaListOf(state["crewUpgrades"]);
-  const cost = upgrade === "mastery" ? 4 : (upgrade === "cohort" ? 2 : 1);
+  const cost = upgrade === "mastery" ? 4 : upgrade === "cohort" ? 2 : 1;
   if (
     system.id !== "blades-in-the-dark" ||
     !allowed ||

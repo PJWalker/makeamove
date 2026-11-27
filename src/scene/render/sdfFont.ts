@@ -135,7 +135,9 @@ export function sdfFont(spec: SdfFontSpec, haloRatio: number): string {
   if (!Cache.has(`${name}-bitmap`)) {
     const font = new SdfFont(spec, haloRatio * GLYPH_SIZE);
     Cache.set(`${name}-bitmap`, font);
-    font.once("destroy", () => { Cache.remove(`${name}-bitmap`); });
+    font.once("destroy", () => {
+      Cache.remove(`${name}-bitmap`);
+    });
   }
   return name;
 }

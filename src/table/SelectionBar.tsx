@@ -1,19 +1,13 @@
-import { useLayoutEffect, useRef, useState  } from "react";
-import type {ReactNode} from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { SceneController } from "../scene/controller";
 import type { ElementPatch } from "../scene/sceneDoc";
 import { bounds } from "../scene/geometry";
 import { toScreen } from "../scene/camera";
 import { HANDLE_SIZE, ROTATE_HANDLE_GAP } from "../scene/render/handles";
 import { PEN_WIDTH_RANGE } from "../scene/tools";
-import {
-  isPlainToken,
-  sharedTextStyle
-  
-  
-  
-} from "../scene/types";
-import type {EffectKind, SceneElement, TextStyle} from "../scene/types";
+import { isPlainToken, sharedTextStyle } from "../scene/types";
+import type { EffectKind, SceneElement, TextStyle } from "../scene/types";
 import { ColourPicker } from "../ui/ColourPicker";
 import { CommitInput } from "../ui/CommitInput";
 import { Button } from "../ui/Button";
@@ -129,7 +123,9 @@ function useSelectionFields(
   onTokenOptions: (id: string, from: Element) => void,
 ) {
   const context = useCampaign();
-  return buildSelectionFields(controller, sel, onTokenOptions, (patch) => { context.tools.setTextStyle(patch); });
+  return buildSelectionFields(controller, sel, onTokenOptions, (patch) => {
+    context.tools.setTextStyle(patch);
+  });
 }
 
 function buildSelectionFields(
@@ -140,15 +136,17 @@ function buildSelectionFields(
 ) {
   const ids = sel.map((element) => element.id);
   const first = sel[0]!;
-  const set = (patch: ElementPatch) => { controller.setProps(ids, patch); };
+  const set = (patch: ElementPatch) => {
+    controller.setProps(ids, patch);
+  };
   const one = sel.length === 1 ? first : null;
-  const {grid} = controller.renderer;
+  const { grid } = controller.renderer;
   const fields: ReactNode[] = [];
 
   if (one?.type === "token" && one.characterId)
     fields.push(<TokenStats key="stats" characterId={one.characterId} hidden={!!one.hideBars} />);
   if (every(sel, "effect")) {
-    const {effect} = (sel[0]!);
+    const { effect } = sel[0]!;
     fields.push(
       <Segmented
         key="effect"
@@ -156,14 +154,20 @@ function buildSelectionFields(
         // None chosen when the zones differ.
         value={sel.every((element) => element.effect === effect) ? effect : ("" as EffectKind)}
         options={EFFECT_OPTIONS}
-        onChange={(effect) => { set({ effect }); }}
+        onChange={(effect) => {
+          set({ effect });
+        }}
       />,
       <EffectSightToggles
         key="sight"
         // On only where every zone has it.
-        value={{ glow: sel.every((element) => element.glow), obscures: sel.every((element) => element.obscures) }}
-        onChange={(patch) => { set(Object.fromEntries(Object.entries(patch).map(([k, on]) => [k, on || undefined]))); }
-        }
+        value={{
+          glow: sel.every((element) => element.glow),
+          obscures: sel.every((element) => element.obscures),
+        }}
+        onChange={(patch) => {
+          set(Object.fromEntries(Object.entries(patch).map(([k, on]) => [k, on || undefined])));
+        }}
       />,
     );
   }
@@ -185,7 +189,9 @@ function buildSelectionFields(
         key="colour"
         controller={controller}
         ids={ids}
-        label={sel.every((element) => element.type === "token") ? "Background and Border" : "Colour"}
+        label={
+          sel.every((element) => element.type === "token") ? "Background and Border" : "Colour"
+        }
         value={sel[0]!.colour}
         prop="colour"
         disabled={sel.every(isPlainToken)}
@@ -221,7 +227,9 @@ function buildSelectionFields(
           { id: "over", label: "Over Tokens" },
           { id: "under", label: "Under Tokens" },
         ]}
-        onChange={(layer) => { controller.setLayer(ids, layer); }}
+        onChange={(layer) => {
+          controller.setLayer(ids, layer);
+        }}
       />,
     );
   if (every(sel, "token"))
@@ -232,7 +240,9 @@ function buildSelectionFields(
         icon={IconReveal}
         label="Show Name"
         pressed={!sel.every((t) => t.hideName)}
-        onClick={() => { set({ hideName: sel.every((t) => !t.hideName) ? true : undefined }); }}
+        onClick={() => {
+          set({ hideName: sel.every((t) => !t.hideName) ? true : undefined });
+        }}
       />,
     );
   if (every(sel, "wall")) {
@@ -246,7 +256,9 @@ function buildSelectionFields(
           { id: "wall", label: "Wall" },
           { id: "door", label: "Door" },
         ]}
-        onChange={(kind) => { set(kind === "door" ? { door: true, open: false } : { door: false }); }}
+        onChange={(kind) => {
+          set(kind === "door" ? { door: true, open: false } : { door: false });
+        }}
       />,
     );
     if (doors)
@@ -259,7 +271,9 @@ function buildSelectionFields(
             { id: "closed", label: "Closed" },
             { id: "open", label: "Open" },
           ]}
-          onChange={(state) => { set({ open: state === "open" }); }}
+          onChange={(state) => {
+            set({ open: state === "open" });
+          }}
         />,
       );
   }
@@ -300,7 +314,9 @@ function buildSelectionFields(
         icon={IconLight}
         label="Flicker"
         pressed={sel.every((x) => x.flicker)}
-        onClick={() => { set({ flicker: sel.every((x) => x.flicker) ? undefined : true }); }}
+        onClick={() => {
+          set({ flicker: sel.every((x) => x.flicker) ? undefined : true });
+        }}
       />,
     );
   }
@@ -314,7 +330,9 @@ function buildSelectionFields(
           { id: "light", label: "Light" },
           { id: "dark", label: "Dark" },
         ]}
-        onChange={(tone) => { set({ tone }); }}
+        onChange={(tone) => {
+          set({ tone });
+        }}
       />,
     );
   const locked = sel.every((element) => element.locked);
@@ -325,7 +343,9 @@ function buildSelectionFields(
       icon={locked ? IconLock : IconUnlock}
       label={locked ? "Unlock" : "Lock"}
       pressed={locked}
-      onClick={() => { controller.setLocked(ids, !locked); }}
+      onClick={() => {
+        controller.setLocked(ids, !locked);
+      }}
     />,
   );
   if (one?.type === "token")
@@ -335,7 +355,9 @@ function buildSelectionFields(
         variant="icon"
         icon={IconSettings}
         label="Token Options"
-        onClick={(e) => { onTokenOptions(one.id, e.currentTarget); }}
+        onClick={(e) => {
+          onTokenOptions(one.id, e.currentTarget);
+        }}
       />,
     );
   return fields;
@@ -355,22 +377,23 @@ function TokenStats({ characterId, hidden }: { characterId: string; hidden: bool
   const editable = canEdit(campaign, character);
   if (hidden && !editable) return null;
   const change = ({ source, max }: TokenStat, by: number) => {
-    const {id} = character;
-    if ("resource" in source) context.execute(bumpResource, { id, resource: source.resource, by, max });
+    const { id } = character;
+    if ("resource" in source)
+      context.execute(bumpResource, { id, resource: source.resource, by, max });
     else context.execute(bumpData, { id, key: source.data, by, max });
   };
-  return system
-    .tokenStats(character, derive(character, system))
-    .map((stat) => (
-      <Counter
-        key={stat.id}
-        label={stat.label}
-        value={stat.value}
-        max={stat.max}
-        disabled={!editable}
-        onChange={(by) => { change(stat, by); }}
-      />
-    ));
+  return system.tokenStats(character, derive(character, system)).map((stat) => (
+    <Counter
+      key={stat.id}
+      label={stat.label}
+      value={stat.value}
+      max={stat.max}
+      disabled={!editable}
+      onChange={(by) => {
+        change(stat, by);
+      }}
+    />
+  ));
 }
 
 /**
@@ -448,7 +471,9 @@ function WidthField({
       value={draft ?? value}
       aria-label="Outline Width"
       data-tip="Outline Width"
-      onChange={(e) => { preview(Number(e.currentTarget.value)); }}
+      onChange={(e) => {
+        preview(Number(e.currentTarget.value));
+      }}
       onPointerUp={commit}
       onKeyUp={commit}
       onBlur={commit}

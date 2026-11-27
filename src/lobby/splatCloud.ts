@@ -12,10 +12,9 @@ import {
   RGBAFormat,
   ShaderMaterial,
   Vector2,
-  Vector3
-  
+  Vector3,
 } from "three";
-import type {Matrix4} from "three";
+import type { Matrix4 } from "three";
 import { MOTION, STRIDE } from "./splat";
 
 /*

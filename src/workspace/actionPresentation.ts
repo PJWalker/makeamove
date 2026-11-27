@@ -19,7 +19,7 @@ export const signedStr = (value: number) => (value < 0 ? `−${-value}` : `+${va
 export function makeVerb(action: ActionDef) {
   return action.target
     ? { label: "Target", Icon: IconTarget }
-    : (checkOf(action)
+    : checkOf(action)
       ? { label: "Roll", Icon: IconRoll }
-      : { label: "Post", Icon: IconPost });
+      : { label: "Post", Icon: IconPost };
 }

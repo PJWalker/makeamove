@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState , useEffect, useLayoutEffect } from "react";
+import { lazy, Suspense, useState, useEffect, useLayoutEffect } from "react";
 import { sceneOklchFromHex } from "../lib/colour";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";

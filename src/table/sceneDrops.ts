@@ -59,16 +59,23 @@ export function bindSceneDrops(
     };
   });
   ctl.onItemTokenDragMove = (token, event) => {
-    if (!token) { clearDropHint(context); return; }
+    if (!token) {
+      clearDropHint(context);
+      return;
+    }
     const dragged = itemTokenEntity(context, token);
-    const target = dragged ? dropTargetAt(context.canvas, event.clientX, event.clientY, dragged) : null;
+    const target = dragged
+      ? dropTargetAt(context.canvas, event.clientX, event.clientY, dragged)
+      : null;
     document.documentElement.classList.add("is-reordering");
     setDropCursor(!!target);
     context.canvas.sceneDropHighlight.set(target?.tokenId ?? null);
   };
   ctl.onItemTokenDrop = (token, event) => {
     const dragged = itemTokenEntity(context, token);
-    const target = dragged ? dropTargetAt(context.canvas, event.clientX, event.clientY, dragged) : null;
+    const target = dragged
+      ? dropTargetAt(context.canvas, event.clientX, event.clientY, dragged)
+      : null;
     clearDropHint(context);
     if (!target) {
       const overCanvas = host.contains(document.elementFromPoint(event.clientX, event.clientY));
@@ -91,7 +98,8 @@ export function bindSceneDrops(
     const patches: [string, Partial<SceneElement>][] = [];
     for (const id of ids) {
       const element = ctl.scene.get(id);
-      const copy = element?.type === "token" ? getCharacter(campaign, element.characterId) : undefined;
+      const copy =
+        element?.type === "token" ? getCharacter(campaign, element.characterId) : undefined;
       const template = copy?.base ? getCharacter(campaign, copy.base) : undefined;
       if (!template?.template) continue;
       const name = tokenName(template, template.template, ctl.tokenNames());

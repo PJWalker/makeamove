@@ -53,7 +53,9 @@ export class SystemData implements Observable {
     return {
       get: (key) => checked(read()?.get(key)),
       has: (key) => checked(read()?.get(key)) !== undefined,
-      set: (key, value) => { write().set(key, value); },
+      set: (key, value) => {
+        write().set(key, value);
+      },
       delete: (key) => read()?.delete(key),
       values: () => (read()?.values() ?? []).filter(is),
     };

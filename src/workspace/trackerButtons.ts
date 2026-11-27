@@ -2,13 +2,8 @@ import { InputRule, mergeAttributes, Node, PasteRule } from "@tiptap/core";
 import type { Campaign } from "../campaign/campaign";
 import { actingCharacterId } from "../features/characters/api";
 import { trackerBlock } from "../features/characters/trackers";
-import {
-  parseTrackerButton,
-  TRACKER_NODE,
-  trackerToken
-  
-} from "../data/richText";
-import type {TrackerButton} from "../data/richText";
+import { parseTrackerButton, TRACKER_NODE, trackerToken } from "../data/richText";
+import type { TrackerButton } from "../data/richText";
 import { pressTrackerButton } from "./commands/characters";
 import type { CampaignContext } from "./campaignContext";
 
@@ -56,7 +51,8 @@ export function trackerButtonExtension(context: CampaignContext) {
         name: { default: "", parseHTML: (element: HTMLElement) => element.dataset["name"] ?? "" },
         label: {
           default: "",
-          parseHTML: (element: HTMLElement) => element.dataset["label"] ?? element.textContent ?? "",
+          parseHTML: (element: HTMLElement) =>
+            element.dataset["label"] ?? element.textContent ?? "",
         },
       };
     },
@@ -89,7 +85,8 @@ export function trackerButtonExtension(context: CampaignContext) {
           find: new RegExp(`(${TOKEN.source})$`),
           handler: ({ state, range, match }) => {
             const attributes = attributesOf(match[1] ?? "");
-            if (attributes) state.tr.replaceWith(range.from, range.to, this.type.create(attributes));
+            if (attributes)
+              state.tr.replaceWith(range.from, range.to, this.type.create(attributes));
           },
         }),
       ];
@@ -100,13 +97,14 @@ export function trackerButtonExtension(context: CampaignContext) {
           find: new RegExp(TOKEN.source, "g"),
           handler: ({ state, range, match }) => {
             const attributes = attributesOf(match[0]);
-            if (attributes) state.tr.replaceWith(range.from, range.to, this.type.create(attributes));
+            if (attributes)
+              state.tr.replaceWith(range.from, range.to, this.type.create(attributes));
           },
         }),
       ];
     },
     onCreate() {
-      const {dom} = this.editor.view;
+      const { dom } = this.editor.view;
       const buttonAt = (e: Event) =>
         (e.target as Element).closest<HTMLElement>(`[data-type="${TRACKER_NODE}"]`);
       const toButton = (element: HTMLElement): TrackerButton => ({
@@ -117,14 +115,22 @@ export function trackerButtonExtension(context: CampaignContext) {
       // Hovering shows what pressing would do for the selected character, or why it can't.
       dom.addEventListener("pointerover", (e) => {
         const element = buttonAt(e);
-        if (element) element.dataset["tip"] = trackerTip(campaign, actingCharacterId(campaign), toButton(element));
+        if (element)
+          element.dataset["tip"] = trackerTip(
+            campaign,
+            actingCharacterId(campaign),
+            toButton(element),
+          );
       });
       dom.addEventListener("click", (e) => {
         const element = buttonAt(e);
         if (!element) return;
         e.preventDefault();
         const id = actingCharacterId(campaign);
-        if (!id || !context.execute(pressTrackerButton, { characterId: id, button: toButton(element) }))
+        if (
+          !id ||
+          !context.execute(pressTrackerButton, { characterId: id, button: toButton(element) })
+        )
           shake(element);
       });
     },

@@ -40,7 +40,11 @@ export const Button = forwardRef<HTMLButtonElement, Properties>(function Button(
     {
       type: rest.type ?? "button",
       ...(onClick
-        ? { onClick: (event) => { onClick(event as React.MouseEvent<HTMLButtonElement>); } }
+        ? {
+            onClick: (event) => {
+              onClick(event as React.MouseEvent<HTMLButtonElement>);
+            },
+          }
         : {}),
       ...(rest.disabled === undefined ? {} : { isDisabled: rest.disabled }),
     },

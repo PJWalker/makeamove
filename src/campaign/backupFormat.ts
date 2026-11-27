@@ -1,9 +1,4 @@
-import {
-  createDecoder,
-  readVarString,
-  readVarUint,
-  readVarUint8Array,
-} from "lib0/decoding";
+import { createDecoder, readVarString, readVarUint, readVarUint8Array } from "lib0/decoding";
 import {
   createEncoder,
   toUint8Array,
@@ -199,7 +194,10 @@ export async function snapshotCampaign(
   reuse: (guid: string) => DocumentSnapshot | undefined = () => {},
 ): Promise<DocumentSnapshot[]> {
   const out: DocumentSnapshot[] = [];
-  const visit = async (kind: BackupDocKind, guid: string): Promise<DocumentSnapshot | undefined> => {
+  const visit = async (
+    kind: BackupDocKind,
+    guid: string,
+  ): Promise<DocumentSnapshot | undefined> => {
     const kept = reuse(guid);
     if (kept) return kept;
     const document = await readStoredDocument(kind, guid);
@@ -247,7 +245,7 @@ export function metaOf(docs: BackupDocument[], campaignId: string) {
   const document = new Doc();
   const root = docs.find((d) => d.kind === "campaign" && d.guid === campaignId);
   if (root) applyUpdate(document, root.update);
-  const {meta} = rootOf(document, campaignShape);
+  const { meta } = rootOf(document, campaignShape);
   const out = {
     name: meta.get("name") ?? "Untitled campaign",
     systemId: meta.get("systemId") ?? "",
@@ -308,10 +306,10 @@ export async function encodeBackup(backup: CampaignBackup): Promise<Uint8Array> 
 }
 
 export class BackupFileError extends Error {
-	constructor(message: string) {
-		super(message);
-		this.name = 'BackupFileError';
-	}
+  constructor(message: string) {
+    super(message);
+    this.name = "BackupFileError";
+  }
 }
 
 export async function decodeBackup(file: Uint8Array): Promise<CampaignBackup> {

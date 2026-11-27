@@ -139,6 +139,9 @@
     },
     "import/prefer-default-export": {
       "count": 1
+    },
+    "max-lines-per-function": {
+      "count": 1
     }
   },
   "lint/rules/titleCase.ts": {
@@ -4387,6 +4390,9 @@
     },
     "jsx-a11y/prefer-tag-over-role": {
       "count": 1
+    },
+    "max-lines": {
+      "count": 1
     }
   },
   "src/table/Tabletop.tsx": {
@@ -4812,7 +4818,7 @@
       "count": 8
     },
     "max-lines-per-function": {
-      "count": 1
+      "count": 4
     },
     "no-implicit-coercion": {
       "count": 1
@@ -6097,6 +6103,9 @@
       "count": 3
     },
     "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "max-lines": {
       "count": 1
     },
     "no-implicit-coercion": {

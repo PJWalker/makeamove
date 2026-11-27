@@ -2,20 +2,19 @@ import { AlphaFilter, Color, Container, Graphics } from "pixi.js";
 import { visibleWorld } from "../camera";
 import { areaPolygon, fromLocal, shapeOutline } from "../geometry";
 import type { Point } from "../grid";
-import {  Lamp } from "../lampShader";
-import type {Blocker} from "../lampShader";
+import { Lamp } from "../lampShader";
+import type { Blocker } from "../lampShader";
 import type { EffectElement, SceneElement, Transform } from "../types";
 import {
   blocked,
   blockingSegments,
   segmentDistance,
   lightReach,
-  
   sightSegments,
   TOKEN_SHADE,
-  tokenBlocker
+  tokenBlocker,
 } from "../vision";
-import type {Segment} from "../vision";
+import type { Segment } from "../vision";
 import { reducedMotion } from "../../ui/transition";
 import type { RenderState } from "./state";
 import { flat } from "./style";
@@ -103,7 +102,9 @@ export class LightingLayer {
     const placed: SceneElement[] =
       enabled || viewers?.length
         ? s.elements.flatMap((element) =>
-            element.type === "wall" || element.type === "effect" ? [{ ...element, ...at(element) }] : [],
+            element.type === "wall" || element.type === "effect"
+              ? [{ ...element, ...at(element) }]
+              : [],
           )
         : [];
 
@@ -112,9 +113,12 @@ export class LightingLayer {
     const dark = this.lightDark.clear();
     const glowTint = this.glowTint.clear();
     const strength = viewerIds ? 1 : 0.5;
-    const areas = s.elements.filter((element) => element.type === "area" && !s.hidden.has(element.id));
+    const areas = s.elements.filter(
+      (element) => element.type === "area" && !s.hidden.has(element.id),
+    );
     this.lightLayer.visible =
-      enabled && (darkness > 0 || areas.some((element) => element.type === "area" && element.tone === "dark"));
+      enabled &&
+      (darkness > 0 || areas.some((element) => element.type === "area" && element.tone === "dark"));
     const lit = new Set<string>();
     const tinted = new Set<string>();
     this.flickering = [];
@@ -162,7 +166,7 @@ export class LightingLayer {
       for (const element of this.lightLayer.visible ? areas : []) {
         if (element.type !== "area") continue;
         const poly = flat(areaPolygon({ ...element, ...at(element) }));
-        if (element.tone === "light") erase.poly(poly).fill({ color: 0xFF_FF_FF, alpha: 1 });
+        if (element.tone === "light") erase.poly(poly).fill({ color: 0xff_ff_ff, alpha: 1 });
         else dark.poly(poly).fill({ color: 0x00_00_00, alpha: strength });
       }
       for (const element of placed) {
@@ -178,7 +182,7 @@ export class LightingLayer {
     this.sight = null;
     const seeing = new Set<string>();
     if (viewers?.length) {
-      fg.rect(box.x, box.y, box.w, box.h).fill({ color: 0x05_07_0C, alpha: 1 });
+      fg.rect(box.x, box.y, box.w, box.h).fill({ color: 0x05_07_0c, alpha: 1 });
       const sightWalls = sightSegments(placed.filter((element) => !s.hidden.has(element.id)));
       const from = viewers.map((element) => {
         const t = at(element);
@@ -210,8 +214,10 @@ export class LightingLayer {
     // Rings that together lift the dark by half (dim light) in the middle.
     const lift = 1 - (1 - 0.5 * colour.alpha) ** (1 / rings);
     for (const k of GLOW_RINGS) {
-      const poly = flat(shapeOutline(element, element.w * k, element.h * k).map((p) => fromLocal(element, p)));
-      erase?.poly(poly).fill({ color: 0xFF_FF_FF, alpha: lift });
+      const poly = flat(
+        shapeOutline(element, element.w * k, element.h * k).map((p) => fromLocal(element, p)),
+      );
+      erase?.poly(poly).fill({ color: 0xff_ff_ff, alpha: lift });
       tint.poly(poly).fill({ color: colour.toNumber(), alpha: (0.14 * colour.alpha) / rings });
     }
   }
@@ -257,7 +263,7 @@ export class LightingLayer {
 
   /** Whether a token is out of the viewers' sight (always false when they see everything). */
   unseen(t: Transform): boolean {
-    const {sight} = this;
+    const { sight } = this;
     return sight?.from.every((p) => blocked(p, t, sight.walls)) ?? false;
   }
 }

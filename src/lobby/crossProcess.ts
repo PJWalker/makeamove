@@ -6,7 +6,6 @@
 export const CROSS_PROCESS = {
   name: "CrossProcess",
   uniforms: {
-
     tDiffuse: { value: null },
     /** How strong the grade is, from 0 (none) to 1. */
     strength: { value: 1 },

@@ -7,9 +7,14 @@
  *   worker:  serveWorker<Task, Result>(handle, (result) => transferables)
  */
 
-interface Typed { type: string }
+interface Typed {
+  type: string;
+}
 
-interface Request<Task> { id: number; task: Task }
+interface Request<Task> {
+  id: number;
+  task: Task;
+}
 type Response<Result> = { id: number; error: string } | { id: number; result: Result };
 
 export type WorkerRun<Task extends Typed, Result extends Typed> = <T extends Task["type"]>(
@@ -57,7 +62,9 @@ export function workerClient<Task extends Typed, Result extends Typed>(
       event.preventDefault();
       fail(w, new Error(event.message || `${name} failed`));
     };
-    w.addEventListener('messageerror', () => { fail(w, new Error(`Could not read ${name.toLowerCase()} response`)); });
+    w.addEventListener("messageerror", () => {
+      fail(w, new Error(`Could not read ${name.toLowerCase()} response`));
+    });
     worker = w;
     return w;
   };
@@ -90,11 +97,15 @@ export function serveWorker<Task extends Typed, Result extends Typed>(
   const scope = globalThis as unknown as WorkerScope;
   scope.onmessage = ({ data }: MessageEvent<Request<Task>>) => {
     void handle(data.task).then(
-      (result) => { scope.postMessage({ id: data.id, result } satisfies Response<Result>, transferOf(result)); },
-      (error: unknown) => { scope.postMessage({
+      (result) => {
+        scope.postMessage({ id: data.id, result } satisfies Response<Result>, transferOf(result));
+      },
+      (error: unknown) => {
+        scope.postMessage({
           id: data.id,
           error: error instanceof Error ? error.message : String(error),
-        } satisfies Response<Result>); },
+        } satisfies Response<Result>);
+      },
     );
   };
 }

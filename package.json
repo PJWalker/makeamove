@@ -9,7 +9,11 @@
   "scripts": {
     "dev": "vp dev",
     "build": "npm run lint && npm run check:systems && vp build",
-    "lint": "npm run lint:eslint -- . && npm run typecheck && npm run doctor",
+    "ci": "npm run ci:node && npm run ci:install && npm run format:check && npm run lint && npm run deps && npm run knip && npm run dup && npm run check:systems && npm run test:coverage && npx vite build && npm run verify --if-present",
+    "ci:local": "npm run ci && npm run test:browser:local",
+    "ci:node": "node -e \"if (Number(process.versions.node.split('.')[0]) < 24) { console.error('Node 24 or later is needed, as package.json engines says; this is ' + process.version); process.exit(1); }\"",
+    "ci:install": "npm ci --dry-run --ignore-scripts --no-audit --no-fund",
+    "lint": "npm run lint:eslint -- . && vp fmt eslint-suppressions.json && npm run typecheck && npm run doctor",
     "lint:eslint": "eslint --prune-suppressions --no-warn-ignored",
     "check:changed": "jiti scripts/lint.ts",
     "typecheck": "tsc -b",
@@ -26,6 +30,7 @@
     "test": "vp test run",
     "test:coverage": "vp test run --coverage",
     "test:browser": "vp test run --config vitest.browser.config.ts",
+    "test:browser:local": "if [ -n \"$CI\" ] || [ -n \"$CLAUDE_CODE_REMOTE\" ]; then echo 'Browser tests are skipped in the cloud; they run on your own machine.'; else npm run test:browser; fi",
     "generate:rules": "jiti scripts/generateRules.ts",
     "doctor": "npx react-doctor@latest",
     "prepare": "vp config",
@@ -94,6 +99,7 @@
     "jiti": "2.7.0",
     "jscpd": "5.4.3",
     "knip": "^6.44.1",
+    "oxlint-plugin-react-doctor": "^0.9.22",
     "playwright": "^1.65.0",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.2",
@@ -109,6 +115,9 @@
     "fsevents@2.3.3": true
   },
   "overrides": {
+    "eslint-plugin-promise": {
+      "eslint": "$eslint"
+    },
     "vite": "npm:@voidzero-dev/vite-plus-core@1.6.0",
     "vitest": "5.1.0"
   }

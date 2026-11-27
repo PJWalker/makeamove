@@ -1,6 +1,6 @@
 import ts from "typescript";
-import { defineRule  } from "vite-plus/lint/plugins";
-import type {ESTree} from "vite-plus/lint/plugins";
+import { defineRule } from "vite-plus/lint/plugins";
+import type { ESTree } from "vite-plus/lint/plugins";
 
 interface TypeScriptServices {
   program?: ts.Program;
@@ -43,9 +43,10 @@ export const validImportMembers = defineRule({
 
         for (const specifier of node.specifiers) {
           if (specifier.type !== "ImportSpecifier") continue;
-          const name = specifier.imported.type === "Identifier"
-            ? specifier.imported.name
-            : String(specifier.imported.value);
+          const name =
+            specifier.imported.type === "Identifier"
+              ? specifier.imported.name
+              : String(specifier.imported.value);
           if (!names.has(name)) {
             context.report({
               node: specifier,

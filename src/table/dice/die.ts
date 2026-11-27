@@ -1,6 +1,6 @@
 import { Quaternion, Vector3 } from "three";
-import { chipModel, dieModel, paint, resolveColour  } from "./painter";
-import type {Model} from "./painter";
+import { chipModel, dieModel, paint, resolveColour } from "./painter";
+import type { Model } from "./painter";
 import type { DieHull, DiePose, DieThrow, DieTray } from "./physics";
 import { chipHull, firstFaceFor, SCALE, shapeFor, SLOT } from "./shapes";
 import { simulateDiceInWorker, warmDice } from "./simulation";
@@ -148,10 +148,16 @@ export class Die {
       const tick = (now: number) => {
         start ??= now;
         const ms = now - start;
-        if (!this.alive) { stop(); return; }
+        if (!this.alive) {
+          stop();
+          return;
+        }
         if (ms >= delay) {
           const { pose, done } = track(ms);
-          if (done) { stop(); return; }
+          if (done) {
+            stop();
+            return;
+          }
           this.lift();
           if (this.carriedIn) this.carriedIn.style.visibility = "hidden";
           this.place(pose);
@@ -201,7 +207,11 @@ export class Die {
 
   /** Carried, at rest, from `from` into its slot. */
   glideIn(from: Point, delay: number) {
-    return this.play(glideTrack(this.slot, from, delay, this.rotation.clone()), delay, this.rotation);
+    return this.play(
+      glideTrack(this.slot, from, delay, this.rotation.clone()),
+      delay,
+      this.rotation,
+    );
   }
 
   /**
@@ -277,7 +287,10 @@ function rollPending() {
     for (const gone of all) if (!gone.die.alive) gone.settle(Promise.resolve());
     const throws = all.filter(({ die }) => die.alive);
     if (throws.length > 0)
-      rolling.set(tray, (rolling.get(tray) ?? Promise.resolve()).then(() => roll(tray, throws)));
+      rolling.set(
+        tray,
+        (rolling.get(tray) ?? Promise.resolve()).then(() => roll(tray, throws)),
+      );
   }
 }
 
@@ -304,7 +317,15 @@ function inTrayFrame(tray: HTMLElement, throws: Throw[], lying: Die[]): [DieTray
           delay,
           target,
           ...(trayVelocity
-            ? { state: struck(die.hull, die.restingRotation, target, trayVelocity, box.height / SCALE) }
+            ? {
+                state: struck(
+                  die.hull,
+                  die.restingRotation,
+                  target,
+                  trayVelocity,
+                  box.height / SCALE,
+                ),
+              }
             : {}),
         };
       }),
@@ -352,6 +373,7 @@ async function roll(tray: HTMLElement, throws: Throw[]) {
   }
   for (const [index, die] of lying.entries()) {
     const poses = frames?.[throws.length + index];
-    if (poses && die.alive) void die.play(rollTrack(poses, tray, die.slot, 0), 0, die.restingRotation);
+    if (poses && die.alive)
+      void die.play(rollTrack(poses, tray, die.slot, 0), 0, die.restingRotation);
   }
 }

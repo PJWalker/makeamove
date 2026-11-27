@@ -28,7 +28,10 @@ export async function warmDice() {
 }
 
 /** Every frame of a roll, per die, as `simulateDice` gives them. */
-export async function simulateDiceInWorker(tray: DieTray, throws: DieThrow[]): Promise<DiePose[][]> {
+export async function simulateDiceInWorker(
+  tray: DieTray,
+  throws: DieThrow[],
+): Promise<DiePose[][]> {
   const { frames } = await run({ type: "roll", tray, throws });
   return frames;
 }

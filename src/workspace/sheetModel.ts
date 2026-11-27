@@ -3,5 +3,9 @@ import { derive } from "../features/characters/store";
 import type { SheetProps as SheetProperties } from "../systems/extensionTypes";
 
 export function useSheet(properties: SheetProperties) {
-  return { ...properties, d: derive(properties.c, properties.system), editable: canEdit(properties.campaign, properties.c) };
+  return {
+    ...properties,
+    d: derive(properties.c, properties.system),
+    editable: canEdit(properties.campaign, properties.c),
+  };
 }

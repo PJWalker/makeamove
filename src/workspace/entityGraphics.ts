@@ -35,35 +35,35 @@ export function getDefaultEntityGraphic(
   const system = systemOf(campaign);
   let name = defaultIcon ?? DEFAULT_ICON[kind] ?? "bag";
   switch (kind) {
-  case "character": {
-    const character = getCharacter(campaign, id);
-    if (character?.base) {
-      const inherited = campaign.entityGraphics.get(entityGraphicKey(kind, character.base));
-      if (inherited) return inherited;
+    case "character": {
+      const character = getCharacter(campaign, id);
+      if (character?.base) {
+        const inherited = campaign.entityGraphics.get(entityGraphicKey(kind, character.base));
+        if (inherited) return inherited;
+      }
+      name =
+        system.creation?.choices
+          .flatMap((choice) =>
+            choice.options.flatMap((option) =>
+              option.id === character?.data[choice.field] ? [option.icon] : [],
+            ),
+          )
+          .find((icon) => !!icon) ?? name;
+
+      break;
     }
-    name =
-      system.creation?.choices
-        .flatMap((choice) =>
-          choice.options.flatMap((option) =>
-            option.id === character?.data[choice.field] ? [option.icon] : [],
-          ),
-        )
-        .find((icon) => !!icon) ?? name;
+    case "item": {
+      name = system.items.find((item) => item.id === id)?.icon ?? name;
 
-  break;
-  }
-  case "item": {
-    name = system.items.find((item) => item.id === id)?.icon ?? name;
+      break;
+    }
+    case "move": {
+      const move = system.actions.find((action) => action.id === id);
+      if (move) name = move.category === "class" ? "class-move" : "move";
 
-  break;
-  }
-  case "move": {
-    const move = system.actions.find((action) => action.id === id);
-    if (move) name = move.category === "class" ? "class-move" : "move";
-
-  break;
-  }
-  // No default
+      break;
+    }
+    // No default
   }
   return { kind: "icon", name };
 }

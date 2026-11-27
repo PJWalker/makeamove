@@ -54,8 +54,12 @@ function CommandConfirmation() {
       title={title}
       confirmLabel={confirmLabel}
       confirmVariant={danger ? "danger" : "primary"}
-      onClose={() => { context.table.confirming.set(null); }}
-      onConfirm={() => { asking.run(); }}
+      onClose={() => {
+        context.table.confirming.set(null);
+      }}
+      onConfirm={() => {
+        asking.run();
+      }}
     >
       <p>
         <Emphasised {...asking.confirmation} />

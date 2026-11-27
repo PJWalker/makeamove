@@ -2,10 +2,10 @@ import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import { expect } from "vite-plus/test";
 import * as Y from "yjs";
-import { store  } from "../../lib/store";
-import type {Store} from "../../lib/store";
-import { device  } from "../../platform/device";
-import type {Device} from "../../platform/device";
+import { store } from "../../lib/store";
+import type { Store } from "../../lib/store";
+import { device } from "../../platform/device";
+import type { Device } from "../../platform/device";
 import { MemoryNetwork } from "../../sync/__tests__/memoryRoom";
 import { Campaign, createCampaign } from "../campaign";
 
@@ -39,7 +39,7 @@ globalThis.indexedDB = {
 /** A small seeded generator (mulberry32), for reproducible delivery orders. */
 function random(seed: number) {
   return () => {
-    seed = (seed + 0x6D_2B_79_F5) | 0;
+    seed = (seed + 0x6d_2b_79_f5) | 0;
     let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4_294_967_296;
@@ -108,7 +108,9 @@ export class Peer {
 
   /** Go offline, keeping the campaign open locally. */
   disconnect() {
-    this.do((c) => { c.disconnect(); });
+    this.do((c) => {
+      c.disconnect();
+    });
   }
 
   /** Close the campaign, as when the app is closed. */
