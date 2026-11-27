@@ -1,3 +1,4 @@
+// eslint-disable-next-line import/no-nodejs-modules -- Reads source files to check how they name shortcuts.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vite-plus/test";
 
@@ -14,8 +15,11 @@ describe("move and library menu shortcuts", () => {
     ];
 
     for (const file of files) {
-      const text = source(`src/${file}`).replace(/campaign\.entityGraphics\.get\(`[^`]+`\)/g, "");
-      expect(text).not.toMatch(/(?:move|library):\$\{(?:[^}]+)\}/);
+      const text = source(`src/${file}`).replaceAll(
+        /campaign\.entityGraphics\.get\(`[^`]+`\)/g,
+        "",
+      );
+      expect(text).not.toMatch(/(?:move|library):\${[^}]+}/);
     }
   });
 });

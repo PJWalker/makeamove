@@ -2,7 +2,7 @@ import { store, watch } from "../lib/store";
 import type { CampaignDefaults } from "../campaign/campaign";
 import { device } from "../platform/device";
 
-import { importImage, imageColour } from "../media/images";
+import { importImage, imageColour, squareGridOf } from "../media/images";
 import type {
   BlobReference,
   EntityGraphic,
@@ -15,8 +15,11 @@ import { clampZoom, fitCamera, toWorld, zoomAt } from "./camera";
 import type { Camera } from "./camera";
 import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import { bounds, hits } from "./geometry";
-import { cellOr, snapPoint } from "./grid";
-import type { Point } from "./grid";
+import { guessCells } from "./alignMap";
+import type { Box, Cells, Frame } from "./alignMap";
+import { fitBox, fitImageGrid } from "./gridFit";
+import { cellOr, gridPitch, snapPoint } from "./grid";
+import type { Grid, Point } from "./grid";
 import { tokenDistance } from "./measure";
 import { conversion, imageElement, newToken, randomTokenColour } from "./newElements";
 import type { TokenSpec } from "./newElements";
@@ -27,6 +30,7 @@ import { ERASER_RADIUS, GM_KINDS, kindOf } from "./tools";
 import type { SceneTools } from "./tools";
 import type { Layer, NewElement, SceneElement, TokenElement, TokenStyle, Transform } from "./types";
 import { TOOL_PRESS } from "./gestures";
+import alignBox from "./gestures/align";
 import { PolygonDraft } from "./gestures/polygon";
 import { pinch } from "./gestures/pan";
 import { hoverCursor } from "./gestures/select";
@@ -50,6 +54,35 @@ const ARROW_NUDGES: Record<string, Point> = {
 function transformOf(t: Transform): Transform {
   return { x: t.x, y: t.y, w: t.w, h: t.h, rot: t.rot };
 }
+
+/** A map whose image has a square grid drawn on it, scaled and placed so that grid lines up with the scene's. */
+async function alignedToImageGrid<M extends NewElement & Transform>(
+  map: M,
+  image: Blob,
+  grid: Grid,
+): Promise<M> {
+  if (grid.type !== "square") return map;
+  try {
+    const found = await squareGridOf(image);
+    const frame = found && fitImageGrid(map, found, grid);
+    return frame ? { ...map, ...frame } : map;
+  } catch (error) {
+    console.error("Couldn't look for a grid on a map image", error);
+    return map;
+  }
+}
+
+/**
+ * A map being lined up with the grid. Once a box is drawn over some of its
+ * cells: the map as it was then, the box, how many cells it covers, and
+ * where that last put the map.
+ */
+export interface Alignment {
+  mapId: string;
+  drawn?: { base: Transform; box: Box; cells: Cells; placed?: Frame };
+}
+
+const sameFrame = (a: Frame, b: Frame) => a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
 
 /**
  * Turns pointer, wheel and keyboard input into camera moves and scene edits.
@@ -77,6 +110,8 @@ export class SceneController implements ToolContext {
 
   /** An area to place for an action: the next drag on the map puts it down (see placeArea). */
   readonly placing = store<Placement | null>(null);
+  /** A map being lined up with the grid: presses draw a box over its cells. */
+  readonly aligning = store<Alignment | null>(null);
 
   /** The corners of a polygon (a shape, or an area of solid light or dark) being placed, a click at a time. */
   readonly polygon: PolygonDraft = new PolygonDraft(this);
@@ -178,6 +213,9 @@ export class SceneController implements ToolContext {
       this.scene.elements.observe(refresh),
       this.scene.settings.observe(regrid),
       watch([this.selection], () => {
+        const aligning = this.aligning.value;
+        const sel = this.selection.value;
+        if (aligning && (sel.length !== 1 || sel[0] !== aligning.mapId)) this.stopAligning();
         this.selectedElements.value = this.selected();
         this.updateOverlay();
       }),
@@ -199,6 +237,7 @@ export class SceneController implements ToolContext {
             return element && this.pickable(element);
           });
           if (keep.length !== this.selection.value.length) this.selection.value = keep;
+          if (this.tools.activeTool.value !== "select") this.stopAligning();
           this.cancelGesture();
           this.updateCursor();
           this.updateOverlay();
@@ -289,6 +328,7 @@ export class SceneController implements ToolContext {
 
   stop() {
     this.cancelGesture();
+    this.stopAligning();
     cancelAnimationFrame(this.itemTokenDropFrame);
     this.itemTokenDropFrame = 0;
     this.renderer.previews.clear();
@@ -316,6 +356,21 @@ export class SceneController implements ToolContext {
       this.selection.value = sel;
     }
     this.updateMapColour();
+    this.checkAligning();
+  }
+
+  /**
+   * Stop lining a map up once it can't be, or once something else has
+   * moved it (undo, a peer), so stale counts are never applied over that:
+   * it's gone, no longer a map, or locked.
+   */
+  private checkAligning() {
+    const aligning = this.aligning.value;
+    if (!aligning) return;
+    const map = this.byId.get(aligning.mapId);
+    const placed = aligning.drawn?.placed;
+    if (map?.type !== "map" || map.locked || (placed && !sameFrame(map, placed)))
+      this.stopAligning();
   }
 
   private updateMapColour() {
@@ -438,7 +493,8 @@ export class SceneController implements ToolContext {
   private idleCursor(): string {
     const tool = this.tools.activeTool.value;
     if (this.spaceHeld) return "grab";
-    if (this.placing.value || (tool === "select" && this.targetMode.value)) return "crosshair";
+    if (this.placing.value || this.aligning.value || (tool === "select" && this.targetMode.value))
+      return "crosshair";
     return toolCursor(tool, {
       shape: this.tools.shapeTool.value,
       effect: this.tools.effectTool.value.effect,
@@ -565,6 +621,14 @@ export class SceneController implements ToolContext {
     const placing = this.placing.value;
     if (placing && e.button === 0 && !this.spaceHeld) {
       this.gesture = dragShape(this, e, world, placing.shape, placementPlan(this, placing));
+      this.updateCursor();
+      return;
+    }
+
+    if (this.aligning.value && e.button === 0 && !this.spaceHeld) {
+      this.gesture = alignBox(this, world, (box) => {
+        this.alignDrawn(box);
+      });
       this.updateCursor();
       return;
     }
@@ -752,7 +816,10 @@ export class SceneController implements ToolContext {
         return true;
       }
       case "Escape": {
-        if (this.gesture || this.polygon.active) this.cancelGesture();
+        if (this.aligning.value) {
+          this.cancelGesture();
+          this.stopAligning();
+        } else if (this.gesture || this.polygon.active) this.cancelGesture();
         else this.selection.value = [];
         return true;
       }
@@ -859,6 +926,56 @@ export class SceneController implements ToolContext {
       else this.renderer.previews.delete(id);
     }
     this.renderer.invalidate("previews");
+  }
+
+  /** Start lining map `id` up with the grid: a drag over some of its cells then sizes and places it. */
+  alignMap(id: string) {
+    this.cancelGesture();
+    this.tools.activeTool.value = "select";
+    this.selection.value = [id];
+    this.aligning.value = { mapId: id };
+    this.updateCursor();
+  }
+
+  stopAligning() {
+    if (!this.aligning.value) return;
+    this.aligning.value = null;
+    this.updateCursor();
+  }
+
+  /** Say how many cells the drawn box covers, and line the map up again from how it was when the box was drawn. */
+  setAlignCells(cells: Cells) {
+    const aligning = this.aligning.value;
+    if (!aligning?.drawn) return;
+    this.aligning.value = { ...aligning, drawn: { ...aligning.drawn, cells } };
+    this.applyAlignment();
+  }
+
+  /** A box has been drawn over the map's cells: guess how many it covers, and line the map up. */
+  private alignDrawn(box: Box) {
+    const map = this.aligning.value && this.byId.get(this.aligning.value.mapId);
+    const pitch = gridPitch(this.renderer.grid);
+    if (!map || !pitch) return;
+    this.aligning.value = {
+      mapId: map.id,
+      drawn: {
+        base: transformOf(map),
+        box,
+        cells: guessCells(box, pitch),
+      },
+    };
+    this.applyAlignment();
+  }
+
+  /** Scale the map so the box covers its cells of the grid, with its corner on a grid point. */
+  private applyAlignment() {
+    const aligning = this.aligning.value;
+    if (!aligning?.drawn) return;
+    const frame = fitBox(aligning.drawn.base, aligning.drawn, this.renderer.grid);
+    if (!frame) return;
+    // Noted first: the update comes straight back through refresh, which checks it.
+    this.aligning.value = { ...aligning, drawn: { ...aligning.drawn, placed: frame } };
+    this.scene.update([[aligning.mapId, frame]]);
   }
 
   /**
@@ -1009,13 +1126,17 @@ export class SceneController implements ToolContext {
           }
         }),
       );
-      for (const [index, image] of imported.entries()) {
-        if (!image) continue;
-        const file = images[index]!;
-        const shift = index * cellOr(grid, 40);
-        const p = { x: at.x + shift, y: at.y + shift };
-        added.push(imageElement(grid, image, file.name, p, this.newTokenLook(true)));
-      }
+      const placed = await Promise.all(
+        imported.map(async (image, index) => {
+          if (!image) return null;
+          const file = images[index]!;
+          const shift = index * cellOr(grid, 40);
+          const p = { x: at.x + shift, y: at.y + shift };
+          const element = imageElement(grid, image, file.name, p, this.newTokenLook(true));
+          return element.type === "map" ? alignedToImageGrid(element, file, grid) : element;
+        }),
+      );
+      added.push(...placed.filter((element) => element !== null));
     } finally {
       this.updateCursor();
     }

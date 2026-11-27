@@ -13,3 +13,5 @@ src/campaign/standing.ts
 src/lib/commaList.ts
 src/sync/inviteText.ts
 src/features/dice/scan.ts
+src/scene/alignMap.ts
+src/media/peaks.ts
