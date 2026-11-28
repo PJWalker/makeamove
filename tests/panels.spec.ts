@@ -91,6 +91,8 @@ test("panel creation actions share the title bar when docked and floating", asyn
   const title = header.getByRole("heading", { name: "Items", exact: true });
   for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 800 });
+    // Measured once the window has finished opening or resizing.
+    await settled(page);
     for (const action of ["New Gear", "New Move"]) {
       const button = header.getByRole("button", { name: action, exact: true });
       await expect(button).toBeVisible();
