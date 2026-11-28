@@ -1,7 +1,7 @@
 import { fromLocal, shapePolygon } from "./geometry";
 import type { Point } from "./grid";
 import { distanceToSegment } from "./stroke";
-import type { SceneElement } from "./types";
+import type { SceneElement, Transform } from "./types";
 
 /*
  * Line of sight and light (M12). Walls are segments that block sight;
@@ -14,6 +14,20 @@ import type { SceneElement } from "./types";
 export interface Segment {
   a: Point;
   b: Point;
+}
+
+/** How thick a wall is to pick, in world px; it blocks sight along its line alone. */
+const WALL_THICKNESS = 6;
+
+/** A wall from `a` to `b`: the inverse of wallEnds. */
+export function wallBetween(a: Point, b: Point): Transform {
+  return {
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2,
+    w: Math.hypot(b.x - a.x, b.y - a.y),
+    h: WALL_THICKNESS,
+    rot: Math.atan2(b.y - a.y, b.x - a.x),
+  };
 }
 
 /** A wall's two ends in the world: it lies along its length (w), through its centre, at its rotation. */

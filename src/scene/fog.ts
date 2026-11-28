@@ -78,7 +78,10 @@ export function afterPasses(passes: FogPass[], c: FogCover): boolean {
   return afterPass(last, afterPasses(passes.slice(0, -1), c), c);
 }
 
-/** Painting a scene's passes leaves exactly its revealed places clear. */
+/**
+ * Painting a scene's passes leaves exactly its revealed places clear.
+ * @public A proof, not called.
+ */
 export function paintedClear(mode: FogMode, c: FogCover): boolean {
   //@ verify
   //@ ensures \result === isRevealed(mode, c)
@@ -190,6 +193,7 @@ export function overFog(layer: ElementLayer): boolean {
 /**
  * Whether a player sees an element in `layer` at a place with `shade`:
  * fog hides it, unless it's painted over the fog.
+ * @public A proof, not called.
  */
 export function elementSeen(layer: ElementLayer, shade: FogShade): boolean {
   //@ verify

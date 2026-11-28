@@ -27,6 +27,7 @@ export const TOOL_IDS = [
   "light",
   "effect",
   "fog",
+  "pin",
 ] as const;
 
 export type ToolId = (typeof TOOL_IDS)[number];
@@ -92,6 +93,7 @@ export type SelectKind =
   | "fog"
   | "light"
   | "map"
+  | "pin"
   | "shape"
   | "text"
   | "token"
@@ -108,8 +110,17 @@ const SELECT_KINDS = new Set([
   "light",
   "effect",
   "fog",
+  "pin",
 ]);
-const SELECTABLE_DEFAULT: SelectKind[] = ["token", "map", "drawing", "shape", "text", "wall"];
+const SELECTABLE_DEFAULT: SelectKind[] = [
+  "token",
+  "map",
+  "drawing",
+  "shape",
+  "text",
+  "wall",
+  "pin",
+];
 
 /**
  * The scene tools on this device: which is in use (for this session only),
@@ -243,6 +254,7 @@ export const TOOL_KINDS: Partial<Record<ToolId, SelectKind>> = {
   light: "light",
   effect: "effect",
   fog: "fog",
+  pin: "pin",
 };
 
 /** Outline width of drawn shapes, in world px. */

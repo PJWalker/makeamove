@@ -1,5 +1,6 @@
 import { getBlob, putBlob } from "../platform/blobs";
 import { workerClient } from "../lib/workerRpc";
+import type { ImageGrid } from "./gridDetect";
 import type { ImageWorkerResult, ImageWorkerTask } from "./imageWorkerProtocol";
 
 /** An image in the blob store; the CRDT holds only this reference. */
@@ -44,6 +45,15 @@ export async function importImage(file: Blob): Promise<BlobReference> {
   const hash = await putBlob(blob);
   colours.set(hash, colour);
   return { hash, mime: blob.type, width, height };
+}
+
+/**
+ * The square grid drawn on an image, if it has one: its spacing and where
+ * two of its lines cross, in the image's own px.
+ */
+export async function squareGridOf(image: Blob): Promise<ImageGrid | null> {
+  const { grid } = await runImageTask({ type: "squareGrid", blob: image });
+  return grid;
 }
 
 /** Where a campaign gets images this device lacks: from other players, while connected. */
