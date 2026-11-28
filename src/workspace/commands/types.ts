@@ -3,6 +3,7 @@ import type { ChatContent } from "../../features/chat/content";
 import type { Icon } from "../../ui/icons";
 import type { Confirmation } from "../tableState";
 import type { CampaignContext } from "../campaignContext";
+import type { Need } from "./slots";
 
 /*
  * The table's commands: a kernel command (kernel/commands.ts) plus how it's
@@ -57,6 +58,11 @@ export interface Offer<P> {
   mine?: boolean;
   /** A secondary action, usually showing full text without running it. */
   open?: () => void;
+  /**
+   * The call's parameters without who acts or what on, for a call made from
+   * a palette sentence: recent actions remember the move, not its targets.
+   */
+  verb?: unknown;
 }
 
 type Shown<P, T> = T | ((context: CampaignContext, parameters: P) => T);
@@ -85,6 +91,15 @@ export interface TableCommand<P = void, R = unknown> extends Command<CampaignCon
   section?: MenuSection;
   /** Ways to type it in the chat box, like `/r 2d6`. */
   slash?: SlashForm<P>[];
+  /**
+   * The calls it offers for a sentence typed in the palette, like "Mira hack
+   * and slash goblin": a character the player plays acts, on what `object`
+   * takes, if anything. Commands with a `menu` read "goblin lock" without one.
+   */
+  sentence?: {
+    object: Need;
+    offers: (context: CampaignContext, actor: string, object: Target | undefined) => Offer<P>[];
+  };
 }
 
 /** One way to type a command in the chat box. */
@@ -126,6 +141,8 @@ export interface Action {
   /** True, or the reason it can't run now. Unavailable actions stay listed, dimmed. */
   available: Availability;
   mine?: boolean;
+  /** For a call made from a sentence: its verb's key, which recent actions remember instead of `id`. */
+  verb?: string;
   /** Run it, asking first if the command wants confirming. */
   run: () => void;
   open?: () => void;

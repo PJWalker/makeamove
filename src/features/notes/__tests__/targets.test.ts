@@ -1,14 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { Campaign } from "../../../campaign/campaign";
 
-import {
-  characterLinkTargets,
-  linkLabel,
-  linkTargets,
-  linkTip,
-  matchingLinkTargets,
-} from "../targets";
-
 const dependencies = vi.hoisted(() => ({
   getCharacter: vi.fn(),
   listCharacters: vi.fn(),
@@ -22,6 +14,12 @@ vi.mock("../../characters/api", () => ({
   systemOf: dependencies.systemOf,
 }));
 vi.mock("../api", () => ({ listNotes: dependencies.listNotes }));
+
+// Tests share modules, so another file may have loaded this with the real ones it uses.
+vi.resetModules();
+const { characterLinkTargets, linkLabel, linkTargets, linkTip, matchingLinkTargets } = await import(
+  /* webpackChunkName: "targets" */ "../targets"
+);
 
 const notes = [
   { id: "current", title: "Current Page", gmOnly: false },
