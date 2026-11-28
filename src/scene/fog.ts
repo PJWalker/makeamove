@@ -106,6 +106,30 @@ export function fogShade(mode: FogMode, vision: boolean, c: FogCover): FogShade 
   return "clear";
 }
 
+/** What decides whether a player sees a token: whose it is, how they see, and what covers its place. */
+export interface TokenView {
+  /** One of the player's own, which they see through. */
+  own: boolean;
+  /** They see only what their tokens see. */
+  vision: boolean;
+  cover: FogCover;
+}
+
+/**
+ * Whether a player sees a token: their own always, anyone else's only where
+ * the place looks clear to them. So under a hidden shape, out of their
+ * tokens' sight or in unexplored fog, nothing (a chat bubble included) gives
+ * another token away.
+ */
+export function tokenShows(mode: FogMode, t: TokenView): boolean {
+  //@ verify
+  //@ ensures \result === (t.own || fogShade(mode, t.vision, t.cover) === "clear")
+  //@ ensures !t.own && mode !== "none" && t.cover.hidden ==> !\result
+  //@ ensures !t.own && !isRevealed(mode, t.cover) ==> !\result
+  //@ ensures !t.own && t.vision && !t.cover.inSight ==> !\result
+  return t.own || fogShade(mode, t.vision, t.cover) === "clear";
+}
+
 /**
  * What the scene is painted in, bottom to top: its element layers (see
  * types.ts LAYERS), with the grid, light, sight and fog between them.
