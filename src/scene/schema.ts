@@ -8,6 +8,7 @@ import type {
 } from "../media/images";
 import { isLink } from "../features/notes/links";
 import { DEFAULT_GRID } from "./grid";
+import { FOG_MODES } from "./fog";
 import { EFFECTS, LAYERS, SHAPES, TEXT_FONTS, TOKEN_STYLES } from "./types";
 import type { SceneElement } from "./types";
 
@@ -16,6 +17,7 @@ import type { SceneElement } from "./types";
  *
  *   settings  lighting, darkness, vision, and the grid
  *   elements  elementId -> element: a map, token, drawing, shape…
+ *   explored  key -> what characters have seen from one place (fog of war)
  *
  * Each scene is a Yjs subdocument of the campaign root, persisted in its own
  * IndexedDB database and loaded only while someone is looking at it.
@@ -32,6 +34,8 @@ export const sceneSettings = record({
   darkness: number_(0.75),
   /** Whether players see only what their tokens see. */
   vision: lww(isBoolean).or(false),
+  /** Fog of war: off, revealed by exploring, or revealed by hand (see fog.ts). */
+  fog: lww(oneOf(...FOG_MODES.map((m) => m.id))).or("none"),
   gridType: lww(oneOf("none", "square", "hex")).or(DEFAULT_GRID.type),
   gridSize: number_(DEFAULT_GRID.size),
   gridOffsetX: number_(DEFAULT_GRID.offsetX),
@@ -93,6 +97,7 @@ const elementCases = {
     glow: lww(isBoolean),
     obscures: lww(isBoolean),
   },
+  fog: { ...outline, shape: shapeKind, force: lww(oneOf("hide", "reveal")).or("hide") },
 } satisfies Record<SceneElement["type"], Shape>;
 
 export const sceneElement = variant(
@@ -138,7 +143,14 @@ function parseElement(m: Item<typeof sceneElement>, id: string): Invalid | Scene
   return { id, ...element } as SceneElement;
 }
 
+/** What a character saw from one place: a polygon in the world, flat [x, y, …]. */
+function parseExplored(points: number[]): Invalid | number[] {
+  if (points.length < 6 || points.length % 2 !== 0) return new Invalid("its outline is missing");
+  return points;
+}
+
 export const sceneShape = {
   settings: sceneSettings,
   elements: collection(sceneElement, "scene element", parseElement),
+  explored: collection(lww(isPoints), "explored sight", parseExplored),
 };

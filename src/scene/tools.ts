@@ -2,10 +2,11 @@ import { store } from "../lib/store";
 import { choiceOf, listOf, settingsOver } from "../data/localDoc";
 import type { LocalDoc as LocalDocument, LocalValue } from "../data/localDoc";
 import { oneOf, isString } from "../lib/guards";
-import { EFFECTS, SHAPES, TEXT_FONTS } from "./types";
+import { EFFECTS, FOG_COLOURS, SHAPES, TEXT_FONTS } from "./types";
 import type {
   AreaTone,
   EffectKind,
+  FogForce,
   Layer,
   SceneElement,
   ShapeKind,
@@ -25,6 +26,7 @@ export const TOOL_IDS = [
   "wall",
   "light",
   "effect",
+  "fog",
   "pin",
 ] as const;
 
@@ -37,8 +39,25 @@ interface PenSettings {
   colour: string;
   /** Stroke width in screen px, so the brush is the same size on screen at any zoom. */
   width: number;
-  layer: Extract<Layer, "over" | "under">;
+  /** The layer it draws in, or "auto": over the fog for a player, over tokens for the GM. */
+  layer: PenLayer | "auto";
 }
+
+/** The layers the pen, Shapes and Text tools put things in. */
+export type PenLayer = Extract<Layer, "aboveFog" | "over" | "under">;
+
+/** The layer a pen set to `layer` draws in: "auto" is over the fog for a player, over tokens for the GM. */
+export function penLayerFor(layer: PenLayer | "auto", gm: boolean): PenLayer {
+  if (layer !== "auto") return layer;
+  return gm ? "over" : "aboveFog";
+}
+
+/** The layers things can be drawn in, as the pen and selection bar offer them. */
+export const PEN_LAYERS: { id: PenLayer; label: string; title: string }[] = [
+  { id: "under", label: "Under Tokens", title: "Under tokens, and under the fog of war" },
+  { id: "over", label: "Over Tokens", title: "Over tokens, and under the fog of war" },
+  { id: "aboveFog", label: "Over Fog", title: "Over the fog of war, so players see it everywhere" },
+];
 
 /** Eraser radius in screen px. */
 export const ERASER_RADIUS = 14;
@@ -55,6 +74,12 @@ interface EffectSettings {
   shape: ShapeKind;
 }
 
+/** What the Fog tool draws: a shape revealed to players, or hidden from them, and its shape. */
+interface FogToolSettings {
+  force: FogForce;
+  shape: ShapeKind;
+}
+
 /** An effect as it starts: in its own colour, with its own light and sight. */
 function effectDefaults(effect: EffectKind) {
   const e = EFFECTS.find((x) => x.id === effect)!;
@@ -65,6 +90,7 @@ function effectDefaults(effect: EffectKind) {
 export type SelectKind =
   | "drawing"
   | "effect"
+  | "fog"
   | "light"
   | "map"
   | "pin"
@@ -83,6 +109,7 @@ const SELECT_KINDS = new Set([
   "wall",
   "light",
   "effect",
+  "fog",
   "pin",
 ]);
 const SELECTABLE_DEFAULT: SelectKind[] = [
@@ -112,6 +139,7 @@ export class SceneTools {
   readonly textStyle: LocalValue<TextStyle>;
   readonly lightTool: LocalValue<LightToolMode>;
   readonly effectTool: LocalValue<EffectSettings>;
+  readonly fogTool: LocalValue<FogToolSettings>;
   /** The sorts of things the Select tool picks. Lights and effects are off until asked for. */
   readonly selectable: LocalValue<SelectKind[]>;
 
@@ -119,12 +147,13 @@ export class SceneTools {
     this.toolOrder = local.value("toolOrder", listOf(oneOf(...TOOL_IDS), "tool order"));
     // Gold, like the UI accent.
     const penRead = settingsOver<PenSettings>(
-      { colour: "#f0bb3b", width: 6, layer: "over" },
+      { colour: "#f0bb3b", width: 6, layer: "auto" },
       "pen",
     );
     this.pen = local.value("pen", (v) => {
       const pen = penRead(v);
-      return pen.layer === "under" || pen.layer === "over" ? pen : { ...pen, layer: "over" };
+      const known = pen.layer === "auto" || PEN_LAYERS.some((l) => l.id === pen.layer);
+      return known ? pen : { ...pen, layer: "auto" };
     });
     this.shapeTool = local.value(
       "shapeTool",
@@ -160,6 +189,12 @@ export class SceneTools {
       const known = EFFECTS.some((x) => x.id === e.effect) && SHAPES.some((s) => s.id === e.shape);
       return known ? e : effectRead(undefined);
     });
+    const fogRead = settingsOver<FogToolSettings>({ force: "reveal", shape: "rect" }, "fog tool");
+    this.fogTool = local.value("fogTool", (v) => {
+      const f = fogRead(v);
+      const known = Object.hasOwn(FOG_COLOURS, f.force) && SHAPES.some((s) => s.id === f.shape);
+      return known ? f : fogRead(undefined);
+    });
     this.selectable = local.value(
       "selectable",
       listOf(
@@ -172,6 +207,19 @@ export class SceneTools {
 
   setPen(patch: Partial<PenSettings>) {
     this.pen.value = { ...this.pen.value, ...patch };
+  }
+
+  setFogTool(patch: Partial<FogToolSettings>) {
+    this.fogTool.value = { ...this.fogTool.value, ...patch };
+  }
+
+  /**
+   * The layer the pen, Shapes and Text tools put things in: the one chosen,
+   * or by default over the fog for a player, so they can sketch what they've
+   * heard of places they haven't seen; the GM's go over tokens.
+   */
+  penLayer(gm: boolean): PenLayer {
+    return penLayerFor(this.pen.value.layer, gm);
   }
 
   setTextStyle(patch: Partial<TextStyle>) {
@@ -199,12 +247,13 @@ export class SceneTools {
 }
 
 /** The GM's sorts of things, which only the GM sees, picks and edits. */
-export const GM_KINDS: readonly SelectKind[] = ["wall", "light", "effect"];
+export const GM_KINDS: readonly SelectKind[] = ["wall", "light", "effect", "fog"];
 
 /** The tools that make a sort of thing, and pick only that while in use. */
 export const TOOL_KINDS: Partial<Record<ToolId, SelectKind>> = {
   light: "light",
   effect: "effect",
+  fog: "fog",
   pin: "pin",
 };
 

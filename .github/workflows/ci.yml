@@ -10,8 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      # `npm run verify` (part of `ci`) proves the LemmaScript files with Dafny.
-      # Before setup-node: this action sets up its own older Node.
+      # `npm run verify` proves the LemmaScript files with Dafny. It installs
+      # Node 16 for itself, so it runs before setup-node.
       - uses: dafny-lang/setup-dafny-action@v1
         with:
           dafny-version: "4.11.0"

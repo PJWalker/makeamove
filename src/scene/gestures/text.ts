@@ -50,7 +50,7 @@ export function putText(c: ToolContext, at: Point, text: string, id?: string) {
   const m = c.renderer.measureText(look);
   c.scene.add({
     type: "text",
-    layer: c.tools.pen.value.layer,
+    layer: c.tools.penLayer(c.gm),
     ...look,
     x: at.x,
     y: at.y,

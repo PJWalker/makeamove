@@ -21,6 +21,10 @@ import { measureSdfText } from "./render/sdfText";
 import { CANVAS_FONTS } from "./render/style";
 import { ElementLayer } from "./render/elements";
 import { GridLayer } from "./render/grid";
+import { stack } from "./fog";
+import type { Stratum } from "./fog";
+import { FogOfWarLayer } from "./render/fogOfWar";
+import type { FogOfWar } from "./render/fogOfWar";
 import { LightingLayer } from "./render/lighting";
 import type { Lighting } from "./render/lighting";
 import { OverlayLayer } from "./render/overlay";
@@ -72,7 +76,9 @@ export class SceneRenderer implements RenderState {
   private readonly gridLayer = new GridLayer();
   private readonly elementLayer = new ElementLayer(this, this.layers);
   private readonly lightingLayer = new LightingLayer(this);
+  private readonly fogLayer = new FogOfWarLayer(this);
   private readonly draftLayer = new DraftLayer();
+  private readonly proposalLayer = new DraftLayer();
   private readonly tokenLabels = new TokenLabelLayer(this);
   private readonly conditions = new ConditionLayer(this);
   private readonly presence = new PresenceLayer(this);
@@ -115,6 +121,8 @@ export class SceneRenderer implements RenderState {
     rangeFrom: null,
   };
   draft: Draft | null = null;
+  /** What's proposed for adding, shown until it's added or dropped, whatever gestures come and go: walls found on a map. */
+  proposal: Draft | null = null;
   /** Show the GM's walls and lights (only the GM sees them). */
   showHelpers = false;
   /** The sorts of things whose GM helpers (lamps, areas, effect outlines) show: those the active tool can pick. */
@@ -164,16 +172,16 @@ export class SceneRenderer implements RenderState {
     this.app.stage.eventMode = "none";
     host.append(this.app.canvas);
     const lighting = this.lightingLayer;
-    this.world.addChild(
-      this.layers.map,
-      this.gridLayer.view,
-      this.layers.under,
-      this.layers.token,
-      this.layers.over,
-      lighting.tintLayer,
-      lighting.lightLayer,
-      lighting.fogLayer,
-    );
+    const strata: Record<Stratum, Container> = {
+      ...this.layers,
+      grid: this.gridLayer.view,
+      tint: lighting.tintLayer,
+      light: lighting.lightLayer,
+      sight: lighting.sightLayer,
+      fog: this.fogLayer.view,
+    };
+    // In the order fog.ts proves leaves only the layer above the fog showing over it.
+    this.world.addChild(...stack().map((s) => strata[s]));
     this.app.stage.addChild(
       this.world,
       this.tokenLabels.bars,
@@ -262,7 +270,6 @@ export class SceneRenderer implements RenderState {
     const d = this.dirty;
     if (d.elements) this.elementLayer.sync();
     else if (d.previews) this.elementLayer.syncPreviews();
-    this.elementLayer.syncHidden(this.showHelpers, this.helpersShown);
     const falling = this.elementLayer.syncDowned();
     const effects = this.elementLayer.animate();
     if (d.camera) {
@@ -272,12 +279,21 @@ export class SceneRenderer implements RenderState {
     }
     if (d.elements || d.previews) d.overlay = true;
     if (d.grid) this.gridLayer.draw(this);
-    if (d.elements || d.previews || d.camera || d.lighting)
-      this.lightingLayer.draw(this.lighting, this.viewers);
+    if (d.elements || d.previews || d.camera || d.lighting) {
+      this.lightingLayer.draw(this.lighting, this.viewers, this.fogLayer.fog.mode !== "none");
+      this.fogLayer.draw(this.lightingLayer.sight, this.lightingLayer.box);
+    }
+    this.elementLayer.syncHidden(
+      this.showHelpers,
+      this.helpersShown,
+      (token) =>
+        !this.viewers?.includes(token.id) && this.unseen(this.previews.get(token.id) ?? token),
+    );
     this.syncPins();
     if (d.overlay) {
-      const unseen = (t: Transform) => this.lightingLayer.unseen(t);
+      const unseen = (t: Transform) => this.unseen(t);
       this.draftLayer.draw(this.draft, this.layers, this.camera.zoom);
+      this.proposalLayer.draw(this.proposal, this.layers, this.camera.zoom);
       this.overlay.draw(this.overlayState);
       this.tokenLabels.draw(this.hoverToken, this.hoverPointer, unseen);
       this.conditions.draw(this.tokenLabels.bars, this.hoverPointer, unseen);
@@ -333,6 +349,19 @@ export class SceneRenderer implements RenderState {
     this.invalidate("lighting", "overlay");
   }
 
+  /** Set the scene's fog of war, and whether this device sees under it (the GM's). */
+  setFog(fog: FogOfWar, seeAll: boolean) {
+    this.fogLayer.fog = fog;
+    this.fogLayer.seeAll = seeAll;
+    this.invalidate("lighting", "overlay");
+  }
+
+  /** Whether a token there is hidden from this device: out of its viewers' sight, or under fog. */
+  private unseen(t: Point): boolean {
+    const { sight } = this.lightingLayer;
+    return !this.fogLayer.clear(t, this.lightingLayer.inSight(t), sight !== null);
+  }
+
   /** Where pins find what they lead to, as it changes. */
   setPinTargets(target: (link: LinkReference) => PinTarget | null) {
     this.pinTarget = target;
@@ -346,7 +375,7 @@ export class SceneRenderer implements RenderState {
       gm: this.showHelpers,
       found: target !== null,
       gmOnly: target?.gmOnly === true,
-      inSight: !this.lightingLayer.unseen(this.previews.get(pin.id) ?? pin),
+      inSight: !this.unseen(this.previews.get(pin.id) ?? pin),
     };
   }
 

@@ -13,7 +13,7 @@ import type { EffectKind, ShapeKind } from "./types";
  * white with a soft shadow on a Mac, white outlined in black elsewhere.
  */
 
-/** The tool settings a cursor shows: what the Shapes and Effects tools put down. */
+/** The tool settings a cursor shows: what the Shapes, Fog of War and Effects tools put down. */
 export interface CursorSettings {
   shape: ShapeKind;
   effect: EffectKind;
@@ -126,7 +126,7 @@ export function toolCursor(tool: ToolId, settings: CursorSettings, mac = IS_MAC)
   if (tool === "draw") return imageCursor(QUILL, [3, 29], mac, QUILL_SPINE);
   if (tool === "ping") return imageCursor(RADAR, [16, 16], mac);
   const badge =
-    tool === "shape"
+    tool === "shape" || tool === "fog"
       ? SHAPE_BADGES[settings.shape]
       : tool === "effect"
         ? EFFECT_BADGES[settings.effect]
