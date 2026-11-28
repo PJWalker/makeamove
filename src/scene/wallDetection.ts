@@ -1,15 +1,15 @@
 import { store } from "../lib/store";
-import { loadBitmap } from "../media/images";
+import type { Greyscale } from "../media/greyscale";
+import { greyscaleOf, loadBlob } from "../media/images";
 import {
   DEFAULT_DETECT,
   MAX_SAMPLES,
   SAMPLES_PER_CELL,
   outlinePaths,
-  shadesOf,
   wallsAlong,
   wallsNotIn,
 } from "./detectWalls";
-import type { DetectSettings, Shades } from "./detectWalls";
+import type { DetectSettings } from "./detectWalls";
 import type { ToolContext } from "./gestures/types";
 import { cellOr, DEFAULT_GRID } from "./grid";
 import type { MapElement, Transform } from "./types";
@@ -24,10 +24,11 @@ export interface WallDetection {
 
 const PREVIEW = { colour: "#ffd27a", width: 3 };
 
-/** An image's shades, sampled to fit a map at its size. */
+/** An image's shades, sampled at most `maxSide` along its longer side. */
 interface Sampled {
   hash: string;
-  shades: Shades;
+  maxSide: number;
+  shades: Greyscale;
 }
 
 /**
@@ -99,7 +100,8 @@ export class WallDetector {
       this.show();
       return;
     }
-    const paths = outlinePaths(shades, now.settings, cell / perSample);
+    // The samples as read, which may be a little coarser than asked for.
+    const paths = outlinePaths(shades, now.settings, (cell * shades.width) / map.w);
     const frame = { frame: map, width: shades.width, height: shades.height };
     this.state.value = {
       ...now,
@@ -142,30 +144,19 @@ export class WallDetector {
   }
 
   /**
-   * The map's image cut into samples `perSample` world px apart: a few to a
-   * grid cell, at most MAX_SAMPLES along its longer side and no finer than
-   * the image itself.
+   * The map's image cut into samples about `perSample` world px apart: a few
+   * to a grid cell, at most MAX_SAMPLES along its longer side and no finer
+   * than the image itself. Read in the image worker.
    */
-  private async sample(map: MapElement, perSample: number): Promise<Shades | null> {
+  private async sample(map: MapElement, perSample: number): Promise<Greyscale | null> {
     const { image } = map;
-    const width = Math.max(1, Math.round(map.w / perSample));
-    const height = Math.max(1, Math.round(map.h / perSample));
+    const maxSide = Math.max(1, Math.round(Math.max(map.w, map.h) / perSample));
     const known = this.sampled;
-    if (
-      known?.hash === image.hash &&
-      known.shades.width === width &&
-      known.shades.height === height
-    )
-      return known.shades;
-    const bitmap = await loadBitmap(image.hash, this.c.renderer.peers);
-    if (!bitmap) return null;
-    const canvas = new OffscreenCanvas(width, height);
-    const g = canvas.getContext("2d", { willReadFrequently: true });
-    if (!g) return null;
-    g.imageSmoothingQuality = "high";
-    g.drawImage(bitmap, 0, 0, width, height);
-    const shades = shadesOf(g.getImageData(0, 0, width, height).data, width, height);
-    this.sampled = { hash: image.hash, shades };
+    if (known?.hash === image.hash && known.maxSide === maxSide) return known.shades;
+    const blob = await loadBlob(image.hash, this.c.renderer.peers);
+    if (!blob) return null;
+    const shades = await greyscaleOf(blob, maxSide);
+    this.sampled = { hash: image.hash, maxSide, shades };
     return shades;
   }
 }

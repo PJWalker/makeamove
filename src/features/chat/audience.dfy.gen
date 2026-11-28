@@ -4,6 +4,10 @@ datatype Seen = full | hidden | masked
 
 datatype Audience = Audience(author: string, whisper: bool, to: seq<string>, secretRoll: bool)
 
+datatype BubblePlace = edge | off | token
+
+datatype BubbleViewer = BubbleViewer(me: string, isGm: bool, chatOpen: bool, tokenShown: bool)
+
 function seenBy(a: Audience, me: string, isGm: bool): Seen
 {
   if a.whisper then
@@ -23,5 +27,37 @@ lemma seenBy_ensures(a: Audience, me: string, isGm: bool)
   ensures (a.whisper ==> (!seenBy(a, me, isGm).masked?))
   ensures (!(a.whisper) ==> (!seenBy(a, me, isGm).hidden?))
   ensures (!(a.whisper) ==> (seenBy(a, me, isGm).masked? == ((a.secretRoll && !(isGm)) && (a.author != me))))
+{
+}
+
+function shadowReads(a: Audience, gm: string): bool
+{
+  ((!(a.whisper) || (a.author == gm)) || (gm in a.to))
+}
+
+lemma shadowReads_ensures(a: Audience, gm: string)
+  ensures (shadowReads(a, gm) == seenBy(a, gm, true).full?)
+  ensures (a.whisper ==> (a.author != gm) ==> !((gm in a.to)) ==> !(shadowReads(a, gm)))
+{
+}
+
+function bubblePlace(a: Audience, v: BubbleViewer): BubblePlace
+{
+  if (v.chatOpen || (!seenBy(a, v.me, v.isGm).full?)) then
+    BubblePlace.off
+  else
+    if v.tokenShown then
+      BubblePlace.token
+    else
+      BubblePlace.edge
+}
+
+lemma bubblePlace_ensures(a: Audience, v: BubbleViewer)
+  ensures (v.chatOpen ==> bubblePlace(a, v).off?)
+  ensures ((!bubblePlace(a, v).off?) ==> seenBy(a, v.me, v.isGm).full?)
+  ensures (a.whisper ==> (a.author != v.me) ==> !((v.me in a.to)) ==> bubblePlace(a, v).off?)
+  ensures (!(a.whisper) ==> a.secretRoll ==> !(v.isGm) ==> (a.author != v.me) ==> bubblePlace(a, v).off?)
+  ensures (bubblePlace(a, v).token? ==> v.tokenShown)
+  ensures (!(v.chatOpen) ==> seenBy(a, v.me, v.isGm).full? ==> (bubblePlace(a, v) == (if v.tokenShown then BubblePlace.token else BubblePlace.edge)))
 {
 }

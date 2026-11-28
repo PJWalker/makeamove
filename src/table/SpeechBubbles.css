@@ -1,0 +1,62 @@
+@layer components {
+  /*
+   * Spatial chat (table/SpeechBubbles.tsx): speech bubbles over a token,
+   * placed with translate. The newest sits nearest the token, with the tail.
+   */
+  .speech-bubbles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    /* Under the selection bar and floating windows: it's a glance, not a control. */
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    width: max-content;
+    max-width: min(280px, 60vw);
+    pointer-events: none;
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: -8px;
+      left: clamp(12px, var(--tail-x, 50%), calc(100% - 12px));
+      width: 16px;
+      height: 8px;
+      translate: -50% 0;
+      background: var(--surface-raised);
+      clip-path: polygon(0 0, 100% 0, 50% 100%);
+      animation: vt-fade-in 120ms ease-out 160ms both;
+    }
+    &[data-tail="false"]::after {
+      display: none;
+    }
+  }
+  .speech-bubble {
+    pointer-events: auto;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+    max-width: 100%;
+    padding: var(--space-1) var(--space-2);
+    border: 0;
+    border-radius: 12px;
+    background: var(--surface-raised);
+    box-shadow: var(--window-shadow);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--text-sm);
+    line-height: 1.35;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+    &[data-whisper="true"] {
+      font-style: italic;
+    }
+  }
+  .speech-bubble-whisper {
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+}

@@ -1,8 +1,8 @@
 import type { RichText } from "../../data/richText";
 import type { Roll } from "../dice/notation";
 import type { ChatContent } from "./content";
-import { seenBy } from "./audience";
-import type { Seen } from "./audience";
+import { bubblePlace, seenBy, shadowReads } from "./audience";
+import type { Audience, BubblePlace, BubbleViewer, Seen } from "./audience";
 
 /*
  * Chat messages are immutable plain objects, appended to a chunk of the log
@@ -178,16 +178,23 @@ export const canEditMessage = (m: ChatMessage, me: string) => m.kind === "text" 
 /** Timers and counters are worked by whoever started them and the GM. */
 export const canWork = (m: ChatMessage, me: string, isGm: boolean) => isGm || m.author === me;
 
-export function visibilityOf(m: ChatMessage, me: string, isGm: boolean): Visibility {
+/** What decides who sees a message (audience.ts). */
+export function audienceOf(m: ChatMessage): Audience {
   const to = m.kind === "text" ? m.to : undefined;
-  return seenBy(
-    {
-      author: m.author,
-      whisper: to !== undefined,
-      to: to ?? [],
-      secretRoll: m.kind === "roll" && m.visibility === "private",
-    },
-    me,
-    isGm,
-  );
+  return {
+    author: m.author,
+    whisper: to !== undefined,
+    to: to ?? [],
+    secretRoll: m.kind === "roll" && m.visibility === "private",
+  };
 }
+
+export const visibilityOf = (m: ChatMessage, me: string, isGm: boolean): Visibility =>
+  seenBy(audienceOf(m), me, isGm);
+
+/** Whether the GM shadow may read a message: only what the GM `gm` sees in full. */
+export const shadowReadsMessage = (m: ChatMessage, gm: string) => shadowReads(audienceOf(m), gm);
+
+/** Where a message pops up over the map while the chat log is closed (audience.ts). */
+export const bubblePlaceOf = (m: ChatMessage, v: BubbleViewer): BubblePlace =>
+  bubblePlace(audienceOf(m), v);

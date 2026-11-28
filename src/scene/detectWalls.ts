@@ -1,3 +1,4 @@
+import type { Greyscale } from "../media/greyscale";
 import { fromLocal } from "./geometry";
 import { snapToLattice } from "./grid";
 import type { Grid, Point } from "./grid";
@@ -16,13 +17,6 @@ import type { Corner } from "./wallTrace";
  * gives a wall on each side, a lit room in a dark cave one round it.
  */
 
-/** An image's brightness, 0–255 a sample, row by row. */
-export interface Shades {
-  width: number;
-  height: number;
-  data: Uint8Array;
-}
-
 /** How the GM tunes detection: each from 1 to 9, 5 by default. */
 export interface DetectSettings {
   /** How dark a shade has to be to count as wall; higher counts paler shades. */
@@ -40,9 +34,10 @@ export const SAMPLES_PER_CELL = 6;
 /** The most samples along an image's longer side. */
 export const MAX_SAMPLES = 1024;
 
+/** How many shades brightness is binned into to find the threshold. */
 const LEVELS = 256;
-/** How far each step of darkness moves the threshold, in shades. */
-const DARKNESS_STEP = 14;
+/** How far each step of darkness moves the threshold, in brightness 0–1. */
+const DARKNESS_STEP = 14 / (LEVELS - 1);
 /** At each step of detail: how far a wall may stray from the outline, in samples (squared). */
 const TOLERANCE2 = [16, 12, 9, 6, 4, 3, 2, 1, 1];
 /** At each step of detail: the smallest feature kept, in cells. */
@@ -51,25 +46,10 @@ const MIN_AREA = [2, 1.2, 0.8, 0.5, 0.3, 0.2, 0.12, 0.06, 0.03];
 const SNAP_REACH = 0.25;
 const HALF = 0.5;
 
-const R = 0.299;
-const G = 0.587;
-const B = 0.114;
-
-/** The brightness of RGBA pixels; transparent ones count as dark, as unmapped space. */
-export function shadesOf(rgba: Uint8ClampedArray, width: number, height: number): Shades {
-  const data = new Uint8Array(width * height);
-  for (let index = 0; index < data.length; index++) {
-    const o = index * 4;
-    const alpha = rgba[o + 3]! / (LEVELS - 1);
-    data[index] = Math.round((R * rgba[o]! + G * rgba[o + 1]! + B * rgba[o + 2]!) * alpha);
-  }
-  return { width, height, data };
-}
-
-/** The threshold that best splits the shades in two (Otsu's method): those at or below it are dark. */
-export function otsu({ data }: Shades): number {
+/** The brightness that best splits an image's shades in two (Otsu's method): those at or below it are dark. */
+export function otsu({ data }: Greyscale): number {
   const counts = new Float64Array(LEVELS);
-  for (const v of data) counts[v]!++;
+  for (const v of data) counts[Math.round(v * (LEVELS - 1))]!++;
   let sum = 0;
   for (let v = 0; v < LEVELS; v++) sum += v * counts[v]!;
   let below = 0;
@@ -88,12 +68,12 @@ export function otsu({ data }: Shades): number {
       best = t;
     }
   }
-  return best;
+  return best / (LEVELS - 1);
 }
 
 /** Which samples are wall: 1 for dark, 0 for light. */
-export function darkMask(shades: Shades, threshold: number): Uint8Array {
-  return shades.data.map((v) => (v <= threshold ? 1 : 0));
+export function darkMask(shades: Greyscale, threshold: number): Uint8Array {
+  return Uint8Array.from(shades.data, (v) => (v <= threshold ? 1 : 0));
 }
 
 /** A grid of samples' size. */
@@ -246,7 +226,7 @@ const level = (v: number) => Math.min(DETECT_MAX, Math.max(DETECT_MIN, Math.roun
 
 /** The simplified outline of a map's walls, in samples. */
 export function outlinePaths(
-  shades: Shades,
+  shades: Greyscale,
   settings: DetectSettings,
   samplesPerCell: number,
 ): Corner[][] {

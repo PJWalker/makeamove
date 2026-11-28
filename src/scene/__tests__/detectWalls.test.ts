@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_DETECT, outlinePaths, wallsAlong } from "../detectWalls";
-import type { Shades } from "../detectWalls";
+import type { Greyscale } from "../../media/greyscale";
 import { DEFAULT_GRID } from "../grid";
 import { wallEnds } from "../vision";
 
@@ -8,15 +8,19 @@ const CELL = 6;
 const grid = { ...DEFAULT_GRID, size: 70 };
 
 /** A dark image with light rectangles cut out of it, given in samples. */
-function image(width: number, height: number, rooms: [number, number, number, number][]): Shades {
-  const data = new Uint8Array(width * height).fill(20);
+function image(
+  width: number,
+  height: number,
+  rooms: [number, number, number, number][],
+): Greyscale {
+  const data = new Float32Array(width * height).fill(0.1);
   for (const [x0, y0, x1, y1] of rooms)
-    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) data[y * width + x] = 220;
-  return { width, height, data };
+    for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) data[y * width + x] = 0.9;
+  return { width, height, scale: 1, data };
 }
 
 /** Detect walls on a map placed with its top left corner at the world's origin, a sample per CELL of the grid. */
-function detect(shades: Shades) {
+function detect(shades: Greyscale) {
   const paths = outlinePaths(shades, DEFAULT_DETECT, CELL);
   const w = (shades.width / CELL) * grid.size;
   const h = (shades.height / CELL) * grid.size;

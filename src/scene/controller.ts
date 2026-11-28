@@ -102,6 +102,8 @@ const sameFrame = (a: Frame, b: Frame) => a.x === b.x && a.y === b.y && a.w === 
  */
 export class SceneController implements ToolContext {
   readonly selection = store<string[]>([]);
+  /** The token under the pointer, for the palette to act on. */
+  readonly hoveredToken = store<string | null>(null);
   /** The selected elements as they are now, kept current as they change. */
   readonly selectedElements = store<readonly SceneElement[]>([]);
   /** Dominant colour of the scene's largest map, for the UI tint. */
@@ -347,6 +349,7 @@ export class SceneController implements ToolContext {
       this.presence?.setCursor(null);
       this.hover = null;
       this.renderer.setHoverToken(null);
+      this.hoveredToken.value = null;
       this.updateOverlay();
     });
     listen(
@@ -699,7 +702,9 @@ export class SceneController implements ToolContext {
     this.hover = world;
     const g = this.gesture;
     const under = this.hitTest(world, true);
-    this.renderer.setHoverToken(under?.type === "token" ? under.id : null, screen);
+    const hovered = under?.type === "token" ? under.id : null;
+    this.renderer.setHoverToken(hovered, screen);
+    if (this.hoveredToken.value !== hovered) this.hoveredToken.value = hovered;
 
     // Share the cursor at about 20 Hz.
     const now = performance.now();

@@ -27,7 +27,8 @@ export type PanelId =
   | "notes"
   | "pc"
   | "reference"
-  | "scene";
+  | "scene"
+  | "shadow";
 export type DockItemId = PanelId | `entity:${string}`;
 export type Side = "left" | "right";
 
@@ -39,6 +40,7 @@ export const PANEL_ORDER: PanelId[] = [
   "combat",
   "libraries",
   "reference",
+  "shadow",
   "items",
   "notes",
   "members",
@@ -91,6 +93,7 @@ const DEFAULT_SIDE: Record<PanelId, Side> = {
   combat: "left",
   libraries: "right",
   reference: "right",
+  shadow: "right",
   items: "right",
 };
 

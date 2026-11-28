@@ -1,6 +1,6 @@
 import { AlphaFilter, Container, Graphics } from "pixi.js";
-import { fogPasses, fogShade } from "../fog";
-import type { FogMode, FogPass } from "../fog";
+import { fogPasses, fogShade, tokenShows } from "../fog";
+import type { FogCover, FogMode, FogPass } from "../fog";
 import { insidePolygon, shapeCovers, shapePolygon } from "../geometry";
 import type { Point } from "../grid";
 import { Lamp } from "../lampShader";
@@ -102,6 +102,18 @@ export class FogOfWarLayer {
    * viewers' sight (`vision`: whether they see only what their tokens see).
    */
   clear(p: Point, inSight: boolean, vision: boolean): boolean {
+    const { mode, cover } = this.coverAt(p, inSight);
+    return fogShade(mode, vision, cover) === "clear";
+  }
+
+  /** Whether a token there shows to this device: one it sees through (`own`) always, else as fog.ts's `tokenShows` decides. */
+  showsToken(p: Point, t: { own: boolean; inSight: boolean; vision: boolean }): boolean {
+    const { mode, cover } = this.coverAt(p, t.inSight);
+    return tokenShows(mode, { own: t.own, vision: t.vision, cover });
+  }
+
+  /** The fog mode this device sees by, and what covers a place. */
+  private coverAt(p: Point, inSight: boolean): { mode: FogMode; cover: FogCover } {
     const s = this.state;
     const mode = this.seeAll ? "none" : this.fog.mode;
     const fogShapes = (force: "hide" | "reveal") =>
@@ -113,12 +125,14 @@ export class FogOfWarLayer {
           !s.hidden.has(element.id) &&
           shapeCovers({ ...element, ...s.previews.get(element.id) }, p),
       );
-    const cover = {
-      hidden: fogShapes("hide"),
-      revealed: fogShapes("reveal"),
-      explored: mode === "auto" && this.fog.explored.some((poly) => insidePolygon(poly, p)),
-      inSight,
+    return {
+      mode,
+      cover: {
+        hidden: fogShapes("hide"),
+        revealed: fogShapes("reveal"),
+        explored: mode === "auto" && this.fog.explored.some((poly) => insidePolygon(poly, p)),
+        inSight,
+      },
     };
-    return fogShade(mode, vision, cover) === "clear";
   }
 }
