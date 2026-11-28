@@ -233,7 +233,8 @@
     transform-box: view-box;
     transform-origin: 12px 12px;
   }
-  [data-icon="secret"][data-playing] .eye {
+  [data-icon="secret"][data-playing] .eye,
+  [data-icon="shadow"][data-playing] .eye {
     animation-name: icon-blink-lid;
   }
   [data-icon="reveal"][data-playing] .iris {

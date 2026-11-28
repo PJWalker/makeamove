@@ -21,6 +21,7 @@ import {
   IconNotes,
   IconPlayerCharacter,
   IconReference,
+  IconShadow,
 } from "../ui/icons";
 import type { Icon } from "../ui/icons";
 import {
@@ -49,6 +50,7 @@ export const PANELS: Record<PanelId, { label: string; Icon: Icon }> = {
   combat: { label: "Combat", Icon: IconCombat },
   libraries: { label: "Libraries", Icon: IconLibraries },
   reference: { label: "Reference", Icon: IconReference },
+  shadow: { label: "GM Shadow", Icon: IconShadow },
   items: { label: "Items", Icon: IconItems },
   notes: { label: "Notes", Icon: IconNotes },
   members: { label: "Members", Icon: IconMembers },

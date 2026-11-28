@@ -68,6 +68,42 @@ module.exports = {
       from: { path: "^src/media/", pathNot: TESTS },
       to: { path: "^src/", pathNot: "^src/(lib|platform|media)/" },
     },
+    // ── The GM shadow ──────────────────────────────────────────────────────
+    {
+      name: "shadow-never-writes-shared-state",
+      comment:
+        "The GM shadow (features/shadow) writes only to its memory in the GM vault. It reads the session through ShadowSource, and only source.ts may touch the campaign, to build that source. It never reaches sync, chat posting, commands or the workspace, so nothing it makes can reach a player.",
+      severity: "error",
+      from: {
+        path: "^src/features/shadow/",
+        pathNot: [TESTS, "^src/features/shadow/source\\.ts$"],
+      },
+      to: {
+        path: [
+          "^src/sync/",
+          "^src/campaign/",
+          "^src/workspace/",
+          "^src/kernel/",
+          "^src/features/(?!shadow/|chat/(types|content|audience)\\.ts$)",
+        ],
+      },
+    },
+    {
+      name: "shadow-source-only-reads",
+      comment:
+        "source.ts builds the shadow's read-only view of the campaign; it may not post, sync or run commands.",
+      severity: "error",
+      from: { path: "^src/features/shadow/source\\.ts$" },
+      to: {
+        path: [
+          "^src/sync/",
+          "^src/workspace/",
+          "^src/kernel/",
+          "^src/features/chat/(send|chatLog|messageState)\\.ts$",
+        ],
+      },
+    },
+
     // ── 2.0 foundations (TRANSITION.md) ────────────────────────────────────
     // data/ → kernel/ → api/ sit above lib/ and platform/ and below
     // everything else. Each may use only the layers listed for it, so the

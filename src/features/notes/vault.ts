@@ -8,6 +8,8 @@ import { dataName } from "../../platform/dataEpoch";
 import { SyncSession } from "../../sync/session";
 import type { JoinRoom } from "../../sync/transport";
 import { joinPublicRoom } from "../../sync/publicRoom";
+import { shadowShape } from "../shadow/schema";
+import type { ShadowStore } from "../shadow/schema";
 import { noteEntry } from "./schema";
 
 /*
@@ -36,6 +38,8 @@ export const vaultShape = {
   notes: collection(noteEntry, "GM-only note"),
   /** `characterId/field` -> a character's GM-only rich text. */
   characterText: collection(text()),
+  /** The GM shadow's memory (shadow/schema.ts). */
+  ...shadowShape,
 };
 
 export class Vault {
@@ -43,6 +47,8 @@ export class Vault {
   readonly meta: Root<typeof vaultShape>["meta"];
   readonly notes: Root<typeof vaultShape>["notes"];
   readonly characterText: Root<typeof vaultShape>["characterText"];
+  /** The GM shadow's memory. */
+  readonly shadow: ShadowStore;
   private readonly persistence: IndexeddbPersistence;
   private session: SyncSession | null = null;
   private destroyed = false;
@@ -52,11 +58,15 @@ export class Vault {
     private readonly joinRoom: JoinRoom,
   ) {
     this.doc = new Y.Doc({ guid: vaultGuid(campaignId) });
-    ({
-      meta: this.meta,
-      notes: this.notes,
-      characterText: this.characterText,
-    } = rootOf(this.doc, vaultShape));
+    const root = rootOf(this.doc, vaultShape);
+    ({ meta: this.meta, notes: this.notes, characterText: this.characterText } = root);
+    this.shadow = {
+      shadowState: root.shadowState,
+      shadowLog: root.shadowLog,
+      shadowFacts: root.shadowFacts,
+      shadowThreads: root.shadowThreads,
+      shadowIdeas: root.shadowIdeas,
+    };
     this.persistence = new IndexeddbPersistence(vaultDbName(campaignId), this.doc);
   }
 

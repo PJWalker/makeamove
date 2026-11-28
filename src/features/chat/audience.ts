@@ -29,6 +29,18 @@ export function seenBy(a: Audience, me: string, isGm: boolean): Seen {
 }
 
 /**
+ * Whether the GM shadow (features/shadow) may read a message. Proved: it
+ * reads exactly what the GM sees in full, so a whisper between players never
+ * reaches it.
+ */
+export function shadowReads(a: Audience, gm: string): boolean {
+  //@ verify
+  //@ ensures \result === (seenBy(a, gm, true) === "full")
+  //@ ensures a.whisper && a.author !== gm && !a.to.includes(gm) ==> !\result
+  return !a.whisper || a.author === gm || a.to.includes(gm);
+}
+
+/**
  * Where a message shows on the map while the chat log is closed: in a speech
  * bubble at its speaker's token, at the screen's edge, or not at all ("off").
  */
