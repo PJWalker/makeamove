@@ -14,6 +14,7 @@ import {
   IconToFront,
   IconToken,
   IconUnlock,
+  IconWall,
 } from "../../ui/icons";
 import type { Icon } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
@@ -179,6 +180,29 @@ export const tokenOptions = oneElementCommand(
   (context, id) => open(context)?.tokenOptions(id, "token"),
 );
 
+export const alignMapToGrid = command<Selection | undefined>({
+  id: "map.alignToGrid",
+  params: isSelectionOrNow,
+  title: "Align to Grid…",
+  icon: IconGrid,
+  section: "act",
+  transact: false,
+  available: (context, p) => {
+    const map = one(context, p, (element) => element.type === "map");
+    if (!map) return "Select one map";
+    if (map.locked) return "Locked";
+    return open(context)?.controller.renderer.grid.type !== "none" || "The scene has no grid";
+  },
+  menu: {
+    selection: (context, t) =>
+      one(context, t, (element) => element.type === "map") ? [{ params: t }] : [],
+  },
+  run: (context, p) => {
+    const map = one(context, p, (element) => element.type === "map");
+    if (map) open(context)?.controller.alignMap(map.id);
+  },
+});
+
 export const useAsToken = oneElementCommand(
   "map.useAsToken",
   { title: "Use as Token", icon: IconToken },
@@ -187,6 +211,29 @@ export const useAsToken = oneElementCommand(
   "Select one map",
   (context, id) => open(context)?.controller.convert(id, "token"),
 );
+
+export const detectWalls = command<Selection | undefined>({
+  id: "map.detectWalls",
+  params: isSelectionOrNow,
+  title: "Detect Walls…",
+  icon: IconWall,
+  section: "act",
+  transact: false,
+  available: (context, p) => {
+    if (!one(context, p, (element) => element.type === "map")) return "Select one map";
+    return Boolean(open(context)?.controller.gm) || "Only the GM places walls";
+  },
+  menu: {
+    selection: (context, t) =>
+      one(context, t, (element) => element.type === "map") && open(context)?.controller.gm
+        ? [{ params: t }]
+        : [],
+  },
+  run: (context, p) => {
+    const map = one(context, p, (element) => element.type === "map");
+    if (map) open(context)?.controller.detectWalls(map.id);
+  },
+});
 
 export const useAsMap = oneElementCommand(
   "token.useAsMap",
@@ -247,7 +294,9 @@ export const sceneSettings = command<Place>({
 
 export const selectionCommands = [
   tokenOptions,
+  alignMapToGrid,
   useAsToken,
+  detectWalls,
   useAsMap,
   bringToFront,
   sendToBack,

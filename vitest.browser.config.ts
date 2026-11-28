@@ -50,13 +50,12 @@ export default mergeConfig(
       browser: {
         enabled: true,
         headless: true,
-        provider: playwright(),
-        instances: [
-          {
-            browser: "chromium",
-            launch: process.env.CHROME_BIN ? { executablePath: process.env.CHROME_BIN } : {},
-          },
-        ],
+        // CHROME_BIN points at a preinstalled Chromium (as in the cloud environment)
+        // when Playwright's own download isn't there.
+        provider: playwright({
+          launchOptions: process.env.CHROME_BIN ? { executablePath: process.env.CHROME_BIN } : {},
+        }),
+        instances: [{ browser: "chromium" }],
       },
     },
   }),

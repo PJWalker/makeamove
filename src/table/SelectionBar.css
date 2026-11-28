@@ -55,6 +55,9 @@
       width: 5em;
     }
   }
+  .selection-bar-hint {
+    padding-inline: var(--space-2);
+  }
   .selection-bar-width {
     width: 100px;
   }

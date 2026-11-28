@@ -1,7 +1,7 @@
 import { fromLocal, shapePolygon } from "./geometry";
 import type { Point } from "./grid";
 import { distanceToSegment } from "./stroke";
-import type { SceneElement } from "./types";
+import type { SceneElement, Transform } from "./types";
 
 /*
  * Line of sight and light (M12). Walls are segments that block sight;
@@ -14,6 +14,20 @@ import type { SceneElement } from "./types";
 export interface Segment {
   a: Point;
   b: Point;
+}
+
+/** How thick a wall is to pick, in world px; it blocks sight along its line alone. */
+const WALL_THICKNESS = 6;
+
+/** A wall from `a` to `b`: the inverse of wallEnds. */
+export function wallBetween(a: Point, b: Point): Transform {
+  return {
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2,
+    w: Math.hypot(b.x - a.x, b.y - a.y),
+    h: WALL_THICKNESS,
+    rot: Math.atan2(b.y - a.y, b.x - a.x),
+  };
 }
 
 /** A wall's two ends in the world: it lies along its length (w), through its centre, at its rotation. */
@@ -175,4 +189,84 @@ export function tokenBlocker(
     },
     fade: [d + 0.6 * size, d + 1.8 * size],
   };
+}
+
+/** A box in the world. */
+export interface Box {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Where a ray from `from` along `d` first meets `s`, as a distance along the ray (in units of its length); Infinity if it misses. */
+function rayHit(from: Point, { x: dx, y: dy }: Point, s: Segment): number {
+  const ex = s.b.x - s.a.x;
+  const ey = s.b.y - s.a.y;
+  const denom = dx * ey - dy * ex;
+  if (Math.abs(denom) < 1e-12) return Infinity;
+  const ax = s.a.x - from.x;
+  const ay = s.a.y - from.y;
+  const t = (ax * ey - ay * ex) / denom;
+  const u = (ax * dy - ay * dx) / denom;
+  return t > 1e-9 && u >= -1e-9 && u <= 1 + 1e-9 ? t : Infinity;
+}
+
+/**
+ * What can be seen from `from` within `box`: the polygon swept by rays to
+ * every wall end (and just either side of it, to see past it), each stopped
+ * at the first segment in its way. Flat [x, y, …] in the world, rounded to
+ * whole px.
+ */
+export function sightPolygon(from: Point, segments: readonly Segment[], box: Box): number[] {
+  const x1 = box.x + box.w;
+  const y1 = box.y + box.h;
+  const edges: Segment[] = [
+    { a: { x: box.x, y: box.y }, b: { x: x1, y: box.y } },
+    { a: { x: x1, y: box.y }, b: { x: x1, y: y1 } },
+    { a: { x: x1, y: y1 }, b: { x: box.x, y: y1 } },
+    { a: { x: box.x, y: y1 }, b: { x: box.x, y: box.y } },
+  ];
+  const inside = (p: Point) => p.x >= box.x && p.x <= x1 && p.y >= box.y && p.y <= y1;
+  const all = [
+    ...segments.filter((s) => inside(s.a) || inside(s.b) || crossesBox(s, box)),
+    ...edges,
+  ];
+  const angles: number[] = [];
+  for (const s of all)
+    for (const p of [s.a, s.b]) {
+      if (!inside(p)) continue;
+      const a = Math.atan2(p.y - from.y, p.x - from.x);
+      angles.push(a - 1e-4, a, a + 1e-4);
+    }
+  angles.sort((a, b) => a - b);
+  const reach = Math.hypot(box.w, box.h) * 2;
+  const points: number[] = [];
+  for (const a of angles) {
+    const dx = Math.cos(a) * reach;
+    const dy = Math.sin(a) * reach;
+    let t = 1;
+    for (const s of all) t = Math.min(t, rayHit(from, { x: dx, y: dy }, s));
+    const x = Math.round(from.x + dx * t);
+    const y = Math.round(from.y + dy * t);
+    // eslint-disable-next-line unicorn/prefer-at
+    if (points.length > 0 && points[points.length - 2] === x && points[points.length - 1] === y)
+      continue;
+    points.push(x, y);
+  }
+  return points;
+}
+
+/** Whether a segment with both ends outside a box passes through it. */
+function crossesBox(s: Segment, box: Box): boolean {
+  const corners = [
+    { x: box.x, y: box.y },
+    { x: box.x + box.w, y: box.y },
+    { x: box.x + box.w, y: box.y + box.h },
+    { x: box.x, y: box.y + box.h },
+  ];
+  return corners.some((c, index) => {
+    const d = corners[(index + 1) % 4]!;
+    return blocked(s.a, s.b, [{ a: c, b: d }]);
+  });
 }

@@ -702,6 +702,17 @@ export const IconRelationships = glyph(
     </g>
   </>,
 );
+/** A map marker: a teardrop on its point, over the faint spot it marks. */
+export const IconMapPin = glyph(
+  "map-pin",
+  <>
+    <ellipse {...faint} cx="12" cy="20.5" rx="5" ry="1.75" />
+    <path
+      fillRule="evenodd"
+      d="M12 21C8 16.4 5 13 5 9a7 7 0 0 1 14 0c0 4-3 7.4-7 12zm0-9.25a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5z"
+    />
+  </>,
+);
 export const IconPin = glyph(
   "pin",
   <>
@@ -727,13 +738,6 @@ export const IconAllowBack = glyph(
 );
 
 // Interface
-export const IconPhone = glyph(
-  "phone",
-  <>
-    <rect {...line} x="7" y="2" width="10" height="20" rx="1.5" />
-    <circle cx="12" cy="18.5" r="1" />
-  </>,
-);
 export const IconSettings = glyph(
   "settings",
   <path fillRule="evenodd" d={cogPath(8, 10, 7.4, 3)} />,

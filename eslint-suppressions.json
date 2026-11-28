@@ -1966,6 +1966,34 @@
       "count": 1
     }
   },
+  "src/scene/__tests__/controllerHarness.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-empty-function": {
+      "count": 10
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 5
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 5
+    },
+    "max-lines-per-function": {
+      "count": 1
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/scene/__tests__/detectWalls.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 27
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    }
+  },
   "src/scene/__tests__/downed.test.ts": {
     "@typescript-eslint/no-magic-numbers": {
       "count": 1
@@ -1974,6 +2002,11 @@
   "src/scene/__tests__/edgePin.test.ts": {
     "@typescript-eslint/no-magic-numbers": {
       "count": 9
+    }
+  },
+  "src/scene/__tests__/explore.test.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 3
     }
   },
   "src/scene/__tests__/geometry.test.ts": {
@@ -2010,28 +2043,16 @@
   },
   "src/scene/__tests__/selection.test.ts": {
     "@typescript-eslint/max-params": {
-      "count": 3
-    },
-    "@typescript-eslint/no-empty-function": {
-      "count": 10
+      "count": 1
     },
     "@typescript-eslint/no-magic-numbers": {
-      "count": 128
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 5
-    },
-    "import/dynamic-import-chunkname": {
-      "count": 3
-    },
-    "makeamove/test-structure": {
-      "count": 4
+      "count": 123
     },
     "max-lines-per-function": {
-      "count": 3
+      "count": 2
     },
     "unicorn/consistent-function-scoping": {
-      "count": 3
+      "count": 1
     }
   },
   "src/scene/__tests__/stroke.test.ts": {
@@ -2126,9 +2147,6 @@
     "default-case": {
       "count": 1
     },
-    "import/prefer-default-export": {
-      "count": 1
-    },
     "max-lines": {
       "count": 1
     },
@@ -2140,6 +2158,11 @@
     },
     "unicorn/prefer-single-call": {
       "count": 1
+    }
+  },
+  "src/scene/detectWalls.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 22
     }
   },
   "src/scene/downed.ts": {
@@ -2158,12 +2181,17 @@
       "count": 9
     }
   },
+  "src/scene/fog.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 8
+    }
+  },
   "src/scene/geometry.ts": {
     "@typescript-eslint/max-params": {
       "count": 1
     },
     "@typescript-eslint/no-magic-numbers": {
-      "count": 33
+      "count": 34
     },
     "consistent-return": {
       "count": 2
@@ -2198,6 +2226,17 @@
     }
   },
   "src/scene/gestures/erase.ts": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
+  "src/scene/gestures/fog.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
     "import/prefer-default-export": {
       "count": 1
     }
@@ -2342,7 +2381,7 @@
       "count": 1
     },
     "@typescript-eslint/no-magic-numbers": {
-      "count": 5
+      "count": 3
     },
     "@typescript-eslint/no-shadow": {
       "count": 4
@@ -2350,7 +2389,7 @@
   },
   "src/scene/grid.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 15
+      "count": 12
     }
   },
   "src/scene/lampShader.ts": {
@@ -2501,7 +2540,7 @@
       "count": 37
     },
     "@typescript-eslint/restrict-template-expressions": {
-      "count": 25
+      "count": 27
     },
     "consistent-return": {
       "count": 2
@@ -2542,6 +2581,17 @@
       "count": 1
     },
     "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/scene/render/fogOfWar.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
       "count": 1
     }
   },
@@ -2766,9 +2816,6 @@
     "import/avoid-importing-barrel-files": {
       "count": 1
     },
-    "import/prefer-default-export": {
-      "count": 1
-    },
     "max-lines-per-function": {
       "count": 1
     },
@@ -2795,7 +2842,7 @@
   },
   "src/scene/schema.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 8
+      "count": 10
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
@@ -2841,9 +2888,6 @@
     }
   },
   "src/scene/tools.ts": {
-    "@typescript-eslint/no-unnecessary-condition": {
-      "count": 1
-    },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
     },
@@ -2864,7 +2908,15 @@
       "count": 1
     },
     "@typescript-eslint/no-magic-numbers": {
-      "count": 16
+      "count": 27
+    }
+  },
+  "src/scene/wallTrace.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 3
+    },
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
     }
   },
   "src/sync/__tests__/blobs.test.ts": {
@@ -4333,7 +4385,7 @@
       "count": 1
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 2
+      "count": 4
     },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 2
@@ -4348,6 +4400,11 @@
       "count": 1
     },
     "unicorn/no-array-callback-reference": {
+      "count": 1
+    }
+  },
+  "src/table/ShapeGlyph.tsx": {
+    "import/prefer-default-export": {
       "count": 1
     }
   },
@@ -4629,11 +4686,6 @@
       "count": 1
     }
   },
-  "src/table/effectOptionsData.ts": {
-    "import/prefer-default-export": {
-      "count": 1
-    }
-  },
   "src/table/onScreenRect.ts": {
     "import/prefer-default-export": {
       "count": 1
@@ -4791,7 +4843,7 @@
       "count": 1
     },
     "consistent-return": {
-      "count": 8
+      "count": 10
     },
     "max-lines-per-function": {
       "count": 4
@@ -5910,7 +5962,7 @@
       "count": 4
     },
     "complexity": {
-      "count": 2
+      "count": 1
     },
     "max-lines-per-function": {
       "count": 1
@@ -6127,9 +6179,6 @@
       "count": 1
     },
     "max-lines": {
-      "count": 1
-    },
-    "no-implicit-coercion": {
       "count": 1
     },
     "react-hooks/todo": {
