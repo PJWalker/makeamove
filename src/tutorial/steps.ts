@@ -168,6 +168,14 @@ export const STEPS: readonly Step[] = [
     anchors: [{ tool: "effect" }],
   },
   {
+    id: "fog",
+    section: "Running the Game",
+    title: "Hide the Treasure Room",
+    text: "Pick Fog of War and drag a Hide shape over the Treasure Room. Players never see what's under it until you take it away. The scene's settings turn on fog that lifts as their tokens explore.",
+    goal: { kind: "more", of: "fog" },
+    anchors: [{ tool: "fog" }],
+  },
+  {
     id: "members",
     section: "Playing Together",
     title: "Invite Your Players",

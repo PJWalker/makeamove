@@ -143,4 +143,4 @@ export const DECOR: readonly NewElement[] = [
 ];
 
 /** Dark where the torch doesn't reach, so lights and doors show what they do. */
-export const LIGHTING: SceneLighting = { enabled: true, darkness: 0.6, vision: false };
+export const LIGHTING: SceneLighting = { enabled: true, darkness: 0.6, vision: false, fog: "none" };
