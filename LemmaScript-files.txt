@@ -19,3 +19,4 @@ src/scene/pins.ts
 src/scene/alignMap.ts
 src/media/peaks.ts
 src/features/shadow/window.ts
+src/workspace/commands/slots.ts

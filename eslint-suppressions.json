@@ -2162,7 +2162,7 @@
   },
   "src/scene/detectWalls.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 22
+      "count": 20
     }
   },
   "src/scene/downed.ts": {

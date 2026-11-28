@@ -2,9 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { Campaign } from "../../campaign/campaign";
 import type { PanelLayout } from "../panelLayout";
 
-import { LinkNavigation } from "../linkNavigation";
-import { LibraryView } from "../libraryView";
-
 const dependencies = vi.hoisted(() => ({
   linkLabel: vi.fn(),
   viewCharacter: vi.fn(),
@@ -17,14 +14,21 @@ vi.mock("../../features/characters/api", () => ({
 }));
 vi.mock("../../features/notes/targets", () => ({ linkLabel: dependencies.linkLabel }));
 
+// Tests share modules, so another file may have loaded these with the real ones they use.
+vi.resetModules();
+const { LinkNavigation } = await import(
+  /* webpackChunkName: "linkNavigation" */ "../linkNavigation"
+);
+const { LibraryView } = await import(/* webpackChunkName: "libraryView" */ "../libraryView");
+
 const labels: Record<string, string> = { sword: "Longsword", strike: "Strike" };
 
 const setActiveScene = vi.fn();
 const campaign = { setActiveScene } as unknown as Campaign;
 const showPanel = vi.fn();
 const panels = { showPanel } as unknown as PanelLayout;
-let library: LibraryView;
-let links: LinkNavigation;
+let library: InstanceType<typeof LibraryView>;
+let links: InstanceType<typeof LinkNavigation>;
 
 beforeEach(() => {
   vi.clearAllMocks();

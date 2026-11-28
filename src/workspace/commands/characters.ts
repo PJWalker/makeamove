@@ -552,6 +552,16 @@ function moveFor(
   );
 }
 
+/** Tokens on the open scene, as a move's targets. */
+function tokenTargets(context: CampaignContext, ids: string[]): MoveTarget[] {
+  const controller = context.canvas.canvasCommands.value?.controller;
+  return ids.flatMap((id) => {
+    const t = controller?.element(id);
+    if (t?.type !== "token") return [];
+    return [{ id, name: t.name, ...(t.characterId ? { characterId: t.characterId } : {}) }];
+  });
+}
+
 /** Start making a move: it asks for targets and choices first if it needs them. */
 export const startMove = command<{
   move: string;
@@ -590,6 +600,19 @@ export const startMove = command<{
       mine: mine.has(m.id),
       ...(m.tags ? { tags: m.tags } : {}),
     }));
+  },
+  // "Mira hack and slash goblin": the character's own moves, at the tokens named.
+  sentence: {
+    object: "optional",
+    offers: (context, characterId, object) => {
+      const targets = object?.kind === "selection" ? tokenTargets(context, object.ids) : undefined;
+      return movesOf(context, getCharacter(context.campaign, characterId)).map((m) => ({
+        params: { move: m.id, characterId, ...(targets ? { targets } : {}) },
+        verb: { move: m.id },
+        mine: true,
+        ...(m.tags ? { tags: m.tags } : {}),
+      }));
+    },
   },
   // Rolling posts to the chat, which isn't taken back.
   undoGroup: false,
