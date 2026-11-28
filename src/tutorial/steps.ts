@@ -51,8 +51,8 @@ export const STEPS: readonly Step[] = [
     id: "palette",
     section: "Playing",
     title: "Say What to Do",
-    text: 'Press Ctrl+K (Cmd+K on a Mac) or click the search button to open the command palette. Type a command, or a sentence such as "hero lock": names say who does what, to whom.',
-    goal: { kind: "read" },
+    text: 'Press Ctrl+K (Cmd+K on a Mac) or click the search button to open the command palette. Type a command, or a sentence such as "hero lock" to lock the Hero in place: names say who does what, to whom.',
+    goal: { kind: "locked", piece: "hero" },
     anchors: [{ ui: "palette" }],
   },
   {

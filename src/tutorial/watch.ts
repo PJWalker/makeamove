@@ -53,6 +53,7 @@ export function worldOf(context: CampaignContext, progress: TutorialProgress): W
         pieces[key] = {
           x: element.x,
           y: element.y,
+          locked: element.locked,
           open: element.type === "wall" && element.open === true,
         };
     }

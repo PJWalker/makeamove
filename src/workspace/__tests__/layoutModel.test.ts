@@ -27,7 +27,15 @@ describe("panel layout", () => {
   it("starts with characters on the left and chat on the right", () => {
     const l = defaultLayout(false);
     expect(l.left.panels).toEqual(["scene", "pc", "characters", "combat"]);
-    expect(l.right.panels).toEqual(["chat", "libraries", "reference", "items", "notes", "members"]);
+    expect(l.right.panels).toEqual([
+      "chat",
+      "libraries",
+      "reference",
+      "shadow",
+      "items",
+      "notes",
+      "members",
+    ]);
     expect(l.right.active).toBe("chat");
   });
 
@@ -83,12 +91,21 @@ describe("panel layout", () => {
 
   it("reorders tabs within a side without changing the open tab", () => {
     const l = reorder(defaultLayout(false), "members", 0);
-    expect(l.right.panels).toEqual(["members", "chat", "libraries", "reference", "items", "notes"]);
+    expect(l.right.panels).toEqual([
+      "members",
+      "chat",
+      "libraries",
+      "reference",
+      "shadow",
+      "items",
+      "notes",
+    ]);
     expect(l.right.active).toBe("chat");
     expect(reorder(l, "members", 99).right.panels).toEqual([
       "chat",
       "libraries",
       "reference",
+      "shadow",
       "items",
       "notes",
       "members",
@@ -135,6 +152,7 @@ describe("panel layout", () => {
       "chat",
       "libraries",
       "reference",
+      "shadow",
       "items",
       "notes",
       "members",
@@ -146,12 +164,13 @@ describe("panel layout", () => {
     l = reorder(l, "members", 0);
     l = reorder(l, "libraries", 99);
     l = dock(l, "notes", "right", 2);
-    // The tabs are now members, chat, notes, reference, libraries; items sat after reference.
+    // The tabs are now members, chat, notes, reference, shadow, libraries; items sat after shadow.
     expect(dock(l, "items").right.panels).toEqual([
       "members",
       "chat",
       "notes",
       "reference",
+      "shadow",
       "items",
       "libraries",
     ]);
@@ -181,6 +200,7 @@ describe("panel layout", () => {
       "libraries",
       "reference",
       "scene",
+      "shadow",
       "items",
       "notes",
       "members",

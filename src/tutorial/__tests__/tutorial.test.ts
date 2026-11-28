@@ -70,7 +70,10 @@ describe("the tutorial's steps", () => {
 const world = (patch: Partial<World> = {}): World => ({
   tool: "select",
   tally: { drawing: 1, roll: 0 },
-  pieces: { hero: { x: 0, y: 0, open: false }, door: { x: 5, y: 5, open: false } },
+  pieces: {
+    hero: { x: 0, y: 0, locked: false, open: false },
+    door: { x: 5, y: 5, locked: false, open: false },
+  },
   ...patch,
 });
 
@@ -99,15 +102,17 @@ describe("tutorial goals", () => {
     expect(
       goalMet({ kind: "fewer", of: "drawing" }, before, world({ tally: { drawing: 0 } })),
     ).toBe(true);
-    const moved = world({ pieces: { hero: { x: 70, y: 0, open: false } } });
+    const moved = world({ pieces: { hero: { x: 70, y: 0, locked: false, open: false } } });
     expect(goalMet({ kind: "moved", piece: "hero" }, before, moved)).toBe(true);
   });
 
   it("notice a tool picked and a door opened", () => {
     expect(goalMet({ kind: "tool", tool: "pan" }, world(), world({ tool: "pan" }))).toBe(true);
-    const open = world({ pieces: { door: { x: 5, y: 5, open: true } } });
+    const open = world({ pieces: { door: { x: 5, y: 5, locked: false, open: true } } });
     expect(goalMet({ kind: "opened", piece: "door" }, world(), open)).toBe(true);
     expect(goalMet({ kind: "read" }, world(), open)).toBe(false);
+    const locked = world({ pieces: { hero: { x: 0, y: 0, locked: true, open: false } } });
+    expect(goalMet({ kind: "locked", piece: "hero" }, world(), locked)).toBe(true);
   });
 });
 
