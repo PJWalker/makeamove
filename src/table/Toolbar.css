@@ -142,6 +142,11 @@
   .tool-settings > * {
     flex-shrink: 0;
   }
+  /* Icon buttons match the other tool options' height, so the row is the same height whatever the tool. */
+  .tool-settings .btn-icon {
+    width: 34px;
+    min-height: 34px;
+  }
   :root.vt-tool .toolbar-options {
     view-transition-name: tool-options;
   }
@@ -170,6 +175,8 @@
     gap: var(--space-2);
     input {
       width: 120px;
+      /* Chrome's default margin made Draw's row taller than other tools'. */
+      margin-block: 0;
     }
   }
   .pen-width-preview {

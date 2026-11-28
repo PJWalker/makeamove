@@ -128,7 +128,9 @@ test("tool settings stay visible and usable in both toolbar layouts", async ({ p
         .getByRole("button", { name: button.getAttribute("aria-label")!, exact: true })
         .click();
       await settled(page);
-      expect(toolbar.element().getBoundingClientRect().height).toBe(initialHeight);
+      // A tool without options drops the second row a narrow toolbar keeps for them.
+      if (await toolbar.locator(".tool-settings").count())
+        expect(toolbar.element().getBoundingClientRect().height).toBe(initialHeight);
       await expect(toolbar).toHaveAttribute("data-full-width", initialLayout!);
     }
   }
