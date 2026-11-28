@@ -291,7 +291,8 @@ async function placeText(page: Page, at: { x: number; y: number }, text: string)
   const box = page.getByRole("textbox", { name: "Text", exact: true });
   await expect(box).toBeVisible();
   await box.fill(text);
-  await box.press("Enter");
+  // Enter starts a new line; Escape puts the text down.
+  await box.press("Escape");
   await expect(box).toHaveCount(0);
 }
 
@@ -339,7 +340,7 @@ test("text on the map can be hovered, dragged and double-clicked", async ({ page
   await page.mouse.dblclick(over.x + 160, over.y + 120);
   const box = page.getByRole("textbox", { name: "Text", exact: true });
   await expect(box).toBeVisible();
-  await expect(box).toHaveValue("Ford the river here");
+  await expect(box).toHaveText("Ford the river here");
 
   // Nothing is left where it was.
   await page.mouse.move(over.x, over.y);
