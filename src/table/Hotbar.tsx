@@ -90,6 +90,7 @@ export function Hotbar({ campaign }: { campaign: Campaign }) {
         <Button
           variant="icon"
           className="hotbar-palette"
+          data-tutorial="palette"
           label="Command Palette (Ctrl/Cmd+K)"
           onClick={() => {
             ctx.table.togglePalette();

@@ -14,7 +14,7 @@ import type { Goal } from "./goals";
  * Each is marked in the UI with `data-tutorial="…"`; the test checks every
  * one is.
  */
-export const UI_ANCHORS = ["quick-dice", "chat-message", "new-note"] as const;
+export const UI_ANCHORS = ["quick-dice", "chat-message", "new-note", "palette"] as const;
 export type UiAnchor = (typeof UI_ANCHORS)[number];
 
 /** What a step points at: a tool's button, a panel's tab, or a marked part of the UI. */
@@ -136,6 +136,14 @@ export const STEPS: readonly Step[] = [
     anchors: [{ tool: "pin" }],
   },
   {
+    id: "palette",
+    section: "At the Table",
+    title: "Say What to Do",
+    text: 'Press Ctrl+K (Cmd+K on a Mac) and type what you want in plain words, such as "goblin lock" to lock the Goblin in place. Hover a token first and the palette knows who you mean. Tab finishes a name.',
+    goal: { kind: "locked", piece: "goblin" },
+    anchors: [{ ui: "palette" }],
+  },
+  {
     id: "door",
     section: "Running the Game",
     title: "Open the Door",
@@ -174,6 +182,14 @@ export const STEPS: readonly Step[] = [
     text: "Pick Fog of War and drag a Hide shape over the Treasure Room. Players never see what's under it until you take it away. The scene's settings turn on fog that lifts as their tokens explore.",
     goal: { kind: "more", of: "fog" },
     anchors: [{ tool: "fog" }],
+  },
+  {
+    id: "shadow",
+    section: "Running the Game",
+    title: "Meet Your Shadow",
+    text: "The GM Shadow watches the session and suggests complications, keeps track of the people and places that come up, and follows plot threads. Only you see it, and it runs on this device using Chrome's built-in model, so nothing leaves it.",
+    goal: { kind: "read" },
+    anchors: [{ panel: "shadow" }],
   },
   {
     id: "members",

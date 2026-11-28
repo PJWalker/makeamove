@@ -15,6 +15,8 @@ export type Tally = SceneElement["type"] | "message" | "note" | "roll";
 export type Goal =
   /** Take one of something away. */
   | { kind: "fewer"; of: Tally }
+  /** Lock one of the dungeon's pieces. */
+  | { kind: "locked"; piece: PieceKey }
   /** Make one more of something. */
   | { kind: "more"; of: Tally }
   /** Move one of the dungeon's pieces. */
@@ -26,10 +28,11 @@ export type Goal =
   /** Pick a tool. */
   | { kind: "tool"; tool: ToolId };
 
-/** Where one of the dungeon's pieces is, and whether it's open if it's a door. */
+/** Where one of the dungeon's pieces is, whether it's locked, and whether it's open if it's a door. */
 export interface PieceState {
   x: number;
   y: number;
+  locked: boolean;
   open: boolean;
 }
 
@@ -58,6 +61,8 @@ const CHECKS: {
     const is = now.pieces[goal.piece];
     return was !== undefined && is !== undefined && (was.x !== is.x || was.y !== is.y);
   },
+  locked: (goal, before, now) =>
+    now.pieces[goal.piece]?.locked === true && before.pieces[goal.piece]?.locked !== true,
   opened: (goal, before, now) =>
     now.pieces[goal.piece]?.open === true && before.pieces[goal.piece]?.open !== true,
 };

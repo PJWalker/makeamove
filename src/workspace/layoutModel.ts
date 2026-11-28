@@ -112,8 +112,9 @@ function defaultSide(id: DockItemId): Side {
 }
 
 export function defaultLayout(narrow: boolean): Layout {
-  const left: DockItemId[] = ["scene", "pc", "characters", "combat"];
-  const right: DockItemId[] = ["chat", "libraries", "reference", "items", "notes", "members"];
+  // Every panel starts on its own side, so a new panel needs no change here.
+  const left: DockItemId[] = PANEL_ORDER.filter((id) => DEFAULT_SIDE[id] === "left");
+  const right: DockItemId[] = PANEL_ORDER.filter((id) => DEFAULT_SIDE[id] === "right");
   return {
     left: { active: "characters", open: !narrow, width: SIDEBAR_DEFAULT_W, panels: left },
     right: { active: "chat", open: !narrow, width: SIDEBAR_DEFAULT_W, panels: right },
