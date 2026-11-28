@@ -48,6 +48,14 @@ export const STEPS: readonly Step[] = [
     anchors: [{ tool: "select" }],
   },
   {
+    id: "palette",
+    section: "Playing",
+    title: "Say What to Do",
+    text: 'Press Ctrl+K (Cmd+K on a Mac) or click the search button to open the command palette. Type a command, or a sentence such as "hero lock" to lock the Hero in place: names say who does what, to whom.',
+    goal: { kind: "locked", piece: "hero" },
+    anchors: [{ ui: "palette" }],
+  },
+  {
     id: "pan",
     section: "Playing",
     title: "Look Around",
@@ -86,6 +94,14 @@ export const STEPS: readonly Step[] = [
     text: "Type a message and press Enter. You can also roll from here: try 2d6+1.",
     goal: { kind: "more", of: "message" },
     anchors: [{ ui: "chat-message" }, { panel: "chat" }],
+  },
+  {
+    id: "bubbles",
+    section: "At the Table",
+    title: "Speech Bubbles",
+    text: "Close the Chat panel. New messages then pop up as speech bubbles over the speaker's token, or at the edge of the screen if their token is out of view. Whispers only show to the people they're for.",
+    goal: { kind: "read" },
+    anchors: [{ panel: "chat" }],
   },
   {
     id: "draw",
@@ -136,14 +152,6 @@ export const STEPS: readonly Step[] = [
     anchors: [{ tool: "pin" }],
   },
   {
-    id: "palette",
-    section: "At the Table",
-    title: "Say What to Do",
-    text: 'Press Ctrl+K (Cmd+K on a Mac) and type what you want in plain words, such as "goblin lock" to lock the Goblin in place. Hover a token first and the palette knows who you mean. Tab finishes a name.',
-    goal: { kind: "locked", piece: "goblin" },
-    anchors: [{ ui: "palette" }],
-  },
-  {
     id: "door",
     section: "Running the Game",
     title: "Open the Door",
@@ -186,8 +194,8 @@ export const STEPS: readonly Step[] = [
   {
     id: "shadow",
     section: "Running the Game",
-    title: "Meet Your Shadow",
-    text: "The GM Shadow watches the session and suggests complications, keeps track of the people and places that come up, and follows plot threads. Only you see it, and it runs on this device using Chrome's built-in model, so nothing leaves it.",
+    title: "Your GM Shadow",
+    text: "GM Shadow watches the session and keeps track of the people, places and plot threads that come up, and suggests complications. It runs on Chrome's built-in AI on your device, so nothing it reads leaves it, and only you see what it writes.",
     goal: { kind: "read" },
     anchors: [{ panel: "shadow" }],
   },

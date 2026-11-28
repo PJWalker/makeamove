@@ -101,7 +101,7 @@
     "jiti": "2.7.0",
     "jscpd": "5.4.3",
     "knip": "^6.44.1",
-    "lemmascript": "0.6.14",
+    "lemmascript": "^0.6.15",
     "oxlint-plugin-react-doctor": "^0.9.22",
     "playwright": "^1.65.0",
     "typescript": "~6.0.3",
