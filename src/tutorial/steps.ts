@@ -88,6 +88,14 @@ export const STEPS: readonly Step[] = [
     anchors: [{ ui: "chat-message" }, { panel: "chat" }],
   },
   {
+    id: "bubbles",
+    section: "At the Table",
+    title: "Speech Bubbles",
+    text: "Close the Chat panel. New messages then pop up as speech bubbles over the speaker's token, or at the edge of the screen if their token is out of view. Whispers only show to the people they're for.",
+    goal: { kind: "read" },
+    anchors: [{ panel: "chat" }],
+  },
+  {
     id: "draw",
     section: "Marking the Map",
     title: "Draw on the Map",
@@ -174,6 +182,14 @@ export const STEPS: readonly Step[] = [
     text: "Pick Fog of War and drag a Hide shape over the Treasure Room. Players never see what's under it until you take it away. The scene's settings turn on fog that lifts as their tokens explore.",
     goal: { kind: "more", of: "fog" },
     anchors: [{ tool: "fog" }],
+  },
+  {
+    id: "shadow",
+    section: "Running the Game",
+    title: "Your GM Shadow",
+    text: "GM Shadow watches the session and keeps track of the people, places and plot threads that come up, and suggests complications. It runs on Chrome's built-in AI on your device, so nothing it reads leaves it, and only you see what it writes.",
+    goal: { kind: "read" },
+    anchors: [{ panel: "shadow" }],
   },
   {
     id: "members",
