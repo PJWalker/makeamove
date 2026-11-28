@@ -68,6 +68,10 @@ test("scenes can be filed and pulled or deleted from their context menu", async 
   await secondScene.click({ button: "right" });
   await expect(sceneMenu.getByRole("menuitem", { name: "Delete Scene" })).toBeVisible();
   await sceneMenu.getByRole("menuitem", { name: "Delete Scene" }).click();
+  await page
+    .getByRole("dialog", { name: "Delete Scene" })
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
   await expect(page.locator(".scene-item")).toHaveCount(1);
 });
 
