@@ -78,6 +78,7 @@ export class SceneRenderer implements RenderState {
   private readonly lightingLayer = new LightingLayer(this);
   private readonly fogLayer = new FogOfWarLayer(this);
   private readonly draftLayer = new DraftLayer();
+  private readonly proposalLayer = new DraftLayer();
   private readonly tokenLabels = new TokenLabelLayer(this);
   private readonly conditions = new ConditionLayer(this);
   private readonly presence = new PresenceLayer(this);
@@ -120,6 +121,8 @@ export class SceneRenderer implements RenderState {
     rangeFrom: null,
   };
   draft: Draft | null = null;
+  /** What's proposed for adding, shown until it's added or dropped, whatever gestures come and go: walls found on a map. */
+  proposal: Draft | null = null;
   /** Show the GM's walls and lights (only the GM sees them). */
   showHelpers = false;
   /** The sorts of things whose GM helpers (lamps, areas, effect outlines) show: those the active tool can pick. */
@@ -290,6 +293,7 @@ export class SceneRenderer implements RenderState {
     if (d.overlay) {
       const unseen = (t: Transform) => this.unseen(t);
       this.draftLayer.draw(this.draft, this.layers, this.camera.zoom);
+      this.proposalLayer.draw(this.proposal, this.layers, this.camera.zoom);
       this.overlay.draw(this.overlayState);
       this.tokenLabels.draw(this.hoverToken, this.hoverPointer, unseen);
       this.conditions.draw(this.tokenLabels.bars, this.hoverPointer, unseen);

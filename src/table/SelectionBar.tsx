@@ -21,6 +21,7 @@ import { TextStyleFields } from "./TextStyleFields";
 import TokenStats from "./TokenStats";
 import { EFFECT_OPTIONS, FOG_FORCE_OPTIONS } from "./effectOptionsData";
 import { EffectSightToggles } from "./effectOptions";
+import DetectWallsFields from "./DetectWallsFields";
 import AlignMapFields from "./AlignMapFields";
 import "./SelectionBar.css";
 
@@ -118,8 +119,11 @@ function Fields({
   sel: readonly SceneElement[];
   onTokenOptions: (id: string, from: Element) => void;
 }) {
+  const detecting = useQuery(controller.wallDetection.state);
   const aligning = useQuery(controller.aligning);
   const fields = useSelectionFields(controller, sel, onTokenOptions);
+  if (detecting && sel.length === 1 && sel[0]!.id === detecting.mapId)
+    return <DetectWallsFields detector={controller.wallDetection} detection={detecting} />;
   if (aligning && sel.length === 1 && sel[0]!.id === aligning.mapId)
     return <AlignMapFields controller={controller} alignment={aligning} />;
   return fields;

@@ -14,6 +14,7 @@ import {
   IconToFront,
   IconToken,
   IconUnlock,
+  IconWall,
 } from "../../ui/icons";
 import type { Icon } from "../../ui/icons";
 import type { CampaignContext } from "../campaignContext";
@@ -211,6 +212,29 @@ export const useAsToken = oneElementCommand(
   (context, id) => open(context)?.controller.convert(id, "token"),
 );
 
+export const detectWalls = command<Selection | undefined>({
+  id: "map.detectWalls",
+  params: isSelectionOrNow,
+  title: "Detect Walls…",
+  icon: IconWall,
+  section: "act",
+  transact: false,
+  available: (context, p) => {
+    if (!one(context, p, (element) => element.type === "map")) return "Select one map";
+    return Boolean(open(context)?.controller.gm) || "Only the GM places walls";
+  },
+  menu: {
+    selection: (context, t) =>
+      one(context, t, (element) => element.type === "map") && open(context)?.controller.gm
+        ? [{ params: t }]
+        : [],
+  },
+  run: (context, p) => {
+    const map = one(context, p, (element) => element.type === "map");
+    if (map) open(context)?.controller.detectWalls(map.id);
+  },
+});
+
 export const useAsMap = oneElementCommand(
   "token.useAsMap",
   { title: "Use as Map", icon: IconMap },
@@ -272,6 +296,7 @@ export const selectionCommands = [
   tokenOptions,
   alignMapToGrid,
   useAsToken,
+  detectWalls,
   useAsMap,
   bringToFront,
   sendToBack,

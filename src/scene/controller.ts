@@ -41,6 +41,7 @@ import type {
 import { TOOL_PRESS } from "./gestures";
 import alignBox from "./gestures/align";
 import { PolygonDraft } from "./gestures/polygon";
+import { WallDetector } from "./wallDetection";
 import { pinch } from "./gestures/pan";
 import { hoverCursor } from "./gestures/select";
 import { dragShape, placementPlan } from "./gestures/shape";
@@ -124,6 +125,9 @@ export class SceneController implements ToolContext {
 
   /** The corners of a polygon (a shape, or an area of solid light or dark) being placed, a click at a time. */
   readonly polygon: PolygonDraft = new PolygonDraft(this);
+
+  /** Walls being found on a map, for the GM to tune before adding them. */
+  readonly wallDetection: WallDetector = new WallDetector(this);
 
   /** Whether this device is the GM's: only the GM sees and edits walls and lights. */
   gm = false;
@@ -221,6 +225,8 @@ export class SceneController implements ToolContext {
     const regrid = () => {
       this.renderer.setGrid(this.scene.grid());
       this.renderer.invalidate("overlay");
+      // Walls being found snap to the grid.
+      if (this.wallDetection.state.value) void this.wallDetection.refresh();
     };
     // A selected pin that goes out of sight, or whose target goes, drops out of the selection.
     this.renderer.onPinsHidden = (ids) => {
@@ -234,8 +240,11 @@ export class SceneController implements ToolContext {
       this.scene.elements.observe(refresh),
       this.scene.settings.observe(regrid),
       watch([this.selection], () => {
-        const aligning = this.aligning.value;
+        const detecting = this.wallDetection.state.value;
         const sel = this.selection.value;
+        if (detecting && (sel.length !== 1 || sel[0] !== detecting.mapId))
+          this.wallDetection.stop();
+        const aligning = this.aligning.value;
         if (aligning && (sel.length !== 1 || sel[0] !== aligning.mapId)) this.stopAligning();
         this.selectedElements.value = this.selected();
         this.updateOverlay();
@@ -259,6 +268,7 @@ export class SceneController implements ToolContext {
             return element && this.pickable(element);
           });
           if (keep.length !== this.selection.value.length) this.selection.value = keep;
+          if (this.tools.activeTool.value !== "select") this.wallDetection.stop();
           if (this.tools.activeTool.value !== "select") this.stopAligning();
           this.cancelGesture();
           this.updateCursor();
@@ -350,6 +360,7 @@ export class SceneController implements ToolContext {
 
   stop() {
     this.cancelGesture();
+    this.wallDetection.stop();
     this.stopAligning();
     cancelAnimationFrame(this.itemTokenDropFrame);
     this.itemTokenDropFrame = 0;
@@ -368,6 +379,7 @@ export class SceneController implements ToolContext {
     this.elements = this.scene.views();
     this.byId = new Map(this.elements.map((e) => [e.id, e]));
     this.renderer.setElements(this.elements);
+    void this.wallDetection.follow();
     const targets = this.targets.value.filter((id) => this.byId.get(id)?.type === "token");
     if (targets.length !== this.targets.value.length) this.setTargets(targets);
     const sel = this.selection.value.filter((id) => this.byId.has(id));
@@ -846,6 +858,7 @@ export class SceneController implements ToolContext {
         return true;
       }
       case "Escape": {
+        this.wallDetection.stop();
         if (this.aligning.value) {
           this.cancelGesture();
           this.stopAligning();
@@ -958,11 +971,21 @@ export class SceneController implements ToolContext {
     this.renderer.invalidate("previews");
   }
 
+  /** Start finding the walls on map `id`, to tune and then add. */
+  detectWalls(id: string) {
+    this.cancelGesture();
+    this.tools.activeTool.value = "select";
+    this.selection.value = [id];
+    this.stopAligning();
+    void this.wallDetection.start(id);
+  }
+
   /** Start lining map `id` up with the grid: a drag over some of its cells then sizes and places it. */
   alignMap(id: string) {
     this.cancelGesture();
     this.tools.activeTool.value = "select";
     this.selection.value = [id];
+    this.wallDetection.stop();
     this.aligning.value = { mapId: id };
     this.updateCursor();
   }
