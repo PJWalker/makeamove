@@ -121,7 +121,7 @@ function useTooltipTracking(
 
     function consider(target: EventTarget | null, delay: number) {
       const element =
-        target instanceof HTMLElement ? target.closest<HTMLElement>("[title], [data-tip]") : null;
+        target instanceof Element ? target.closest<HTMLElement>("[title], [data-tip]") : null;
       if (element === current || (element && element === suppressed)) return;
       hide();
       if (!element || !textOf(element)) return;
