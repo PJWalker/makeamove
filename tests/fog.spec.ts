@@ -10,15 +10,9 @@ test("the GM turns on fog of war, and draws shapes that reveal or hide what's in
 
   // Off until the GM chooses how it's revealed.
   const settings = page.getByRole("region", { name: "Fog of War" });
-  await expect(settings.getByRole("radio", { name: "Off" })).toHaveAttribute(
-    "aria-checked",
-    "true",
-  );
+  await expect(settings.getByRole("radio", { name: "Off" })).toBeChecked();
   await settings.getByRole("radio", { name: "Explore" }).click();
-  await expect(settings.getByRole("radio", { name: "Explore" })).toHaveAttribute(
-    "aria-checked",
-    "true",
-  );
+  await expect(settings.getByRole("radio", { name: "Explore" })).toBeChecked();
   await expect(settings.getByRole("button", { name: "Cover Explored Areas" })).toBeDisabled();
 
   const canvas = page.locator(".scene-canvas");
@@ -40,7 +34,7 @@ test("the GM turns on fog of war, and draws shapes that reveal or hide what's in
   await page.getByRole("button", { name: "Fog of War", exact: true }).click();
   await page.mouse.click(at.x + 70, at.y + 60);
   const bar = page.getByRole("toolbar", { name: "Selection" });
-  await expect(bar.getByRole("radio", { name: "Reveal" })).toHaveAttribute("aria-checked", "true");
+  await expect(bar.getByRole("radio", { name: "Reveal" })).toBeChecked();
   await bar.getByRole("radio", { name: "Hide" }).click();
-  await expect(bar.getByRole("radio", { name: "Hide" })).toHaveAttribute("aria-checked", "true");
+  await expect(bar.getByRole("radio", { name: "Hide" })).toBeChecked();
 });
