@@ -18,3 +18,4 @@ src/scene/fog.ts
 src/scene/pins.ts
 src/scene/alignMap.ts
 src/media/peaks.ts
+src/features/shadow/window.ts

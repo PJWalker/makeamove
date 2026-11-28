@@ -4,6 +4,8 @@ import type { Campaign } from "../campaign/campaign";
 import { FolderBackup } from "../campaign/folderBackup";
 import { campaignUiDbName as campaignUiDatabaseName } from "../campaign/storage";
 import { ChatNotifications } from "../features/chat/notify";
+import { shadowFor } from "../features/shadow/source";
+import type { Shadow } from "../features/shadow/shadow";
 import { SceneTools } from "../scene/tools";
 import { CommandRegistry } from "../kernel/commands";
 import type { AnyCommand, Command, CommandHost } from "../kernel/commands";
@@ -50,6 +52,7 @@ export class CampaignContext implements CommandHost {
   readonly #origin = { commands: true };
   readonly #disposeUndo: () => void;
   #disposed = false;
+  #shadow: Shadow | null | undefined;
 
   private constructor(campaign: Campaign, local: LocalDocument) {
     this.campaign = campaign;
@@ -72,6 +75,12 @@ export class CampaignContext implements CommandHost {
 
   isGm() {
     return this.campaign.isGm();
+  }
+
+  /** The GM shadow, made the first time it's asked for; none on a player's device. */
+  get shadow(): Shadow | null {
+    if (this.#shadow === undefined && !this.#disposed) this.#shadow = shadowFor(this.campaign);
+    return this.#shadow ?? null;
   }
 
   transact<T>(function_: () => T, undoable: boolean): T {
@@ -118,6 +127,7 @@ export class CampaignContext implements CommandHost {
     if (this.#disposed) return;
     this.#disposed = true;
     this.chat.dispose();
+    this.#shadow?.destroy();
     this.backup.dispose();
     this.windows.dispose();
     this.#disposeUndo();

@@ -1,7 +1,7 @@
 import type { RichText } from "../../data/richText";
 import type { Roll } from "../dice/notation";
 import type { ChatContent } from "./content";
-import { bubblePlace, seenBy } from "./audience";
+import { bubblePlace, seenBy, shadowReads } from "./audience";
 import type { Audience, BubblePlace, BubbleViewer, Seen } from "./audience";
 
 /*
@@ -191,6 +191,9 @@ export function audienceOf(m: ChatMessage): Audience {
 
 export const visibilityOf = (m: ChatMessage, me: string, isGm: boolean): Visibility =>
   seenBy(audienceOf(m), me, isGm);
+
+/** Whether the GM shadow may read a message: only what the GM `gm` sees in full. */
+export const shadowReadsMessage = (m: ChatMessage, gm: string) => shadowReads(audienceOf(m), gm);
 
 /** Where a message pops up over the map while the chat log is closed (audience.ts). */
 export const bubblePlaceOf = (m: ChatMessage, v: BubbleViewer): BubblePlace =>
