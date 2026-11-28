@@ -35,7 +35,12 @@ class YSource implements Source {
   };
 
   readonly subscribe = (listener: Listener) => {
-    if (this.#listeners.size === 0) this.#type.observeDeep(this.#onChange);
+    if (this.#listeners.size === 0) {
+      this.#type.observeDeep(this.#onChange);
+      // Nothing counted changes while nobody listened (such as a child's
+      // effect writing before this component subscribed), so read afresh.
+      this.version++;
+    }
     this.#listeners.add(listener);
     return () => {
       this.#listeners.delete(listener);

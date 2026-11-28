@@ -1,4 +1,4 @@
-import { act, createElement } from "react";
+import { act, createElement, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, test } from "vite-plus/test";
 import * as Y from "yjs";
@@ -49,6 +49,27 @@ test("sees changes nested deep inside the type", async () => {
   await act(async () => inner.set("hp", 7));
   expect(seen.value).toBe(7);
   unmount();
+  doc.destroy();
+});
+
+test("sees a change made before it subscribes, such as by a child's effect", async () => {
+  const doc = new Y.Doc();
+  const map = doc.getMap<string>("m");
+  function Child() {
+    useEffect(() => {
+      map.set("name", "Gwen");
+    }, []);
+    return null;
+  }
+  let seen: string | undefined;
+  function Parent() {
+    seen = useQuery(map, (m) => m.get("name"));
+    return createElement(Child);
+  }
+  const root = createRoot(document.createElement("div"));
+  await act(async () => root.render(createElement(Parent)));
+  expect(seen).toBe("Gwen");
+  act(() => root.unmount());
   doc.destroy();
 });
 
