@@ -14,7 +14,7 @@ import type { Goal } from "./goals";
  * Each is marked in the UI with `data-tutorial="…"`; the test checks every
  * one is.
  */
-export const UI_ANCHORS = ["quick-dice", "chat-message", "new-note"] as const;
+export const UI_ANCHORS = ["quick-dice", "chat-message", "new-note", "palette"] as const;
 export type UiAnchor = (typeof UI_ANCHORS)[number];
 
 /** What a step points at: a tool's button, a panel's tab, or a marked part of the UI. */
@@ -46,6 +46,14 @@ export const STEPS: readonly Step[] = [
     text: "With the Select tool, drag the Hero token towards the corridor. Everyone at the table sees it move.",
     goal: { kind: "moved", piece: "hero" },
     anchors: [{ tool: "select" }],
+  },
+  {
+    id: "palette",
+    section: "Playing",
+    title: "Say What to Do",
+    text: "Press Ctrl+K (Cmd+K on a Mac) or click the search button to open the command palette. Type a command, or a sentence such as \"hero lock\": names say who does what, to whom.",
+    goal: { kind: "read" },
+    anchors: [{ ui: "palette" }],
   },
   {
     id: "pan",
