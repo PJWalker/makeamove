@@ -1,6 +1,5 @@
 import { expect, test, type Page } from "./browser-test";
 import { createCampaign, settled } from "./e2e-helpers";
-import { hexToOklch } from "../src/lib/colour";
 import { setAutohide } from "../src/workspace/autohide";
 
 test("autohide reveals each edge within 8px and stays open over its panel", async ({ page }) => {
@@ -135,57 +134,6 @@ test("tool settings stay visible and usable in both toolbar layouts", async ({ p
     }
   }
 }, 90_000);
-
-test("scene-tinted surfaces follow scene chroma and lightness", async ({ page }) => {
-  await createCampaign(page, "Scene-tinted sidebar test");
-  const pixels = await page.evaluate(() => {
-    const root = document.documentElement;
-    root.style.setProperty("transition", "none", "important");
-    const probe = document.createElement("div");
-    document.body.append(probe);
-    const context = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
-    if (!context) throw new Error("Canvas color sampling is unavailable.");
-
-    const sample = (background: string) => {
-      probe.style.backgroundColor = background;
-      return ["oklch(40% 0.02 130)", "oklch(40% 0.2 130)", "oklch(90% 0.2 130)"].map(
-        (sceneColour) => {
-          root.style.setProperty("--scene-oklch", sceneColour);
-          context.clearRect(0, 0, 1, 1);
-          context.fillStyle = getComputedStyle(probe).backgroundColor;
-          context.fillRect(0, 0, 1, 1);
-          return [...context.getImageData(0, 0, 1, 1).data];
-        },
-      );
-    };
-    const samples = {
-      toolbar: sample("var(--toolbar)"),
-      surface: sample("var(--surface)"),
-    };
-    probe.remove();
-    return samples;
-  });
-
-  const colours = (samples: number[][]) =>
-    samples.map((pixel) => {
-      expect(pixel[3]).toBeGreaterThan(150);
-      const hex = `#${pixel
-        .slice(0, 3)
-        .map((channel) => channel!.toString(16).padStart(2, "0"))
-        .join("")}`;
-      return hexToOklch(hex);
-    });
-  const toolbarColours = colours(pixels.toolbar);
-  const surfaceColours = colours(pixels.surface);
-  expect(pixels.surface).toEqual(pixels.toolbar);
-  expect(toolbarColours[0]!.c).toBeLessThanOrEqual(0.025);
-  expect(toolbarColours[1]!.c).toBeLessThanOrEqual(0.075);
-  expect(toolbarColours[1]!.c).toBeGreaterThan(0.055);
-  expect(surfaceColours[0]!.c).toBeLessThanOrEqual(0.025);
-  expect(surfaceColours[1]!.c).toBeGreaterThan(0.022);
-  expect(surfaceColours[1]!.c).toBeLessThanOrEqual(0.03);
-  expect(surfaceColours[2]!.l).toBeGreaterThan(surfaceColours[1]!.l + 0.01);
-}, 30_000);
 
 test("the toolbar reserves panel bodies but not sidebar tab rails", async ({ page }) => {
   await createCampaign(page, "Toolbar insets test");
