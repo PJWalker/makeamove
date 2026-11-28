@@ -8,6 +8,8 @@ datatype FogPass = clearExplored | clearRevealed | clearSight | cover | coverHid
 
 datatype FogShade = clear | remembered | unseen
 
+datatype TokenView = TokenView(own: bool, vision: bool, cover: FogCover)
+
 datatype Stratum = aboveFog | fog | grid | light | map_ | over | sight | tint | token | under
 
 datatype ElementLayer = aboveFog | map_ | over | token | under
@@ -89,6 +91,19 @@ lemma fogShade_ensures(mode: FogMode, vision: bool, c: FogCover)
   ensures (fogShade(mode, vision, c).remembered? ==> (isRevealed(mode, c) && (!mode.none?)))
   ensures ((!mode.none?) ==> c.hidden ==> fogShade(mode, vision, c).unseen?)
   ensures (!(vision) ==> isRevealed(mode, c) ==> fogShade(mode, vision, c).clear?)
+{
+}
+
+function tokenShows(mode: FogMode, t: TokenView): bool
+{
+  (t.own || fogShade(mode, t.vision, t.cover).clear?)
+}
+
+lemma tokenShows_ensures(mode: FogMode, t: TokenView)
+  ensures (tokenShows(mode, t) == (t.own || fogShade(mode, t.vision, t.cover).clear?))
+  ensures (!(t.own) ==> (!mode.none?) ==> t.cover.hidden ==> !(tokenShows(mode, t)))
+  ensures (!(t.own) ==> !(isRevealed(mode, t.cover)) ==> !(tokenShows(mode, t)))
+  ensures (!(t.own) ==> t.vision ==> !(t.cover.inSight) ==> !(tokenShows(mode, t)))
 {
 }
 
