@@ -9,7 +9,7 @@ import type { PresenceMark } from "./presence";
 import type { TokenMarks } from "./tokenMarks";
 import type { SelectKind } from "./tools";
 import { LAYERS } from "./types";
-import type { Layer, PinElement, SceneElement, TextLook, Transform } from "./types";
+import type { Layer, PinElement, SceneElement, TextLook, TokenElement, Transform } from "./types";
 import { pinLook } from "./pins";
 import type { PinLook, PinSight } from "./pins";
 import { ConditionLayer } from "./render/conditions";
@@ -286,8 +286,7 @@ export class SceneRenderer implements RenderState {
     this.elementLayer.syncHidden(
       this.showHelpers,
       this.helpersShown,
-      (token) =>
-        !this.viewers?.includes(token.id) && this.unseen(this.previews.get(token.id) ?? token),
+      (token) => !this.tokenShown(token),
     );
     this.syncPins();
     if (d.overlay) {
@@ -354,6 +353,19 @@ export class SceneRenderer implements RenderState {
     this.fogLayer.fog = fog;
     this.fogLayer.seeAll = seeAll;
     this.invalidate("lighting", "overlay");
+  }
+
+  /**
+   * Whether a token shows to this device, where it is now: one it sees
+   * through always does, any other only if it isn't out of sight or under fog.
+   */
+  tokenShown(token: TokenElement): boolean {
+    const t = this.previews.get(token.id) ?? token;
+    return this.fogLayer.showsToken(t, {
+      own: this.viewers?.includes(token.id) ?? false,
+      inSight: this.lightingLayer.inSight(t),
+      vision: this.lightingLayer.sight !== null,
+    });
   }
 
   /** Whether a token there is hidden from this device: out of its viewers' sight, or under fog. */
