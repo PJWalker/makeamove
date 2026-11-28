@@ -4540,6 +4540,11 @@
       "count": 2
     }
   },
+  "src/table/TutorialGuide.tsx": {
+    "import/prefer-default-export": {
+      "count": 1
+    }
+  },
   "src/table/chatContentExtensions.ts": {
     "import/no-named-as-default": {
       "count": 1
@@ -4853,6 +4858,29 @@
     },
     "no-nested-ternary": {
       "count": 2
+    }
+  },
+  "src/tutorial/__tests__/tutorial.test.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    }
+  },
+  "src/tutorial/dungeon.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 72
+    }
+  },
+  "src/tutorial/goals.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "src/tutorial/progress.ts": {
+    "no-console": {
+      "count": 1
     }
   },
   "src/ui/Avatar.tsx": {

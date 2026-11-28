@@ -6,6 +6,7 @@ import {
   IconDelete,
   IconDice,
   IconExport,
+  IconHelp,
   IconImport,
   IconMap,
   IconMembers,
@@ -25,6 +26,7 @@ import { ContextMenu } from "../ui/ContextMenu";
 import { menuTrigger } from "../ui/menuTrigger";
 import { leave, showFromOrigin } from "../ui/morph";
 import { useQuery } from "../ui/useQuery";
+import { createTutorialCampaign } from "../tutorial/create";
 import { CaveBackdrop } from "./CaveBackdrop";
 
 const relative = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
@@ -114,7 +116,7 @@ export function Lobby({ error }: { error: string | null }) {
             {failed}
           </p>
         )}
-        {ready && <ImportActions />}
+        {ready && <ImportActions hasCampaigns={list.length > 0} />}
 
         {creating && (
           <NewCampaignDialog
@@ -153,13 +155,33 @@ function Welcome({ onCreate }: { onCreate: () => void }) {
       <Button variant="primary" className="welcome-cta" icon={IconAdd} onClick={onCreate} autoFocus>
         Create a Campaign
       </Button>
+      <TutorialButton />
     </section>
   );
 }
 
-function ImportActions() {
+/** Make a campaign with the tutorial's tiny dungeon in it, and open it. */
+function TutorialButton() {
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button
+      variant="ghost"
+      icon={IconHelp}
+      disabled={busy}
+      onClick={() => {
+        setBusy(true);
+        void createTutorialCampaign(device.value.name || "GM").then(goToCampaign);
+      }}
+    >
+      Learn with the Tutorial
+    </Button>
+  );
+}
+
+function ImportActions({ hasCampaigns }: { hasCampaigns: boolean }) {
   return (
     <div className="lobby-imports">
+      {hasCampaigns && <TutorialButton />}
       <Button variant="ghost" icon={IconImport} onClick={() => void runBackup(importBackupFile)}>
         Import Backup…
       </Button>

@@ -23,6 +23,7 @@ import { ChatPopups } from "./ChatPopups";
 import { Sidebar } from "./Sidebar";
 import { CampaignDialogHost } from "./CampaignDialogHost";
 import { FloatingWindows } from "./FloatingWindows";
+import { TutorialGuide } from "./TutorialGuide";
 
 // PixiJS is big; load it only once someone opens a table.
 const SceneCanvas = lazy(() => import("./SceneCanvas").then((m) => ({ default: m.SceneCanvas })));
@@ -123,6 +124,7 @@ export function Tabletop({ campaign }: { campaign: Campaign }) {
         <LinkPopups campaign={campaign} />
         <ActionDialogs campaign={campaign} />
         <ChatPopups campaign={campaign} />
+        <TutorialGuide />
       </div>
     </SystemExtensions>
   );

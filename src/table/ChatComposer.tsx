@@ -69,6 +69,7 @@ function MessageBox({
     <>
       <form
         className="dice-entry"
+        data-tutorial="chat-message"
         onSubmit={(e) => {
           e.preventDefault();
           send();

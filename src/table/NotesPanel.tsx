@@ -235,7 +235,11 @@ function NoteList({
             renderItem={row}
             renderActions={(newFolder) => (
               <>
-                <Button icon={IconAdd} onClick={() => context.execute(newPage, {})}>
+                <Button
+                  icon={IconAdd}
+                  data-tutorial="new-note"
+                  onClick={() => context.execute(newPage, {})}
+                >
                   New Page
                 </Button>
                 {gmPages && (
