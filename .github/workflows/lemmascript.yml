@@ -8,9 +8,6 @@ jobs:
   verify:
     # Regenerates the Dafny for every file in LemmaScript-files.txt, proves it,
     # and fails if a committed .dfy / .dfy.gen is out of date.
-    # Pinned to the release package.json installs, so this and `npm run verify`
-    # generate the same Dafny. Bump all three together.
-    uses: midspiral/LemmaScript/.github/workflows/verify.yml@v0.6.14
+    uses: midspiral/LemmaScript/.github/workflows/verify.yml@main
     with:
       backend: dafny
-      ls-ref: v0.6.14
