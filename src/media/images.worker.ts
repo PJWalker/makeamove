@@ -24,6 +24,8 @@ async function runTask(task: ImageWorkerTask): Promise<ImageWorkerResult> {
   const bitmap = await createImageBitmap(task.blob);
   try {
     if (task.type === "colour") return { type: "colour", colour: sampleColour(bitmap) };
+    if (task.type === "greyscale")
+      return { type: "greyscale", image: greyscale(bitmap, task.maxSide) };
     if (task.type === "squareGrid")
       return { type: "squareGrid", grid: detectSquareGrid(greyscale(bitmap, ANALYSIS_SIZE)) };
 
@@ -43,5 +45,10 @@ async function runTask(task: ImageWorkerTask): Promise<ImageWorkerResult> {
 }
 
 serveWorker<ImageWorkerTask, ImageWorkerResult>(runTask, (result) =>
-  result.type === "decode" ? [result.bitmap] : [],
+  // eslint-disable-next-line no-nested-ternary -- one transfer list per kind of result
+  result.type === "decode"
+    ? [result.bitmap]
+    : result.type === "greyscale"
+      ? [result.image.data.buffer]
+      : [],
 );

@@ -1,5 +1,6 @@
 import { getBlob, putBlob } from "../platform/blobs";
 import { workerClient } from "../lib/workerRpc";
+import type { Greyscale } from "./greyscale";
 import type { ImageGrid } from "./gridDetect";
 import type { ImageWorkerResult, ImageWorkerTask } from "./imageWorkerProtocol";
 
@@ -54,6 +55,12 @@ export async function importImage(file: Blob): Promise<BlobReference> {
 export async function squareGridOf(image: Blob): Promise<ImageGrid | null> {
   const { grid } = await runImageTask({ type: "squareGrid", blob: image });
   return grid;
+}
+
+/** An image's brightness, shrunk so its longer side is at most `maxSide` px, read in the image worker. */
+export async function greyscaleOf(image: Blob, maxSide: number): Promise<Greyscale> {
+  const { image: grey } = await runImageTask({ type: "greyscale", blob: image, maxSide });
+  return grey;
 }
 
 /** Where a campaign gets images this device lacks: from other players, while connected. */
