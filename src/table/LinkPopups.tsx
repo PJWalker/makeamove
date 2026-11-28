@@ -12,12 +12,12 @@ import { closePopup } from "../ui/popup";
 import CommitInput from "../ui/CommitInput";
 import usePopupDialog from "../workspace/usePopupDialog";
 import Dialog from "../workspace/Dialog";
-import { ContextMenu  } from "../ui/ContextMenu";
-import type {MenuItem} from "../ui/ContextMenu";
+import { ContextMenu } from "../ui/ContextMenu";
+import type { MenuItem } from "../ui/ContextMenu";
 import { EntryWindow } from "../workspace/EntryWindow";
 import type { LinkPopups as LinkPopupState } from "../workspace/linkState";
-import { linkKey   } from "../workspace/linkState";
-import type {LinkRef as LinkReference} from "../workspace/linkState";
+import { linkKey } from "../workspace/linkState";
+import type { LinkRef as LinkReference } from "../workspace/linkState";
 import { joinSections } from "../workspace/commands/views";
 import { linkActionItems } from "../workspace/linkActions";
 import linkProxy from "../workspace/linkProxy";
@@ -26,6 +26,7 @@ import { actionMenuItems } from "../workspace/actionMenu";
 import { entityTabId } from "../workspace/entityWindowState";
 import { useCampaign } from "../workspace/campaignContext";
 import { giveItem, startMove } from "../workspace/commands/characters";
+import { librarySlot, moveSlot } from "../features/characters/hotbar";
 import CharacterSheet from "./sheets";
 import NoteEditor from "./NoteEditor";
 import useActingCharacter from "./useActingCharacter";
@@ -46,7 +47,14 @@ function LinkPopups({ campaign }: { campaign: Campaign }) {
       {links.map((l) => (
         <LinkPopup key={linkKey(l)} campaign={campaign} link={l} />
       ))}
-      {menu && <ContextMenu {...menu} onClose={() => { context.linkPopups.linkMenu.set(null); }} />}
+      {menu && (
+        <ContextMenu
+          {...menu}
+          onClose={() => {
+            context.linkPopups.linkMenu.set(null);
+          }}
+        />
+      )}
       <RenameLink />
     </>
   );
@@ -108,13 +116,18 @@ function LinkDialog({
       proxy,
       menuItems,
       content: children,
-      close: () => { context.linkPopups.close(link); },
+      close: () => {
+        context.linkPopups.close(link);
+      },
     });
   }, [context, campaign, id, link, title, children, menuItems]);
   return null;
 }
 
-interface PopupProperties { campaign: Campaign; link: LinkReference }
+interface PopupProperties {
+  campaign: Campaign;
+  link: LinkReference;
+}
 
 /** What a link to a gear item or move offers from its menu: its action, and pinning it. */
 function useEntryMenu(link: LinkReference, actionId: string, title: string) {
@@ -129,7 +142,7 @@ function ItemPopup({ campaign, link }: PopupProperties) {
   const context = useCampaign();
   const { me, canAct } = useActingCharacter(campaign);
   const item = systemOf(campaign).items.find((index) => index.id === link.id);
-  const menuItems = useEntryMenu(link, `library:${link.id}`, item?.name ?? "");
+  const menuItems = useEntryMenu(link, librarySlot(link.id), item?.name ?? "");
   if (!item) return null;
   return (
     <EntryWindow
@@ -138,7 +151,9 @@ function ItemPopup({ campaign, link }: PopupProperties) {
       title={item.name}
       text={item.description}
       tags={item.tags}
-      onClose={() => { context.linkPopups.close(link); }}
+      onClose={() => {
+        context.linkPopups.close(link);
+      }}
       proxy={linkProxy(context, "item", item.id, item.name, item.icon)}
       menuItems={menuItems}
     >
@@ -158,7 +173,7 @@ function MovePopup({ campaign, link }: PopupProperties) {
   const system = systemOf(campaign);
   const { me, canAct } = useActingCharacter(campaign);
   const move = system.actions.find((m) => m.id === link.id);
-  const menuItems = useEntryMenu(link, `move:${link.id}`, move?.name ?? "");
+  const menuItems = useEntryMenu(link, moveSlot(link.id), move?.name ?? "");
   if (!move) return null;
   const { label, Icon } = makeVerb(move);
   const tag = rollTag(system, move);
@@ -170,7 +185,9 @@ function MovePopup({ campaign, link }: PopupProperties) {
       text={plainText(move.text)}
       body={<MoveBody campaign={campaign} move={move} characterId={me?.id ?? null} />}
       tags={tag ? [tag] : undefined}
-      onClose={() => { context.linkPopups.close(link); }}
+      onClose={() => {
+        context.linkPopups.close(link);
+      }}
       proxy={linkProxy(
         context,
         "move",
@@ -202,7 +219,14 @@ function FollowDialog({
 }: PopupProperties & { title: string; followLabel: string; children: ReactNode }) {
   const context = useCampaign();
   const menuItems = useMemo<MenuItem[]>(
-    () => [{ label: followLabel, onSelect: () => { context.links.followLink(link.kind, link.id); } }],
+    () => [
+      {
+        label: followLabel,
+        onSelect: () => {
+          context.links.followLink(link.kind, link.id);
+        },
+      },
+    ],
     [context, link, followLabel],
   );
   return (
@@ -239,7 +263,12 @@ function ScenePopup({ campaign, link }: PopupProperties) {
     <FollowDialog campaign={campaign} link={link} title={scene.name} followLabel="Go to Scene">
       <p className="muted">A scene in this campaign.</p>
       <div className="form-actions">
-        <Button variant="primary" onClick={() => { context.links.followLink("scene", scene.id); }}>
+        <Button
+          variant="primary"
+          onClick={() => {
+            context.links.followLink("scene", scene.id);
+          }}
+        >
           Go to Scene
         </Button>
       </div>
@@ -288,7 +317,9 @@ function RenameLink() {
 function RenameLinkDialog({ req }: { req: NonNullable<LinkPopupState["linkRename"]["value"]> }) {
   const context = useCampaign();
   const reference = usePopupDialog();
-  const onClose = () => { context.linkPopups.linkRename.set(null); };
+  const onClose = () => {
+    context.linkPopups.linkRename.set(null);
+  };
   const done = (value: string | null) => {
     req.save(value);
   };
@@ -303,9 +334,13 @@ function RenameLinkDialog({ req }: { req: NonNullable<LinkPopupState["linkRename
             // The popup opens on a click, for this one field.
             // react-doctor-disable-next-line react-doctor/no-autofocus
             autoFocus
-            onFocus={(e) => { e.currentTarget.select(); }}
+            onFocus={(e) => {
+              e.currentTarget.select();
+            }}
             onCommit={done}
-            onBlur={() => { closePopup(reference.current, onClose); }}
+            onBlur={() => {
+              closePopup(reference.current, onClose);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Escape") closePopup(reference.current, onClose);
             }}

@@ -1,11 +1,11 @@
 import { md } from "../../macros/markdown.macro" with { type: "macro" };
-import { plainText, richTextFromPlain  } from "../../data/richText";
-import type {RichText} from "../../data/richText";
+import { plainText, richTextFromPlain } from "../../data/richText";
+import type { RichText } from "../../data/richText";
 import type { CharacterView } from "../../features/characters/types";
 import { commaListOf, formatCommaList } from "../../lib/list";
 
-import { resolveEffects  } from "../effects";
-import type {EffectSource} from "../effects";
+import { resolveEffects } from "../effects";
+import type { EffectSource } from "../effects";
 import type {
   ActionDef,
   AreaSpec,
@@ -32,12 +32,9 @@ import {
   SKILLS,
   SPELLS,
   TAGS,
-  XP_FOR_LEVEL
-  
-  
-  
+  XP_FOR_LEVEL,
 } from "./data";
-import type {Ability, DndClass, Spell} from "./data";
+import type { Ability, DndClass, Spell } from "./data";
 import {
   BACKGROUNDS,
   FEATS,
@@ -457,13 +454,13 @@ const spellRoll = (s: Spell, crit: boolean): FollowUpDef => {
     id: `spell-${s.id}${crit ? "-crit" : ""}`,
     kind: "roll",
     damage: r.label === "healing" ? "healing" : (r.type ?? "damage"),
-    label: crit ? "Roll critical damage" : (r.label === "healing" ? "Roll healing" : "Roll damage"),
+    label: crit ? "Roll critical damage" : r.label === "healing" ? "Roll healing" : "Roll damage",
     comment: s.name,
     formula: (c, d) => {
       const extraLevels = Math.max(0, (d.values["spellSlot"] ?? s.level) - s.level);
       const extraDice =
         s.upcastDice ??
-        Number((/\+(\d+)d\d+ per slot level above/i.exec(plainText(s.text)))?.[1] ?? 0);
+        Number(/\+(\d+)d\d+ per slot level above/i.exec(plainText(s.text))?.[1] ?? 0);
       const n =
         (r.count * (r.scales ? cantripDice(levelOf(c)) : 1) + extraLevels * extraDice) *
         (crit ? 2 : 1);
@@ -537,7 +534,7 @@ const SPELL_ACTIONS: ActionDef[] = SPELLS_ALL.map((s) => ({
       }
     : {}),
   tags: [s.level ? `level ${s.level}` : "cantrip"],
-  ...(s.target ? { target: s.target } : (s.save || s.area ? { target: inArea(s.area) } : {})),
+  ...(s.target ? { target: s.target } : s.save || s.area ? { target: inArea(s.area) } : {}),
   ...(s.trigger.includes("Concentration") ? { concentration: true } : {}),
   steps: s.attack
     ? [
@@ -552,9 +549,9 @@ const SPELL_ACTIONS: ActionDef[] = SPELLS_ALL.map((s) => ({
           ATTACK_OUTCOMES,
         ),
       ]
-    : (s.save
+    : s.save
       ? [saveStep(s)]
-      : []),
+      : [],
   ...(!s.attack && s.roll ? { followUps: [`spell-${s.id}`] } : {}),
 }));
 
@@ -735,9 +732,9 @@ export const dnd55e: GameSystem = {
   result: (_total, natural, _roll, context) =>
     (natural[0] ?? 0) >= criticalThreshold(context)
       ? "crit"
-      : (natural[0] === 1
+      : natural[0] === 1
         ? "fumble"
-        : "rolled"),
+        : "rolled",
   // A natural 20 always hits and a natural 1 always misses.
   hits: (total, natural, ac, _roll, context) =>
     (natural[0] ?? 0) >= criticalThreshold(context) || (natural[0] !== 1 && total >= ac),
@@ -940,7 +937,8 @@ export const dnd55e: GameSystem = {
     // Armour Class: worn armour, or a class's Unarmored Defense, or 10 + Dexterity.
     let ac: number;
     if (npc) ac = Number(c.fields["ac"]) || 10 + module_("dex");
-    else if (value("armorWorn")) ac = value("armorBase") + Math.min(module_("dex"), value("dexCap"));
+    else if (value("armorWorn"))
+      ac = value("armorBase") + Math.min(module_("dex"), value("dexCap"));
     else if (cls.id === "barbarian") ac = 10 + module_("dex") + module_("con");
     else if (cls.id === "monk" && !value("shieldWorn")) ac = 10 + module_("dex") + module_("wis");
     else ac = 10 + module_("dex");
@@ -1040,12 +1038,12 @@ export const dnd55e: GameSystem = {
               [6, 3],
               [18, 4],
             ])
-          : (is("paladin", 3)
+          : is("paladin", 3)
             ? stepped(level, [
                 [3, 2],
                 [11, 3],
               ])
-            : 0),
+            : 0,
         wildShapeMax: is("druid", 2)
           ? stepped(level, [
               [2, 2],

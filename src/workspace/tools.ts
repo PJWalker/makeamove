@@ -4,16 +4,17 @@ import {
   IconDraw,
   IconEffects,
   IconLight,
+  IconMapPin,
   IconMeasure,
+  IconObscure,
   IconPan,
   IconPing,
   IconSelect,
   IconShapes,
   IconText,
-  IconWall
-  
+  IconWall,
 } from "../ui/icons";
-import type {IconProps as IconProperties} from "../ui/icons";
+import type { IconProps as IconProperties } from "../ui/icons";
 
 /** The canvas tools, as the toolbar and the command palette list them. */
 const TOOLS: {
@@ -30,9 +31,11 @@ const TOOLS: {
   { id: "text", label: "Text", key: "X", Icon: IconText },
   { id: "ruler", label: "Measure", key: "M", Icon: IconMeasure },
   { id: "ping", label: "Ping", key: "G", Icon: IconPing },
+  { id: "pin", label: "Pins", key: "N", Icon: IconMapPin },
   { id: "wall", label: "Walls", key: "W", Icon: IconWall, gmOnly: true },
   { id: "light", label: "Lights", key: "L", Icon: IconLight, gmOnly: true },
   { id: "effect", label: "Effects", key: "F", Icon: IconEffects, gmOnly: true },
+  { id: "fog", label: "Fog of War", key: "O", Icon: IconObscure, gmOnly: true },
 ];
 
 export default TOOLS;

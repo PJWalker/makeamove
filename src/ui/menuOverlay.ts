@@ -32,7 +32,9 @@ function useMenuOverlay<T extends HTMLElement>({
     const onOutside = (event: Event) => {
       if (!isInside(event.target as Node)) dismiss();
     };
-    const onAway = () => { dismiss(); };
+    const onAway = () => {
+      dismiss();
+    };
     document.addEventListener("pointerdown", onOutside, true);
     window.addEventListener("wheel", onOutside, { passive: true });
     window.addEventListener("blur", onAway);

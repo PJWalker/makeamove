@@ -1,6 +1,16 @@
 import type * as React from "react";
-import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useRef, useState , lazy, Suspense } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+  lazy,
+  Suspense,
+} from "react";
 import { arrow, autoUpdate, computePosition, flip, offset, shift } from "@floating-ui/dom";
+import { bubblePlaceOf } from "../features/chat/types";
 import type { ChatMessage } from "../features/chat/types";
 import { markRead } from "../features/chat/unread";
 import type { Campaign } from "../campaign/campaign";
@@ -12,14 +22,16 @@ import { useQuery } from "../ui/useQuery";
 import { watch } from "../lib/store";
 import { useCampaign } from "../workspace/campaignContext";
 import onScreenRect from "./onScreenRect";
+import { STAY_MS, usePageHidden } from "./popupStay";
 
 const LoneMessage = lazy(() =>
   import("./ChatMessage").then((module) => ({ default: module.LoneMessage })),
 );
 
 /*
- * Chat that arrives while the Chat panel is closed or behind another tab pops
- * up beside the Chat tab, as if the tab were speaking (chat/notify.ts decides
+ * Chat that arrives while the Chat panel is closed or behind another tab, from
+ * someone with no token showing on the scene (the GM, say; table/SpeechBubbles.tsx
+ * has the rest), pops up beside the Chat tab, as if the tab were speaking (chat/notify.ts decides
  * when): the whole message, as the log shows it. Several in a row stack, the
  * newest in front and older ones receding behind it. Each grows out of the
  * tab and shrinks back into it. When the tab isn't on screen (the panel is
@@ -33,8 +45,6 @@ const LoneMessage = lazy(() =>
  * as reading the chat, which clears the Chat tab's unread badge.
  */
 
-/** How long a popup stays, once the pointer isn't on the stack. */
-const STAY_MS = 6000;
 /** Between the tab and the bubble, room for the bubble's tail. */
 const GAP = 16;
 /** The closest the bubble comes to the window's top and bottom edges. */
@@ -56,9 +66,15 @@ function ChatPopups({ campaign }: { campaign: Campaign }) {
       ref={ref}
       className="chat-popups"
       aria-live="polite"
-      onPointerEnter={() => { setHeld(true); }}
-      onPointerLeave={() => { setHeld(false); }}
-      onPointerDown={() => { markRead(campaign); }}
+      onPointerEnter={() => {
+        setHeld(true);
+      }}
+      onPointerLeave={() => {
+        setHeld(false);
+      }}
+      onPointerDown={() => {
+        markRead(campaign);
+      }}
     >
       <div ref={stack} className="chat-popup-stack">
         {shown.map((message, index) => (
@@ -71,7 +87,9 @@ function ChatPopups({ campaign }: { campaign: Campaign }) {
             leaving={leavingAll}
             stack={stack}
             place={place}
-            onDismissAll={() => { setLeavingAll(true); }}
+            onDismissAll={() => {
+              setLeavingAll(true);
+            }}
           />
         ))}
       </div>
@@ -92,17 +110,19 @@ function useChatPopupStack(campaign: Campaign) {
   );
   const messages = useQuery(campaign.chat.messages);
   const panelLayout = useQuery(context.panels.layout);
+  const chatOpen = useQuery(context.chat.chatInView);
+  const atTokens = useQuery(context.chat.bubbleTokens);
+  const me = useQuery(campaign.device).id;
+  const isGm = useQuery(campaign.members, () => campaign.isGm());
   // Looked up live, so a deleted message takes its popup with it.
   const shown = useQuery(context.chat.chatPopups)
     .map((id) => messages.find((m) => m.id === id))
-    .filter((m) => !!m);
+    .filter(
+      (m): m is ChatMessage =>
+        !!m && bubblePlaceOf(m, { me, isGm, chatOpen, tokenShown: m.id in atTokens }) === "edge",
+    );
   const [held, setHeld] = useState(false);
-  const [hidden, setHidden] = useState(document.visibilityState === "hidden");
-  useEffect(() => {
-    const onVisibility = () => { setHidden(document.visibilityState === "hidden"); };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => { document.removeEventListener("visibilitychange", onVisibility); };
-  }, []);
+  const hidden = usePageHidden();
   const [leavingAll, setLeavingAll] = useState(false);
   const reference = useRef<HTMLOutputElement>(null);
   const stack = useRef<HTMLDivElement>(null);
@@ -166,7 +186,8 @@ function useChatPopupStack(campaign: Campaign) {
           element.style.removeProperty("right");
           element.style.removeProperty("bottom");
           const arrowOffset = result.middlewareData.arrow?.y;
-          if (arrowOffset !== undefined) element.style.setProperty("--tail-y", `${arrowOffset + 12}px`);
+          if (arrowOffset !== undefined)
+            element.style.setProperty("--tail-y", `${arrowOffset + 12}px`);
         } else corner();
       }
     });
@@ -235,8 +256,17 @@ function Popup({
     const box = stack.current?.getBoundingClientRect();
     if (gone.current) return;
     gone.current = true;
-    if (!element || !box || reducedMotion.matches) { context.chat.dismissPopup(m.id); return; }
-    void leave(element, () => { context.chat.dismissPopup(m.id); }, null);
+    if (!element || !box || reducedMotion.matches) {
+      context.chat.dismissPopup(m.id);
+      return;
+    }
+    void leave(
+      element,
+      () => {
+        context.chat.dismissPopup(m.id);
+      },
+      null,
+    );
   });
 
   useLayoutEffect(() => {
@@ -256,7 +286,9 @@ function Popup({
   useEffect(() => {
     if (held || leaving) return;
     const timer = setTimeout(leavePopup, STAY_MS);
-    return () => { clearTimeout(timer); };
+    return () => {
+      clearTimeout(timer);
+    };
   }, [held, leaving]);
 
   useEffect(() => {

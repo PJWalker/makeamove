@@ -1,6 +1,8 @@
 /** What an entry window shows: a character's gear, a move on a character's sheet, or a library entry. */
 export type EntryRef =
-  { kind: "inventory"; characterId: string; itemId: string } | { kind: "lib"; key: string } | { kind: "move"; ownerId: string; moveId: string };
+  | { kind: "inventory"; characterId: string; itemId: string }
+  | { kind: "lib"; key: string }
+  | { kind: "move"; ownerId: string; moveId: string };
 
 export const inventoryKey = (characterId: string, itemId: string) =>
   `inventory:${characterId}:${itemId}`;

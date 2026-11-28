@@ -3,12 +3,13 @@ import { store, watch } from "../lib/store";
 import type { CampaignDefaults } from "../campaign/campaign";
 import { device } from "../platform/device";
 
-import { importImage, imageColour } from "../media/images";
+import { importImage, imageColour, squareGridOf } from "../media/images";
 import type {
   BlobReference,
   EntityGraphic,
   EntityGraphicRef as EntityGraphicReference,
 } from "../media/images";
+import type { LinkRef as LinkReference } from "../features/notes/links";
 import { reducedMotion } from "../ui/transition";
 import { colourOf } from "./presence";
 import type { Presence } from "./presence";
@@ -18,10 +19,13 @@ import { readSceneCamera, saveSceneCamera } from "./cameraMemory";
 import { clipboardHtml } from "./clipboard";
 import { bounds, hits, intersects } from "./geometry";
 import { membersOf, regroup, withGroups } from "./groups";
-import { cellOr, snapPoint } from "./grid";
-import type { Point } from "./grid";
+import { cellOr, snapPoint, gridPitch } from "./grid";
+import type { Point, Grid } from "./grid";
+import { guessCells } from "./alignMap";
+import type { Box, Cells, Frame } from "./alignMap";
+import { fitBox, fitImageGrid } from "./gridFit";
 import { tokenDistance } from "./measure";
-import { conversion, imageElement, newToken, randomTokenColour } from "./newElements";
+import { conversion, imageElement, newPin, newToken, randomTokenColour } from "./newElements";
 import type { TokenSpec } from "./newElements";
 import type SceneRenderer from "./renderer";
 import type { ElementPatch, SceneDoc as SceneDocument } from "./sceneDoc";
@@ -29,14 +33,23 @@ import type { Arrangement } from "./stacking";
 import { toolCursor } from "./toolCursors";
 import { GM_KINDS, kindOf } from "./tools";
 import type { SceneTools } from "./tools";
-import type { NewElement, SceneElement, TokenElement, TokenStyle, Transform } from "./types";
+import type {
+  NewElement,
+  SceneElement,
+  TokenElement,
+  TokenStyle,
+  Transform,
+  PinElement,
+} from "./types";
 import TOOL_PRESS from "./gestures";
 import PolygonDraft from "./gestures/polygon";
+import alignBox from "./gestures/align";
+import { WallDetector } from "./wallDetection";
 import { pinch } from "./gestures/pan";
 import { hoverCursor } from "./gestures/select";
 import { dragShape, placementPlan } from "./gestures/shape";
 import { fitPatch, newTextLook, putText } from "./gestures/text";
-import type { Gesture, Placement, TextRequest, ToolContext } from "./gestures/types";
+import type { Gesture, PinRequest, Placement, TextRequest, ToolContext } from "./gestures/types";
 
 /** How soon, and how near in screen px, a press must follow the last to count as a double click. */
 const MULTI_CLICK_MS = 500;
@@ -62,6 +75,35 @@ function transformOf(t: Transform): Transform {
   return { x: t.x, y: t.y, w: t.w, h: t.h, rot: t.rot };
 }
 
+/** A map whose image has a square grid drawn on it, scaled and placed so that grid lines up with the scene's. */
+async function alignedToImageGrid<M extends NewElement & Transform>(
+  map: M,
+  image: Blob,
+  grid: Grid,
+): Promise<M> {
+  if (grid.type !== "square") return map;
+  try {
+    const found = await squareGridOf(image);
+    const frame = found && fitImageGrid(map, found, grid);
+    return frame ? { ...map, ...frame } : map;
+  } catch (error) {
+    console.error("Couldn't look for a grid on a map image", error);
+    return map;
+  }
+}
+
+/**
+ * A map being lined up with the grid. Once a box is drawn over some of its
+ * cells: the map as it was then, the box, how many cells it covers, and
+ * where that last put the map.
+ */
+export interface Alignment {
+  mapId: string;
+  drawn?: { base: Transform; box: Box; cells: Cells; placed?: Frame };
+}
+
+const sameFrame = (a: Frame, b: Frame) => a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
+
 /**
  * Turns pointer, wheel and keyboard input into camera moves and scene edits.
  * Each tool's presses and drags are handled in gestures/; this class keeps
@@ -72,6 +114,8 @@ export default class SceneController implements ToolContext {
   readonly selection = store<string[]>([]);
   /** The group open for picking its members one at a time, if any. */
   readonly openGroup = store<string | null>(null);
+  /** The token under the pointer, for the palette to act on. */
+  readonly hoveredToken = store<string | null>(null);
   /** The selected elements as they are now, kept current as they change. */
   readonly selectedElements = store<readonly SceneElement[]>([]);
   /** Dominant colour of the scene's largest map, for the UI tint. */
@@ -90,9 +134,14 @@ export default class SceneController implements ToolContext {
 
   /** An area to place for an action: the next drag on the map puts it down (see placeArea). */
   readonly placing = store<Placement | null>(null);
+  /** A map being lined up with the grid: presses draw a box over its cells. */
+  readonly aligning = store<Alignment | null>(null);
 
   /** The corners of a polygon (a shape, or an area of solid light or dark) being placed, a click at a time. */
   readonly polygon: PolygonDraft = new PolygonDraft(this);
+
+  /** Walls being found on a map, for the GM to tune before adding them. */
+  readonly wallDetection: WallDetector = new WallDetector(this);
 
   /** Whether this device is the GM's: only the GM sees and edits walls and lights. */
   gm = false;
@@ -119,6 +168,10 @@ export default class SceneController implements ToolContext {
   /** Handles transferring an item token out of the scene on pointer release. */
   onItemTokenDrop: ((token: TokenElement, event: PointerEvent) => boolean) | null = null;
   onTokenClick: ((token: TokenElement) => void) | null = null;
+  /** Opens what a clicked pin leads to. */
+  onPinClick: ((pin: PinElement) => void) | null = null;
+  /** Asks what a new pin at `at` (in screen px) should lead to: set by SceneCanvas. */
+  onPinRequest: ((request: PinRequest) => void) | null = null;
   onTokenDragMove: ((token: TokenElement | null, event?: PointerEvent) => void) | null = null;
   onTokenDrop: ((token: TokenElement, event: PointerEvent) => boolean) | null = null;
 
@@ -191,14 +244,30 @@ export default class SceneController implements ToolContext {
     const regrid = () => {
       this.renderer.setGrid(this.scene.grid());
       this.renderer.invalidate("overlay");
+      // Walls being found snap to the grid.
+      if (this.wallDetection.state.value) void this.wallDetection.refresh();
+    };
+    // A selected pin that goes out of sight, or whose target goes, drops out of the selection.
+    this.renderer.onPinsHidden = (ids) => {
+      const sel = this.selection.value.filter((id) => !ids.has(id));
+      if (sel.length !== this.selection.value.length) this.selection.value = sel;
     };
     this.disposers.push(
+      () => {
+        this.renderer.onPinsHidden = null;
+      },
       this.scene.elements.observe(refresh),
       this.scene.settings.observe(regrid),
       watch([this.selection], () => {
         const open = this.openGroup.value;
         if (open && !this.selected().some((element) => element.group === open))
           this.openGroup.value = null;
+        const detecting = this.wallDetection.state.value;
+        const sel = this.selection.value;
+        if (detecting && (sel.length !== 1 || sel[0] !== detecting.mapId))
+          this.wallDetection.stop();
+        const aligning = this.aligning.value;
+        if (aligning && (sel.length !== 1 || sel[0] !== aligning.mapId)) this.stopAligning();
         this.selectedElements.value = this.selected();
         this.updateOverlay();
       }),
@@ -210,6 +279,7 @@ export default class SceneController implements ToolContext {
           this.tools.lightTool,
           this.tools.shapeTool,
           this.tools.effectTool,
+          this.tools.fogTool,
           this.tools.selectable,
         ],
         () => {
@@ -220,6 +290,8 @@ export default class SceneController implements ToolContext {
             return element && this.pickable(element);
           });
           if (keep.length !== this.selection.value.length) this.selection.value = keep;
+          if (this.tools.activeTool.value !== "select") this.wallDetection.stop();
+          if (this.tools.activeTool.value !== "select") this.stopAligning();
           this.cancelGesture();
           this.updateCursor();
           this.updateOverlay();
@@ -297,6 +369,7 @@ export default class SceneController implements ToolContext {
       this.presence?.setCursor(null);
       this.hover = null;
       this.renderer.setHoverToken(null);
+      this.hoveredToken.value = null;
       this.updateOverlay();
     });
     listen(
@@ -310,6 +383,8 @@ export default class SceneController implements ToolContext {
 
   stop() {
     this.cancelGesture();
+    this.wallDetection.stop();
+    this.stopAligning();
     cancelAnimationFrame(this.itemTokenDropFrame);
     this.itemTokenDropFrame = 0;
     this.renderer.previews.clear();
@@ -339,6 +414,7 @@ export default class SceneController implements ToolContext {
     this.hiddenFromMe = hidden;
     this.byId = new Map(this.elements.map((e) => [e.id, e]));
     this.renderer.setElements(this.elements, fade);
+    void this.wallDetection.follow();
     const targets = this.targets.value.filter((id) => this.byId.get(id)?.type === "token");
     if (targets.length !== this.targets.value.length) this.setTargets(targets);
     const sel = this.selection.value.filter((id) => this.byId.has(id));
@@ -349,6 +425,21 @@ export default class SceneController implements ToolContext {
       this.selection.value = sel;
     }
     this.updateMapColour();
+    this.checkAligning();
+  }
+
+  /**
+   * Stop lining a map up once it can't be, or once something else has
+   * moved it (undo, a peer), so stale counts are never applied over that:
+   * it's gone, no longer a map, or locked.
+   */
+  private checkAligning() {
+    const aligning = this.aligning.value;
+    if (!aligning) return;
+    const map = this.byId.get(aligning.mapId);
+    const placed = aligning.drawn?.placed;
+    if (map?.type !== "map" || map.locked || (placed && !sameFrame(map, placed)))
+      this.stopAligning();
   }
 
   private updateMapColour() {
@@ -493,9 +584,10 @@ export default class SceneController implements ToolContext {
   private idleCursor(): string {
     const tool = this.tools.activeTool.value;
     if (this.spaceHeld) return "grab";
-    if (this.placing.value || (tool === "select" && this.targetMode.value)) return "crosshair";
+    if (this.placing.value || this.aligning.value || (tool === "select" && this.targetMode.value))
+      return "crosshair";
     return toolCursor(tool, {
-      shape: this.tools.shapeTool.value,
+      shape: tool === "fog" ? this.tools.fogTool.value.shape : this.tools.shapeTool.value,
       effect: this.tools.effectTool.value.effect,
     });
   }
@@ -522,13 +614,15 @@ export default class SceneController implements ToolContext {
     saveSceneCamera(this.sceneId, this.renderer.camera);
   }
 
-  /** Show everything in the scene, or the origin at 100% if it's empty. */
+  /** Show everything in the scene, or the origin at 100% if it's empty, in the space the chrome leaves clear. */
   fit() {
     const { width, height } = this.renderer.size;
+    const inset = this.renderer.insets();
+    const w = Math.max(1, width - inset.left - inset.right);
+    const h = Math.max(1, height - inset.top);
     const b = bounds(this.elements);
-    this.renderer.setCamera(
-      b ? fitCamera(b, width, height) : { x: width / 2, y: height / 2, zoom: 1 },
-    );
+    const camera = b ? fitCamera(b, w, h) : { x: w / 2, y: h / 2, zoom: 1 };
+    this.renderer.setCamera({ ...camera, x: camera.x + inset.left, y: camera.y + inset.top });
   }
 
   zoomBy(factor: number, at?: Point) {
@@ -568,7 +662,8 @@ export default class SceneController implements ToolContext {
   /**
    * Whether an element can be picked with the tool in use: the sorts the
    * Select tool's options turn on, or in the Lights or Effects tool what it
-   * makes. Only the GM picks walls, lights and effects.
+   * makes. Only the GM picks walls, lights and effects, and no one picks a
+   * pin hidden from them.
    */
   pickable(element: SceneElement): boolean {
     return this.picker()(element);
@@ -579,8 +674,15 @@ export default class SceneController implements ToolContext {
     const kinds = this.tools.pickingKinds();
     return (element) => {
       const kind = kindOf(element);
-      return (this.gm || !GM_KINDS.includes(kind)) && kinds.includes(kind);
+      return (
+        !this.hiddenPin(element) && (this.gm || !GM_KINDS.includes(kind)) && kinds.includes(kind)
+      );
     };
+  }
+
+  /** Whether an element is a pin hidden from this device: never picked, hit or kept selected. */
+  private hiddenPin(element: SceneElement): boolean {
+    return element.type === "pin" && this.renderer.pinLookOf(element) === "hidden";
   }
 
   /** Topmost element under p. Locked elements only count when asked. */
@@ -591,7 +693,7 @@ export default class SceneController implements ToolContext {
       const element = this.elements[index];
       if (!element) continue;
       if (element.locked && !includeLocked) continue;
-      if (!pickable(element)) continue;
+      if (!pickable(element) || this.hiddenPin(element)) continue;
       if (hits(element, p, tolerance)) return element;
     }
     return null;
@@ -624,6 +726,14 @@ export default class SceneController implements ToolContext {
       return;
     }
 
+    if (this.aligning.value && e.button === 0 && !this.spaceHeld) {
+      this.gesture = alignBox(this, world, (box) => {
+        this.alignDrawn(box);
+      });
+      this.updateCursor();
+      return;
+    }
+
     const tool = e.button === 1 || this.spaceHeld ? "pan" : this.tools.activeTool.value;
     this.gesture = TOOL_PRESS[tool](this, e, world, screen);
     this.updateCursor();
@@ -646,7 +756,9 @@ export default class SceneController implements ToolContext {
     this.hover = world;
     const g = this.gesture;
     const under = this.hitTest(world, true);
-    this.renderer.setHoverToken(under?.type === "token" ? under.id : null, screen);
+    const hovered = under?.type === "token" ? under.id : null;
+    this.renderer.setHoverToken(hovered, screen);
+    if (this.hoveredToken.value !== hovered) this.hoveredToken.value = hovered;
 
     // Share the cursor at about 20 Hz.
     const now = performance.now();
@@ -806,7 +918,11 @@ export default class SceneController implements ToolContext {
         return true;
       }
       case "Escape": {
-        if (this.gesture || this.polygon.active) this.cancelGesture();
+        this.wallDetection.stop();
+        if (this.aligning.value) {
+          this.cancelGesture();
+          this.stopAligning();
+        } else if (this.gesture || this.polygon.active) this.cancelGesture();
         else if (this.openGroup.value) {
           // Out of an open group, to the whole group.
           const group = this.openGroup.value;
@@ -976,6 +1092,66 @@ export default class SceneController implements ToolContext {
     this.renderer.invalidate("previews");
   }
 
+  /** Start finding the walls on map `id`, to tune and then add. */
+  detectWalls(id: string) {
+    this.cancelGesture();
+    this.tools.activeTool.value = "select";
+    this.selection.value = [id];
+    this.stopAligning();
+    void this.wallDetection.start(id);
+  }
+
+  /** Start lining map `id` up with the grid: a drag over some of its cells then sizes and places it. */
+  alignMap(id: string) {
+    this.cancelGesture();
+    this.tools.activeTool.value = "select";
+    this.selection.value = [id];
+    this.wallDetection.stop();
+    this.aligning.value = { mapId: id };
+    this.updateCursor();
+  }
+
+  stopAligning() {
+    if (!this.aligning.value) return;
+    this.aligning.value = null;
+    this.updateCursor();
+  }
+
+  /** Say how many cells the drawn box covers, and line the map up again from how it was when the box was drawn. */
+  setAlignCells(cells: Cells) {
+    const aligning = this.aligning.value;
+    if (!aligning?.drawn) return;
+    this.aligning.value = { ...aligning, drawn: { ...aligning.drawn, cells } };
+    this.applyAlignment();
+  }
+
+  /** A box has been drawn over the map's cells: guess how many it covers, and line the map up. */
+  private alignDrawn(box: Box) {
+    const map = this.aligning.value && this.byId.get(this.aligning.value.mapId);
+    const pitch = gridPitch(this.renderer.grid);
+    if (!map || !pitch) return;
+    this.aligning.value = {
+      mapId: map.id,
+      drawn: {
+        base: transformOf(map),
+        box,
+        cells: guessCells(box, pitch),
+      },
+    };
+    this.applyAlignment();
+  }
+
+  /** Scale the map so the box covers its cells of the grid, with its corner on a grid point. */
+  private applyAlignment() {
+    const aligning = this.aligning.value;
+    if (!aligning?.drawn) return;
+    const frame = fitBox(aligning.drawn.base, aligning.drawn, this.renderer.grid);
+    if (!frame) return;
+    // Noted first: the update comes straight back through refresh, which checks it.
+    this.aligning.value = { ...aligning, drawn: { ...aligning.drawn, placed: frame } };
+    this.scene.update([[aligning.mapId, frame]]);
+  }
+
   /**
    * Ask for an action's area to be placed: the next press puts it down and
    * a drag aims it. Calls back with the new shape and the tokens it covers;
@@ -1092,6 +1268,13 @@ export default class SceneController implements ToolContext {
     return this.placeToken(at, spec);
   }
 
+  /** Put down a pin leading to `link`, its point at `at`, and select it. */
+  addPin(at: Point, link: LinkReference) {
+    const id = this.scene.add(newPin(this.renderer.grid, at, link))[0]!;
+    this.selection.value = [id];
+    return id;
+  }
+
   private placeToken(
     at: Point,
     spec: Omit<TokenSpec, "colour" | "style"> & { colour?: string; style?: TokenStyle },
@@ -1124,13 +1307,17 @@ export default class SceneController implements ToolContext {
           }
         }),
       );
-      for (const [index, image] of imported.entries()) {
-        if (!image) continue;
-        const file = images[index]!;
-        const shift = index * cellOr(grid, 40);
-        const p = { x: at.x + shift, y: at.y + shift };
-        added.push(imageElement(grid, image, file.name, p, this.newTokenLook(true)));
-      }
+      const placed = await Promise.all(
+        imported.map(async (image, index) => {
+          if (!image) return null;
+          const file = images[index]!;
+          const shift = index * cellOr(grid, 40);
+          const p = { x: at.x + shift, y: at.y + shift };
+          const element = imageElement(grid, image, file.name, p, this.newTokenLook(true));
+          return element.type === "map" ? alignedToImageGrid(element, file, grid) : element;
+        }),
+      );
+      added.push(...placed.filter((element) => element !== null));
     } finally {
       this.updateCursor();
     }

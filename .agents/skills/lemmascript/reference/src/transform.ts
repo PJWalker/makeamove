@@ -1,0 +1,3700 @@
+/**
+ * Transform — Typed IR → Backend IR.
+ *
+ * Consumes resolved types and classifications.
+ * No type lookups, no string parsing, no re-inference.
+ */
+
+import type { TExpr, TStmt, TModule, Ty } from "./typedir.js";
+import { isBigInt, optAbsent, tyEqual } from "./typedir.js";
+import type { Expr, Stmt, Decl, Module, FnDef, FnDefByMethod, FnMethod, MatchArm, ConstDecl, MatchPattern } from "./ir.js";
+import { anyExpr, anyExprInStmts, pWild, pCtor, pLiteral, patternBinders, patternCtor } from "./ir.js";
+import type { TypeDeclInfo, VariantInfo } from "./types.js";
+import { parseTsType } from "./types.js";
+import { freshName, freshNameWhere, isUserName } from "./names.js";
+import { builtinSpec } from "./builtins.js";
+import { lowerIndexedCallback } from "./callback-lowering.js";
+import { isFalsyCapableTy } from "./condition-facts.js";
+import { declOf, declOfKind, declOfTy, unionDeclOfTy, declWithVariant, tyBaseName, remainingVariant } from "./typedecls.js";
+import {
+  buildNestedFieldExpr,
+  collectAssignedIrTargets,
+  describeReceiver,
+  emitWriteBacksForTarget,
+  findActiveUnwrapFrame,
+  isMutatingCollectionMethod,
+  makeUnwrapFrame,
+  resolveWriteTargetThroughFrames,
+  type WriteBackFrame,
+} from "./place-lowering.js";
+
+// ── Generic IR walkers ──────────────────────────────────────
+
+/**
+ * Map over all sub-expressions in an Expr. `f` is called on each node;
+ * if it returns non-null, that replaces the node (and recursion stops).
+ * If it returns null, the walker recurses into children.
+ */
+function mapExpr(e: Expr, f: (e: Expr) => Expr | null): Expr {
+  const hit = f(e);
+  if (hit) return hit;
+  const r = (x: Expr) => mapExpr(x, f);
+  switch (e.kind) {
+    case "var": case "num": case "bigint": case "bool": case "str": case "emptyMap": case "emptySet": case "havoc": case "default": return e;
+    case "mapLiteral": return { ...e, entries: e.entries.map(en => ({ key: r(en.key), value: r(en.value) })) };
+    case "constructor": return e.args ? { ...e, args: e.args.map(r) } : e;
+    case "binop": return { ...e, left: r(e.left), right: r(e.right) };
+    case "unop": return { ...e, expr: r(e.expr) };
+    case "implies": return { ...e, premises: e.premises.map(r), conclusion: r(e.conclusion) };
+    case "app": return { ...e, args: e.args.map(r) };
+    case "field": return { ...e, obj: r(e.obj) };
+    case "toNat": return { ...e, expr: r(e.expr) };
+    case "toInt": return { ...e, expr: r(e.expr) };
+    case "toReal": return { ...e, expr: r(e.expr) };
+    case "checkedUnwrap": return { ...e, expr: r(e.expr) };
+    case "index": return { ...e, arr: r(e.arr), idx: r(e.idx) };
+    case "stringIndex": return { ...e, str: r(e.str), idx: r(e.idx) };
+    case "tupleLiteral": return { ...e, elems: e.elems.map(r) };
+    case "tupleProj": return { ...e, obj: r(e.obj) };
+    case "record": return { ...e, spread: e.spread ? r(e.spread) : null, fields: e.fields.map(fi => ({ ...fi, value: r(fi.value) })) };
+    case "arrayLiteral": return { ...e, elems: e.elems.map(r) };
+    case "arrayRange": return { ...e, length: r(e.length) };
+    case "if": return { ...e, cond: r(e.cond), then: r(e.then), else: r(e.else) };
+    case "match": {
+      const scr = r(e.scrutinee);
+      return { ...e, scrutinee: scr, arms: e.arms.map(a => ({ ...a, body: r(a.body) })) };
+    }
+    case "forall": return { ...e, body: r(e.body) };
+    case "exists": return { ...e, body: r(e.body) };
+    case "let": return { ...e, value: r(e.value), body: r(e.body) };
+    case "methodCall": return { ...e, obj: r(e.obj), args: e.args.map(r) };
+    case "lambda": return e;
+  }
+}
+
+/** Map over all expressions in a statement tree. */
+function mapStmt(s: Stmt, f: (e: Expr) => Expr | null): Stmt {
+  const r = (e: Expr) => mapExpr(e, f);
+  switch (s.kind) {
+    case "let": return { ...s, value: r(s.value) };
+    case "assign": return { ...s, value: r(s.value) };
+    case "bind": return { ...s, value: r(s.value) };
+    case "let-bind": return { ...s, value: r(s.value) };
+    case "return": return { ...s, value: r(s.value) };
+    case "break": case "continue": return s;
+    case "if": return { ...s, cond: r(s.cond), then: s.then.map(t => mapStmt(t, f)), else: s.else.map(t => mapStmt(t, f)) };
+    case "match": {
+      const scr = r(s.scrutinee);
+      return { ...s, scrutinee: scr, arms: s.arms.map(a => ({ ...a, body: a.body.map(t => mapStmt(t, f)) })) };
+    }
+    case "while": return { ...s, cond: r(s.cond), invariants: s.invariants.map(r),
+      decreasing: s.decreasing ? r(s.decreasing) : null,
+      doneWith: s.doneWith ? r(s.doneWith) : null,
+      body: s.body.map(t => mapStmt(t, f)) };
+    case "forin": return { ...s, bound: r(s.bound), invariants: s.invariants.map(r),
+      body: s.body.map(t => mapStmt(t, f)) };
+    case "ghostLet": return { ...s, value: r(s.value) };
+    case "ghostAssign": return { ...s, value: r(s.value) };
+    case "assert": return { ...s, expr: r(s.expr) };
+  }
+}
+
+const varE = (name: string): Expr => ({ kind: "var", name });
+
+/** Map `f` over a lambda body unless a parameter rebinds `name`. `mapExpr`
+ *  doesn't descend into lambda bodies, so substitutions that must reach
+ *  closures call this. Statement binders are tracked only at the body's top
+ *  level: a `let`/`let-bind`/`ghostLet` of `name` shadows it for the rest of
+ *  the body, and a `for-in` index of `name` shadows it inside that loop. */
+function mapLambdaBody(x: Expr & { kind: "lambda" }, name: string, f: (e: Expr) => Expr | null): Expr {
+  if (x.params.some(p => p.name === name)) return x;
+  const body: Stmt[] = [];
+  let shadowed = false;
+  for (const s of x.body) {
+    if (shadowed) { body.push(s); continue; }
+    body.push(s.kind === "forin" && s.idx === name
+      ? { ...s, bound: mapExpr(s.bound, f) }
+      : mapStmt(s, f));
+    if ((s.kind === "let" || s.kind === "let-bind" || s.kind === "ghostLet") && s.name === name) shadowed = true;
+  }
+  return { ...x, body };
+}
+
+/** Rename free occurrences of `from` to `to`, stopping at every construct that
+ *  rebinds `from` — lambda params, `let`/`let-bind`/`ghostLet` (shadows the
+ *  rest of the block), `match` arm patterns, `forall`/`exists`, and `for-in`
+ *  indices. Capture-avoiding: a nested scope that reintroduces `from` keeps its
+ *  own binding untouched. Lambda bodies are walked by `mapLambdaBody`. */
+function renameFreeVar(e: Expr, from: string, to: string): Expr {
+  const f = (x: Expr): Expr | null => {
+    if (x.kind === "var") return x.name === from ? { ...x, name: to } : x;
+    // let-expression: `value` is in the outer scope (rename), `body` sees the
+    // rebound `from` (leave it), so handle the recursion here to stop descent.
+    if (x.kind === "let" && x.name === from) return { ...x, value: mapExpr(x.value, f) };
+    if ((x.kind === "forall" || x.kind === "exists") && x.var === from) return x;
+    if (x.kind === "match") {
+      return { ...x, scrutinee: mapExpr(x.scrutinee, f), arms: x.arms.map(a =>
+        patternBinders(a.pattern).includes(from) ? a : { ...a, body: mapExpr(a.body, f) }) };
+    }
+    if (x.kind === "lambda") return mapLambdaBody(x, from, f);
+    return null;
+  };
+  return mapExpr(e, f);
+}
+
+/** Map over all sub-expressions in a TExpr (typed IR), including lambda
+ *  defaults and bodies. Extraction leaves no binding that shadows another
+ *  (see LexicalNames), so callers substituting for a narrowed name can rely
+ *  on names identifying their variables across nested scopes (#353). */
+function mapTExpr(e: TExpr, f: (e: TExpr) => TExpr | null): TExpr {
+  const hit = f(e);
+  if (hit) return hit;
+  const r = (x: TExpr) => mapTExpr(x, f);
+  switch (e.kind) {
+    case "var": case "num": case "bigint": case "str": case "bool": case "havoc": return e;
+    case "binop": return { ...e, left: r(e.left), right: r(e.right) };
+    case "unop": return { ...e, expr: r(e.expr) };
+    case "call": return { ...e, fn: r(e.fn), args: e.args.map(r) };
+    case "index": return { ...e, obj: r(e.obj), idx: r(e.idx) };
+    case "field": return { ...e, obj: r(e.obj) };
+    case "record": return { ...e, spread: e.spread ? r(e.spread) : null, fields: e.fields.map(fi => ({ ...fi, value: r(fi.value) })) };
+    case "arrayLiteral": return { ...e, elems: e.elems.map(r) };
+    case "conditional": return { ...e, cond: r(e.cond), then: r(e.then), else: r(e.else) };
+    case "optChain": return { ...e, obj: r(e.obj),
+      chain: e.chain.map(s => s.kind === "call" ? { ...s, args: s.args.map(r) }
+        : s.kind === "index" ? { ...s, idx: r(s.idx) }
+        : s) };
+    case "nullish": return { ...e, left: r(e.left), right: r(e.right) };
+    case "someMatch": return { ...e, scrutinee: r(e.scrutinee), someBody: r(e.someBody), noneBody: r(e.noneBody) };
+    case "checkedUnwrap": return { ...e, expr: r(e.expr) };
+    case "tagMatch": return { ...e, scrutinee: r(e.scrutinee),
+      cases: e.cases.map(c => ({ ...c, body: r(c.body) })),
+      fallthrough: e.fallthrough ? r(e.fallthrough) : null };
+    case "forall": return { ...e, body: r(e.body) };
+    case "exists": return { ...e, body: r(e.body) };
+    case "lambda": return { ...e,
+      params: e.params.map(p => p.defaultValue ? { ...p, defaultValue: r(p.defaultValue) } : p),
+      body: e.body.map(s => mapTStmt(s, f)) };
+  }
+}
+
+/** Map over all expressions in a TStmt tree (typed IR). */
+function mapTStmt(s: TStmt, f: (e: TExpr) => TExpr | null): TStmt {
+  const r = (e: TExpr) => mapTExpr(e, f);
+  switch (s.kind) {
+    case "let": return { ...s, init: r(s.init) };
+    case "assign": return { ...s, value: r(s.value) };
+    case "return": return { ...s, value: r(s.value) };
+    case "break": case "continue": case "throw": return s;
+    case "expr": return { ...s, expr: r(s.expr) };
+    case "if": return { ...s, cond: r(s.cond), then: s.then.map(t => mapTStmt(t, f)), else: s.else.map(t => mapTStmt(t, f)) };
+    case "while": return { ...s, cond: r(s.cond), invariants: s.invariants.map(r),
+      decreases: s.decreases ? r(s.decreases) : null,
+      doneWith: s.doneWith ? r(s.doneWith) : null, body: s.body.map(t => mapTStmt(t, f)) };
+    case "switch": return { ...s, expr: r(s.expr), cases: s.cases.map(c => ({ ...c, body: c.body.map(t => mapTStmt(t, f)) })), defaultBody: s.defaultBody.map(t => mapTStmt(t, f)) };
+    case "forof": return { ...s, iterable: r(s.iterable), invariants: s.invariants.map(r),
+      doneWith: s.doneWith ? r(s.doneWith) : null, body: s.body.map(t => mapTStmt(t, f)) };
+    case "ghostLet": return { ...s, init: r(s.init) };
+    case "ghostAssign": return { ...s, value: r(s.value) };
+    case "assert": return { ...s, expr: r(s.expr) };
+    case "someMatch": return { ...s, scrutinee: r(s.scrutinee), someBody: s.someBody.map(t => mapTStmt(t, f)), noneBody: s.noneBody.map(t => mapTStmt(t, f)) };
+    case "tagMatch": return { ...s, scrutinee: r(s.scrutinee),
+      cases: s.cases.map(c => ({ ...c, body: c.body.map(t => mapTStmt(t, f)) })),
+      fallthrough: s.fallthrough.map(t => mapTStmt(t, f)) };
+  }
+}
+
+// ── Backend configuration ───────────────────────────────────
+
+export type Backend = "lean" | "dafny";
+
+export interface TransformOptions {
+  backend: Backend;
+  monadic: boolean;
+}
+
+export const LEAN_OPTIONS: TransformOptions = {
+  backend: "lean",
+  monadic: true,
+};
+
+export const DAFNY_OPTIONS: TransformOptions = {
+  backend: "dafny",
+  monadic: false,
+};
+
+/** Active options — set before each transform call. */
+let _opts: TransformOptions = DAFNY_OPTIONS;
+
+/** Type declarations — set once per module transform for discriminated union handling. */
+let _typeDecls: TypeDeclInfo[] = [];
+
+/** Names of functions that get a `Pure.` mirror (Lean). A bare reference to one
+ *  in a higher-order position resolves to the monadic method, so it must be
+ *  redirected to the pure mirror. Set once per module transform. */
+let _pureDefNames: Set<string> = new Set();
+
+/** Discriminated unions whose tag is read as a *value* (`x.kind` compared
+ *  to another union's tag, passed as an argument, …). Each gets a generated
+ *  `<Union>_<disc>` discriminator function beside its datatype, returning
+ *  the source tag strings. Narrowing consumes discriminant *checks*, so this
+ *  fires only for surviving reads. Populated during body transforms; drained
+ *  into the types file. */
+let _neededKindHelpers = new Map<string, TypeDeclInfo>();
+
+function kindHelperName(decl: TypeDeclInfo): string {
+  return freshName(`${decl.name}_${decl.discriminant}`);
+}
+
+function kindHelperDecl(decl: TypeDeclInfo): Decl {
+  return {
+    kind: "def",
+    name: kindHelperName(decl),
+    typeParams: [],
+    params: [{ name: "t", type: { kind: "user", name: decl.name } }],
+    returnType: { kind: "string" },
+    requires: [], ensures: [], decreases: null,
+    body: {
+      kind: "match", scrutinee: varE("t"),
+      arms: decl.variants!.map(v => ({
+        pattern: { kind: "ctor" as const, ctor: v.name, binders: v.fields.map((_, i) => `_${i}`) },
+        body: { kind: "str" as const, value: v.name },
+      })),
+    },
+  };
+}
+
+/** Prefix match-bound field names to avoid capturing user variables.
+ *  When prefix is given (the scrutinee name), include it to avoid
+ *  collisions in nested matches on different variables. `freshName` closes
+ *  the residual gap: a user variable literally named `_value`/`_x_field` in an
+ *  arm body would still be captured, so prime on any module-wide collision.
+ *  Deterministic, so the pattern binder and its body substitutions agree.
+ *  `taken` adds names the arm already reads, such as an outer narrowing's
+ *  binder substituted into the arm before this match was lowered. */
+function matchBinder(fieldName: string, prefix?: string, taken?: (name: string) => boolean): string {
+  const safePrefix = prefix === "\\result"
+    ? "result"
+    : prefix?.replace(/[^A-Za-z0-9_]/g, "_");
+  const base = safePrefix ? `_${safePrefix}_${fieldName}` : `_${fieldName}`;
+  return taken ? freshNameWhere(base, n => isUserName(n) || taken(n)) : freshName(base);
+}
+
+/** Build a match arm pattern like `.VariantName _v_field1 _v_field2` from variant info. */
+function buildMatchPattern(variantName: string, fields: { name: string }[], scopePrefix?: string,
+                           taken?: (name: string) => boolean): MatchPattern {
+  return pCtor(variantName, ...fields.map(f => matchBinder(f.name, scopePrefix, taken)));
+}
+
+/** Build a binder-free wildcard match pattern like `.VariantName _ _` for
+ *  imperative union matches that read and update live storage directly (#405). */
+function buildWildcardMatchPattern(variantName: string, fields: { name: string }[]): MatchPattern {
+  return pCtor(variantName, ...fields.map(() => "_"));
+}
+
+const _forofCounters = new Map<string, number>();
+function isNat(ty: Ty): boolean { return ty.kind === "nat"; }
+function isIntegral(ty: Ty): boolean { return ty.kind === "int" || ty.kind === "nat"; }
+function isArray(ty: Ty): boolean { return ty.kind === "array"; }
+function isUser(ty: Ty): boolean { return ty.kind === "user"; }
+function isRecordType(ty: Ty): boolean {
+  return declOfTy(_typeDecls, ty)?.kind === "record";
+}
+
+/** Truthiness test for a *lowered* value of source type `ty`, used by `||`
+ *  falsiness lowering. Which types need one is `isFalsyCapableTy` (shared with
+ *  condition-facts' falsy gate); this adds the per-type test. Returns null for
+ *  the always-truthy types so callers can unwrap directly instead of emitting
+ *  a redundant guard. */
+function valueTruthyCond(value: Expr, ty: Ty): Expr | null {
+  if (!isFalsyCapableTy(ty)) return null;
+  switch (ty.kind) {
+    case "int": case "nat":
+      return { kind: "binop", op: "≠", left: value, right: { kind: "num", value: 0 } };
+    case "string":
+      return { kind: "binop", op: ">", left: { kind: "field", obj: value, field: "length" }, right: { kind: "num", value: 0 } };
+    case "bool":
+      return value;
+    default:
+      return null;
+  }
+}
+
+/** Check if transformed lambda body contains monadic binds. */
+function isMonadicBody(stmts: Stmt[]): boolean {
+  for (const s of stmts) {
+    if (s.kind === "let-bind" || s.kind === "bind") return true;
+    if (s.kind === "if" && (isMonadicBody(s.then) || isMonadicBody(s.else))) return true;
+    if (s.kind === "while" && isMonadicBody(s.body)) return true;
+    if (s.kind === "forin" && isMonadicBody(s.body)) return true;
+    if (s.kind === "match") {
+      for (const arm of s.arms) if (isMonadicBody(arm.body)) return true;
+    }
+  }
+  return false;
+}
+
+
+// ── Transform expressions ────────────────────────────────────
+
+/** Prop-valued operators (for specs/invariants). */
+const OP_MAP: Record<string, string> = {
+  "===": "=", "!==": "≠", ">=": "≥", "<=": "≤", ">": ">", "<": "<",
+  "&&": "∧", "||": "∨", "+": "+", "-": "-", "*": "*", "/": "/", "%": "%",
+  "==": "=", "!=": "≠", "<==>": "↔",
+};
+
+/** Relational operators with their operands swapped (`a < b` ≡ `b > a`). */
+const MIRROR_OP: Record<string, string> = { "<": ">", "<=": ">=", ">": "<", ">=": "<=" };
+
+/** Bool-valued operators (for code-level conditions needing Decidable). */
+const BOOL_OP_MAP: Record<string, string> = {
+  ...OP_MAP, "===": "==", "!==": "!=",
+};
+
+/** Arithmetic + comparison ops eligible for int→real operand coercion. */
+const NUMERIC_OPS = new Set(["+", "-", "*", "/", "===", "!==", ">=", "<=", ">", "<"]);
+
+function transformExpr(e: TExpr): Expr { return lowerExpr(e, null); }
+
+/** Reduce an if/let/return-shaped statement body to a single expression, for
+ *  expression-only lambda bodies. Returns null for shapes that can't be a pure
+ *  expression (loops, assignments, bare side effects), so callers leave the
+ *  body as statements. A `return` is terminal — statements after it are
+ *  unreachable and dropped.
+ *    [return e]                          → e
+ *    [let x = e, …rest]                  → Expr.let(x, e, flatten(rest))
+ *    [if (c) thenStmts elseStmts, …rest] → Expr.if(c, …) where each branch
+ *        absorbs `rest` if it doesn't already terminate with a return. */
+function flattenLambdaBody(stmts: Stmt[]): Expr | null {
+  if (stmts.length === 0) return null;
+  const first = stmts[0]!;
+  const rest = stmts.slice(1);
+  if (first.kind === "return") return first.value;
+  if (first.kind === "let" && !first.mutable) {
+    const body = flattenLambdaBody(rest);
+    return body === null ? null : { kind: "let", name: first.name, value: first.value, body };
+  }
+  if (first.kind === "if") {
+    const thenTerminates = flattenLambdaBody(first.then);
+    if (thenTerminates !== null) {
+      // then-branch yields a value (ends in return) → `rest` is the else path.
+      const elseExpr = flattenLambdaBody(first.else.length > 0 ? [...first.else, ...rest] : rest);
+      return elseExpr === null ? null : { kind: "if", cond: first.cond, then: thenTerminates, else: elseExpr };
+    }
+    // then-branch falls through → both branches continue into `rest`.
+    const thenExpr = flattenLambdaBody([...first.then, ...rest]);
+    const elseExpr = flattenLambdaBody(first.else.length > 0 ? [...first.else, ...rest] : rest);
+    return thenExpr === null || elseExpr === null ? null : { kind: "if", cond: first.cond, then: thenExpr, else: elseExpr };
+  }
+  // A `switch` lowered to a match-statement: reduce each arm's body to an
+  // expression (an arm that doesn't return falls through into `rest`), giving a
+  // match-expression — same reduction the `if` case does, one level wider.
+  if (first.kind === "match") {
+    const arms: MatchArm[] = [];
+    for (const arm of first.arms) {
+      const armExpr = flattenLambdaBody([...arm.body, ...rest]);
+      if (armExpr === null) return null;
+      arms.push({ pattern: arm.pattern, body: armExpr });
+    }
+    return { kind: "match", scrutinee: first.scrutinee, arms };
+  }
+  return null;
+}
+
+/**
+ * Lower a typed expression to Backend IR.
+ *
+ * When `binds` is non-null, embedded method calls are extracted into
+ * `let ← ` binds (monadic lifting / selective ANF).  Lifting propagates
+ * through binop, unop, and call arguments — the expression kinds where
+ * a method call can appear inline in TS.  It does NOT propagate into
+ * field, index, record, forall, or exists sub-expressions.
+ */
+
+/** JS truthiness coercion for `if`/`while`/`?:` conditions.
+ *  Dafny requires bool; coerce number→`!== 0`, string→non-empty, array→`true`
+ *  (every array, even `[]`, is truthy in JS).
+ *
+ *  Rewrites the typed tree, before lowering, and distributes over `&&`/`||`:
+ *  each operand of a logical connective is itself in condition position, and the
+ *  operands need not share a type — `i >= 0 && carry`, with `carry` an int, is a
+ *  bool conjoined with a number. A conjunction takes its type from its right
+ *  operand (resolve), so coercing the whole expression by its type would emit
+ *  `((i >= 0) && carry) != 0`, which is not well-typed.
+ *
+ *  Optional conds never arrive here — narrow.ts rewrites them to someMatch. */
+function asCondition(e: TExpr): TExpr {
+  const bool: Ty = { kind: "bool" };
+  if (e.ty.kind === "bool") return e;
+  if (e.kind === "binop" && (e.op === "&&" || e.op === "||"))
+    return { ...e, left: asCondition(e.left), right: asCondition(e.right), ty: bool };
+  if (e.ty.kind === "int" || e.ty.kind === "nat")
+    return { kind: "binop", op: "!==", left: e, right: { kind: "num", value: 0, ty: e.ty }, ty: bool };
+  if (e.ty.kind === "string")
+    return { kind: "binop", op: ">",
+      left: { kind: "field", obj: e, field: "length", ty: { kind: "nat" } },
+      right: { kind: "num", value: 0, ty: { kind: "nat" } }, ty: bool };
+  if (e.ty.kind === "void" || e.ty.kind === "null")
+    return { kind: "bool", value: false, ty: bool };
+  // Nullish<T> truthiness in `if (x)` / `while (x)` / `x ? a : b`:
+  // lower as `!(!x)` so `lowerExpr`'s nullish truthiness rule handles both
+  // falsy-capable inners (0, "", false) and always-truthy inners uniformly.
+  if (e.ty.kind === "nullish")
+    return { kind: "unop", op: "!", expr: { kind: "unop", op: "!", expr: e, ty: bool }, ty: bool };
+  // Arrays, objects, maps, sets, tuples are always truthy in JS (even `[]`/`{}`).
+  if (["array", "user", "map", "set", "tuple"].includes(e.ty.kind))
+    return { kind: "bool", value: true, ty: bool };
+  return e;
+}
+
+/** Wrap an expression in Some/None for optional-typed conditionals.
+ *  If the raw TExpr is `undefined`/`null`, emit `.none`; otherwise wrap in `Some`. */
+function wrapOptionalBranch(expr: Expr, raw: TExpr): Expr {
+  // Set type: "Option" so Lean emits `Option.some`/`Option.none` (qualified).
+  // The dotted form `.some`/`.none` would be ambiguous in expression positions
+  // like the scrutinee of an outer match. Dafny treats `Option.Some` and bare
+  // `Some` equivalently — the qualification is harmless there.
+  if (raw.kind === "var" && (raw.name === "undefined" || raw.name === "null")) return { kind: "constructor", name: "none", type: "Option", args: [] };
+  if (raw.ty.kind === "nullish" || (raw.ty.kind === "optional" && raw.ty.fromNullish)) {
+    const bound = matchBinder("value");
+    return {
+      kind: "match", scrutinee: expr,
+      arms: [
+        { pattern: pCtor("nullishValue", bound), body: { kind: "constructor", name: "some", type: "Option", args: [{ kind: "var", name: bound }] } },
+        { pattern: pCtor("nullishNull"), body: { kind: "constructor", name: "none", type: "Option", args: [] } },
+        { pattern: pCtor("nullishUndefined"), body: { kind: "constructor", name: "none", type: "Option", args: [] } },
+      ],
+    };
+  }
+  if (raw.ty.kind === "optional") return expr;  // already Option<T>, don't double-wrap
+  return { kind: "constructor", name: "some", type: "Option", args: [expr] };
+}
+
+/** Wrap an expression in Nullish.Undefined / Nullish.Null / Nullish.Value for
+ *  nullish-typed conditionals and matches (#304). */
+function wrapNullishBranch(expr: Expr, raw: TExpr): Expr {
+  if (raw.kind === "var" && raw.name === "undefined") {
+    return { kind: "constructor", name: "nullishUndefined", type: "Nullish", args: [] };
+  }
+  if (raw.kind === "var" && raw.name === "null") {
+    return { kind: "constructor", name: "nullishNull", type: "Nullish", args: [] };
+  }
+  if (raw.ty.kind === "nullish" || (raw.ty.kind === "optional" && raw.ty.fromNullish)) return expr;
+  if (expr.kind === "if" && raw.kind === "conditional" && raw.ty.kind !== "optional") {
+    return { ...expr, then: wrapNullishBranch(expr.then, raw.then), else: wrapNullishBranch(expr.else, raw.else) };
+  }
+  if (raw.ty.kind === "optional") {
+    const bound = matchBinder("value");
+    const noneCtor = optAbsent(raw.ty) === "null" ? "nullishNull" : "nullishUndefined";
+    return {
+      kind: "match", scrutinee: expr,
+      arms: [
+        { pattern: pCtor("some", bound), body: { kind: "constructor", name: "nullishValue", type: "Nullish", args: [{ kind: "var", name: bound }] } },
+        { pattern: pCtor("none"), body: { kind: "constructor", name: noneCtor, type: "Nullish", args: [] } },
+      ],
+    };
+  }
+  return { kind: "constructor", name: "nullishValue", type: "Nullish", args: [expr] };
+}
+
+function wrapCheckedUnwrapValue(expr: Expr, storageTy: Ty): Expr {
+  if (storageTy.kind === "nullish") {
+    return { kind: "constructor", name: "nullishValue", type: "Nullish", args: [expr] };
+  }
+  return { kind: "app", fn: "Some", args: [expr] };
+}
+
+/** Lean needs `let mut` for any local that is later reassigned. A const local
+ *  whose collection field is mutated (`b.items.push(v)` → `b := b.(items := …)`)
+ *  becomes an assign in the lowered body, so scan for assign targets and flip
+ *  matching lets to mutable. Harmless on Dafny (method locals are `var`); and an
+ *  assigned let already forces a method, so purity is unaffected. */
+function promoteAssignedLets(stmts: Stmt[]): Stmt[] {
+  const assigned = new Set<string>();
+  const collect = (ss: Stmt[]) => {
+    for (const s of ss) {
+      if (s.kind === "assign") assigned.add(s.target);
+      else if (s.kind === "if") { collect(s.then); collect(s.else); }
+      else if (s.kind === "while" || s.kind === "forin") collect(s.body);
+      else if (s.kind === "match") s.arms.forEach(a => collect(a.body));
+    }
+  };
+  collect(stmts);
+  if (assigned.size === 0) return stmts;
+  const fix = (ss: Stmt[]): Stmt[] => ss.map(s => {
+    const s2: Stmt = s.kind === "let" && !s.mutable && assigned.has(s.name) ? { ...s, mutable: true } : s;
+    if (s2.kind === "if") return { ...s2, then: fix(s2.then), else: fix(s2.else) };
+    if (s2.kind === "while" || s2.kind === "forin") return { ...s2, body: fix(s2.body) };
+    if (s2.kind === "match") return { ...s2, arms: s2.arms.map(a => ({ ...a, body: fix(a.body) })) };
+    return s2;
+  });
+  return fix(stmts);
+}
+
+/** Lower an in-place write assigning `newVal` to any writable Place receiver
+ *  (`var`, `field` chain, or `checkedUnwrap` around either). */
+function buildPlaceWrite(recv: TExpr, newVal: Expr): { target: string; value: Expr } | null {
+  if (recv.kind === "var") return { target: recv.name, value: newVal };
+  if (recv.kind === "field") {
+    const upd = buildNestedFieldUpdate(recv, newVal);
+    return upd ? { target: upd.root, value: upd.value } : null;
+  }
+  if (recv.kind === "checkedUnwrap") {
+    const wrapped = wrapCheckedUnwrapValue(newVal, recv.expr.ty);
+    return buildPlaceWrite(recv.expr, wrapped);
+  }
+  return null;
+}
+
+/** Root variable of a writable Place receiver (`var`, `field` chain, or `checkedUnwrap`). */
+function placeRootVar(recv: TExpr): string | null {
+  if (recv.kind === "var") return recv.name;
+  if (recv.kind === "field") return placeRootVar(recv.obj);
+  if (recv.kind === "checkedUnwrap") return placeRootVar(recv.expr);
+  return null;
+}
+
+/** Build a nested record-update assigning `newVal` to a field-path receiver
+ *  rooted at a var: `b.a.items` → `b := b.(a := b.a.(items := newVal))`.
+ *  Handles `checkedUnwrap` hops along the path by wrapping the updated record
+ *  in `Some(...)`. Returns null if the path isn't a chain of field accesses
+ *  (with optional checked unwraps) ending at a var. */
+function buildNestedFieldUpdate(recv: TExpr, newVal: Expr): { root: string; value: Expr } | null {
+  if (recv.kind !== "field") return null;
+  const objTy = recv.obj.ty.kind === "optional" || recv.obj.ty.kind === "nullish" ? recv.obj.ty.inner : recv.obj.ty;
+  const unionBase = objTy.kind === "user" && declOfKind(_typeDecls, tyBaseName(objTy.name), "discriminated-union")
+    ? tyBaseName(objTy.name)
+    : undefined;
+  const upd: Expr = {
+    kind: "record",
+    spread: lowerExpr(recv.obj, null),
+    fields: [{ name: recv.field, value: newVal }],
+    ...(unionBase ? { ctor: recv.ofVariant, ctorOf: unionBase } : {}),
+  };
+  if (recv.obj.kind === "var") return { root: recv.obj.name, value: upd };
+  if (recv.obj.kind === "field") return buildNestedFieldUpdate(recv.obj, upd);
+  if (recv.obj.kind === "checkedUnwrap") {
+    const wrapped: Expr = wrapCheckedUnwrapValue(upd, recv.obj.expr.ty);
+    if (recv.obj.expr.kind === "var") return { root: recv.obj.expr.name, value: wrapped };
+    if (recv.obj.expr.kind === "field") return buildNestedFieldUpdate(recv.obj.expr, wrapped);
+  }
+  return null;
+}
+
+/** Promote every spread segment before concatenation, preserving evaluation
+ *  order. A seq<int> needs elementwise conversion; it cannot be cast to real. */
+function lowerMinMaxSequence(e: TExpr, real: boolean, binds: Stmt[] | null): Expr {
+  if (e.kind === "binop" && e.op === "arrayConcat") {
+    return { kind: "binop", op: "arrayConcat",
+      left: lowerMinMaxSequence(e.left, real, binds),
+      right: lowerMinMaxSequence(e.right, real, binds) };
+  }
+  if (e.kind === "arrayLiteral") {
+    return { kind: "arrayLiteral", elems: e.elems.map(el => {
+      const value = lowerExpr(el, binds);
+      if (real && isIntegral(el.ty)) return { kind: "toReal", expr: value };
+      return _opts.backend === "lean" && isNat(el.ty) ? { kind: "toInt", expr: value } : value;
+    }) };
+  }
+  const value = lowerExpr(e, binds);
+  if (_opts.backend === "lean" && e.ty.kind === "array" && isNat(e.ty.elem)) {
+    return { kind: "app", fn: "Array.map", args: [{ kind: "var", name: "Int.ofNat" }, value] };
+  }
+  return real && e.ty.kind === "array" && isIntegral(e.ty.elem)
+    ? { kind: "app", fn: "SeqIntToReal", args: [value] } : value;
+}
+
+function lowerExpr(e: TExpr, binds: Stmt[] | null): Expr {
+  // Lean spreads are checked Option operations. Lift even a syntactically pure
+  // call so total correctness requires the combined array to be nonempty.
+  if (_opts.backend === "lean" && e.kind === "call" && e.fn.kind === "var" &&
+      (e.fn.name === "MaxOfSeq" || e.fn.name === "MinOfSeq") && e.args.length === 1) {
+    const name = binds ? freshName(`_t${_liftCounter++}`) : null;
+    const value: Expr = { kind: "app",
+      fn: e.fn.name === "MaxOfSeq" ? "LemmaScript.maxOfArray" : "LemmaScript.minOfArray",
+      args: [lowerMinMaxSequence(e.args[0], e.ty.kind === "real", binds)] };
+    if (binds && name) {
+      binds.push({ kind: "let-bind", name, value });
+      return { kind: "var", name };
+    }
+    return value;
+  }
+  // Monadic lifting: extract embedded method calls to let-binds.
+  // `callKind: "method"` means a global var-fn call (classifyCall returns
+  // "method" only for `fn.kind === "var"`). Receiver method calls have
+  // callKind "unknown" and fall through to the regular case below where
+  // they become `methodCall`.
+  if (binds && e.kind === "call" && e.callKind === "method" && e.fn.kind === "var") {
+    const name = freshName(`_t${_liftCounter++}`);
+    const args = e.args.map(a => lowerExpr(a, binds));
+    binds.push({ kind: "let-bind", name, value: { kind: "app", fn: e.fn.name, args } });
+    return { kind: "var", name };
+  }
+
+  switch (e.kind) {
+    case "var":
+      if (e.name === "undefined") {
+        if (e.ty.kind === "nullish") return { kind: "constructor", name: "nullishUndefined", type: "Nullish", args: [] };
+        return { kind: "var", name: "undefined" };
+      }
+      if (e.name === "null") {
+        if (e.ty.kind === "nullish") return { kind: "constructor", name: "nullishNull", type: "Nullish", args: [] };
+        return { kind: "var", name: "undefined" };
+      }
+      return { kind: "var", name: e.name };
+    case "num": {
+      const literal: Expr = { kind: "num", value: e.value };
+      return e.ty.kind === "real" && Number.isInteger(e.value)
+        ? { kind: "toReal", expr: literal } : literal;
+    }
+    case "bigint": return { kind: "bigint", value: e.value };
+    case "bool": return { kind: "bool", value: e.value };
+
+    case "str":
+      if (e.ty.kind === "user") return { kind: "constructor", name: e.value, type: e.ty.name, args: [] };
+      return { kind: "str", value: e.value };
+
+    case "unop":
+      // Only `num` folds. A `bigint` payload is a string, so negating it here
+      // would coerce through `Number` and round: `-9007199254740993n` stays a
+      // structural `unop("-", bigint(...))` and is negated by the emitter.
+      // Keep the resolved type so a contextually real literal retains its cast.
+      if (e.op === "-" && e.expr.kind === "num")
+        return lowerExpr({ ...e.expr, value: -e.expr.value, ty: e.ty }, binds);
+      // String truthiness: !str → str == ""
+      if (e.op === "!" && e.expr.ty.kind === "string")
+        return { kind: "binop", op: "=", left: lowerExpr(e.expr, binds), right: { kind: "str", value: "" } };
+      // Double negation of Nullish<T> (synthesized by asCondition for `if (x)`):
+      // true iff `x` is Value(v) and `v` is truthy.
+      if (e.op === "!" && e.expr.kind === "unop" && e.expr.op === "!" && e.expr.expr.ty.kind === "nullish") {
+        const inner = e.expr.expr;
+        const innerTy = e.expr.expr.ty;
+        const innerExpr = lowerExpr(inner, binds);
+        const bound = matchBinder("value");
+        const truthy = valueTruthyCond({ kind: "var", name: bound }, innerTy.inner);
+        if (!truthy) {
+          return { kind: "methodCall", obj: innerExpr, objTy: innerTy, method: "isValue", args: [], monadic: false };
+        }
+        return {
+          kind: "match", scrutinee: innerExpr,
+          arms: [
+            { pattern: pCtor("nullishValue", bound), body: truthy },
+            { pattern: pCtor("nullishNull"), body: { kind: "bool", value: false } },
+            { pattern: pCtor("nullishUndefined"), body: { kind: "bool", value: false } },
+          ],
+        };
+      }
+      // Nullish<T> truthiness: !x → true on Null/Undefined; on Value(v), !(truthy v).
+      if (e.op === "!" && e.expr.ty.kind === "nullish") {
+        const innerExpr = lowerExpr(e.expr, binds);
+        const bound = matchBinder("value");
+        const truthy = valueTruthyCond({ kind: "var", name: bound }, e.expr.ty.inner);
+        if (!truthy) {
+          return { kind: "unop", op: "¬", expr: { kind: "methodCall", obj: innerExpr, objTy: e.expr.ty, method: "isValue", args: [], monadic: false } };
+        }
+        return {
+          kind: "match", scrutinee: innerExpr,
+          arms: [
+            { pattern: pCtor("nullishValue", bound), body: { kind: "unop", op: "¬", expr: truthy } },
+            { pattern: pCtor("nullishNull"), body: { kind: "bool", value: true } },
+            { pattern: pCtor("nullishUndefined"), body: { kind: "bool", value: true } },
+          ],
+        };
+      }
+      // Optional truthiness: !opt → None negates to `true`. The Some branch is
+      // `!(value truthy)`: always-truthy inners (array/user) give a plain `false`,
+      // while falsy-capable inners re-test the wrapped value (`!Some(0)` is `true`).
+      // Mirrors the `||` falsiness rule.
+      if (e.op === "!" && e.expr.ty.kind === "optional") {
+        const bound = matchBinder("value");
+        const truthy = valueTruthyCond({ kind: "var", name: bound }, e.expr.ty.inner);
+        return {
+          kind: "match", scrutinee: lowerExpr(e.expr, binds),
+          arms: [
+            { pattern: pCtor("some", bound), body: truthy ? { kind: "unop", op: "¬", expr: truthy } : { kind: "bool", value: false } },
+            { pattern: pCtor("none"), body: { kind: "bool", value: true } },
+          ],
+        };
+      }
+      // Number truthiness: !n → n == 0
+      if (e.op === "!" && (e.expr.ty.kind === "int" || e.expr.ty.kind === "nat"))
+        return { kind: "binop", op: "=", left: lowerExpr(e.expr, binds), right: { kind: "num", value: 0 } };
+      // Object truthiness: arrays, objects, maps, and sets are always truthy in
+      // JS, so `!x` is always false.
+      if (e.op === "!" && ["array", "user", "map", "set", "tuple"].includes(e.expr.ty.kind)) {
+        lowerExpr(e.expr, binds);  // preserve any lifted side effects; value is the constant false
+        return { kind: "bool", value: false };
+      }
+      return { kind: "unop", op: e.op === "!" ? "¬" : e.op, expr: lowerExpr(e.expr, binds) };
+
+    case "binop": {
+      // Implication: flatten (A && B) ==> C → implies [A, B] C
+      // Spec-only — no lifting through premises/conclusion.
+      if (e.op === "==>") {
+        const { premises, conclusion } = flattenImpl(e);
+        return { kind: "implies", premises: premises.map(transformExpr), conclusion: transformExpr(conclusion) };
+      }
+      // Boolean connectives evaluate the RHS only if the left operand selects
+      // it. Keep lifted calls in that branch instead of hoisting them eagerly.
+      if ((e.op === "&&" || e.op === "||") && e.left.ty.kind === "bool" && e.right.ty.kind === "bool") {
+        const left = lowerExpr(e.left, binds);
+        const rightBinds: Stmt[] | null = binds ? [] : null;
+        const right = lowerExpr(e.right, rightBinds);
+        if (binds && rightBinds?.length) {
+          const name = freshName(`_branch${_branchCounter++}`);
+          const value: Expr = { kind: "var", name };
+          binds.push({ kind: "let", name, type: { kind: "bool" }, mutable: true, value: left });
+          binds.push({ kind: "if", cond: e.op === "&&" ? value : { kind: "unop", op: "¬", expr: value },
+            then: [...rightBinds, { kind: "assign", target: name, value: right }], else: [] });
+          return value;
+        }
+        return { kind: "binop", op: OP_MAP[e.op], left, right };
+      }
+      // Discriminant check: x.discriminant === "foo" → x = .foo (before generic string literal comparison)
+      if ((e.op === "===" || e.op === "!==") && e.left.kind === "field" && e.left.isDiscriminant && e.right.kind === "str") {
+        const objTy = e.left.obj.ty.kind === "user" ? e.left.obj.ty.name : undefined;
+        return {
+          kind: "binop",
+          op: e.op === "===" ? "=" : "≠",
+          left: transformExpr(e.left.obj),
+          right: { kind: "constructor", name: e.right.value, type: objTy, args: [] },
+        };
+      }
+      // Literal null/undefined comparison (e.g. `null === undefined` → false,
+      // `null == undefined` → true, `null === null` → true).
+      if (["===", "!==", "==", "!="].includes(e.op) &&
+          e.left.kind === "var" && (e.left.name === "null" || e.left.name === "undefined") &&
+          e.right.kind === "var" && (e.right.name === "null" || e.right.name === "undefined")) {
+        const isLoose = e.op === "==" || e.op === "!=";
+        const eq = isLoose ? true : e.left.name === e.right.name;
+        const res = (e.op === "===" || e.op === "==") ? eq : !eq;
+        return { kind: "bool", value: res };
+      }
+      // String literal comparison — constructor if user type, string literal if string.
+      // Skip when the left is optional/nullish: fall through to the nullable-comparison rules,
+      // which unwrap and compare the inner value (`Some(v) => v == ""`).
+      if ((e.op === "===" || e.op === "!==") && e.right.kind === "str" &&
+          e.left.ty.kind !== "optional" && e.left.ty.kind !== "nullish") {
+        const left = lowerExpr(e.left, binds);
+        const leftTy = e.left.ty.kind === "user" ? e.left.ty.name : undefined;
+        const right: Expr = isUser(e.left.ty)
+          ? { kind: "constructor", name: e.right.value, type: leftTy, args: [] }
+          : { kind: "str", value: e.right.value };
+        return { kind: "binop", op: e.op === "===" ? "=" : "≠", left, right };
+      }
+      // Two-sided nullable equality/inequality rules (#304):
+      //   1. Opposite-sentinel Option<T> (`T | null` vs `T | undefined`) under ===/!==:
+      //      None vs None is false for === (null !== undefined).
+      //   2. Nullish<T> vs Nullish<T> under loose ==/!=:
+      //      Null vs Undefined is true for == (null == undefined).
+      //   3. Nullish<T> vs Option<T> under ===/!==/==/!=:
+      //      Nested match comparing Value/Some, plus sentinel match on Null/Undefined vs None.
+      if (["===", "!==", "==", "!="].includes(e.op)) {
+        const isLoose = e.op === "==" || e.op === "!=";
+        const isEq = e.op === "===" || e.op === "==";
+        const cmpOp = isEq ? "=" : "≠";
+        if (!isLoose && e.left.ty.kind === "optional" && e.right.ty.kind === "optional" &&
+            optAbsent(e.left.ty) !== optAbsent(e.right.ty)) {
+          const lExpr = lowerExpr(e.left, binds);
+          const rExpr = lowerExpr(e.right, binds);
+          const lv = matchBinder("lv");
+          const rv = matchBinder("rv");
+          return {
+            kind: "match", scrutinee: lExpr,
+            arms: [
+              { pattern: pCtor("some", lv), body: {
+                kind: "match", scrutinee: rExpr,
+                arms: [
+                  { pattern: pCtor("some", rv), body: { kind: "binop", op: cmpOp, left: { kind: "var", name: lv }, right: { kind: "var", name: rv } } },
+                  { pattern: pCtor("none"), body: { kind: "bool", value: !isEq } },
+                ],
+              } },
+              { pattern: pCtor("none"), body: { kind: "bool", value: !isEq } },
+            ],
+          };
+        }
+        if (isLoose && e.left.ty.kind === "nullish" && e.right.ty.kind === "nullish") {
+          const lExpr = lowerExpr(e.left, binds);
+          const rExpr = lowerExpr(e.right, binds);
+          const lv = matchBinder("lv");
+          const rv = matchBinder("rv");
+          const absentArm: Expr = {
+            kind: "match", scrutinee: rExpr,
+            arms: [
+              { pattern: pCtor("nullishValue", "_"), body: { kind: "bool", value: !isEq } },
+              { pattern: pCtor("nullishNull"), body: { kind: "bool", value: isEq } },
+              { pattern: pCtor("nullishUndefined"), body: { kind: "bool", value: isEq } },
+            ],
+          };
+          return {
+            kind: "match", scrutinee: lExpr,
+            arms: [
+              { pattern: pCtor("nullishValue", lv), body: {
+                kind: "match", scrutinee: rExpr,
+                arms: [
+                  { pattern: pCtor("nullishValue", rv), body: { kind: "binop", op: cmpOp, left: { kind: "var", name: lv }, right: { kind: "var", name: rv } } },
+                  { pattern: pCtor("nullishNull"), body: { kind: "bool", value: !isEq } },
+                  { pattern: pCtor("nullishUndefined"), body: { kind: "bool", value: !isEq } },
+                ],
+              } },
+              { pattern: pCtor("nullishNull"), body: absentArm },
+              { pattern: pCtor("nullishUndefined"), body: absentArm },
+            ],
+          };
+        }
+        if ((e.left.ty.kind === "nullish" && e.right.ty.kind === "optional") ||
+            (e.left.ty.kind === "optional" && e.right.ty.kind === "nullish")) {
+          const [nulSide, optSide] = e.left.ty.kind === "nullish" ? [e.left, e.right] : [e.right, e.left];
+          const nulExpr = lowerExpr(nulSide, binds);
+          const optExpr = lowerExpr(optSide, binds);
+          const optAbs = optAbsent(optSide.ty as Extract<Ty, { kind: "optional" }>);
+          const nv = matchBinder("nv");
+          const ov = matchBinder("ov");
+          const nullMatchesNone = isLoose || optAbs === "null";
+          const undefMatchesNone = isLoose || optAbs === "undefined";
+          const makeAbsentArm = (matchesNone: boolean): Expr => ({
+            kind: "match", scrutinee: optExpr,
+            arms: [
+              { pattern: pCtor("some", "_"), body: { kind: "bool", value: !isEq } },
+              { pattern: pCtor("none"), body: { kind: "bool", value: isEq ? matchesNone : !matchesNone } },
+            ],
+          });
+          return {
+            kind: "match", scrutinee: nulExpr,
+            arms: [
+              { pattern: pCtor("nullishValue", nv), body: {
+                kind: "match", scrutinee: optExpr,
+                arms: [
+                  { pattern: pCtor("some", ov), body: { kind: "binop", op: cmpOp, left: { kind: "var", name: nv }, right: { kind: "var", name: ov } } },
+                  { pattern: pCtor("none"), body: { kind: "bool", value: !isEq } },
+                ],
+              } },
+              { pattern: pCtor("nullishNull"), body: makeAbsentArm(nullMatchesNone) },
+              { pattern: pCtor("nullishUndefined"), body: makeAbsentArm(undefMatchesNone) },
+            ],
+          };
+        }
+      }
+      // Nullish<T> comparison against null / undefined / non-nullish value (#304).
+      if (["===", "!==", "==", "!=", ">=", "<=", ">", "<"].includes(e.op) &&
+          (e.left.ty.kind === "nullish") !== (e.right.ty.kind === "nullish")) {
+        const [nulSide, valSide] = e.left.ty.kind === "nullish" ? [e.left, e.right] : [e.right, e.left];
+        const nulExpr = lowerExpr(nulSide, binds);
+        const nulTy = nulSide.ty as Extract<Ty, { kind: "nullish" }>;
+        if (valSide.kind === "var" && (valSide.name === "undefined" || valSide.name === "null")) {
+          const isLoose = e.op === "==" || e.op === "!=";
+          const isEq = e.op === "===" || e.op === "==";
+          if (isLoose) {
+            // x == null / x == undefined → !x.isValue; x != null / x != undefined → x.isValue
+            const isVal: Expr = { kind: "methodCall", obj: nulExpr, objTy: nulTy, method: "isValue", args: [], monadic: false };
+            return isEq ? { kind: "unop", op: "¬", expr: isVal } : isVal;
+          }
+          const pred: Expr = {
+            kind: "methodCall", obj: nulExpr, objTy: nulTy,
+            method: valSide.name === "null" ? "isNull" : "isUndefined", args: [], monadic: false,
+          };
+          return isEq ? pred : { kind: "unop", op: "¬", expr: pred };
+        }
+        const innerTy = nulTy.inner;
+        const valExpr: Expr = valSide.kind === "str" && innerTy.kind === "user"
+          ? { kind: "constructor", name: valSide.value, type: innerTy.name, args: [] }
+          : lowerExpr(valSide, binds);
+        const op = e.left.ty.kind === "nullish" ? e.op : MIRROR_OP[e.op] ?? e.op;
+        const cmpOp = BOOL_OP_MAP[op] ?? op;
+        const absentVal = (e.op === "!==" || e.op === "!=") ? true : false;
+        const bound = matchBinder("value");
+        const makeNullishCmpMatch = (rhs: Expr): Expr => ({
+          kind: "match", scrutinee: nulExpr,
+          arms: [
+            { pattern: pCtor("nullishValue", bound), body: { kind: "binop", op: cmpOp, left: { kind: "var", name: bound }, right: rhs } },
+            { pattern: pCtor("nullishNull"), body: { kind: "bool", value: absentVal } },
+            { pattern: pCtor("nullishUndefined"), body: { kind: "bool", value: absentVal } },
+          ],
+        });
+        if (!_inSpec && valExpr.kind !== "var" && hasPreconditionExpr(valSide)) {
+          const tmp = freshName(`_cmp${_cmpCounter++}`);
+          return { kind: "let", name: tmp, value: valExpr, body: makeNullishCmpMatch({ kind: "var", name: tmp }) };
+        }
+        return makeNullishCmpMatch(valExpr);
+      }
+      // Optional comparison: optExpr op val → match optExpr { Some(v) => v op val, None => false/true }
+      if (["===", "!==", "==", "!=", ">=", "<=", ">", "<"].includes(e.op) &&
+          (e.left.ty.kind === "optional") !== (e.right.ty.kind === "optional")) {
+        const [optSide, valSide] = e.left.ty.kind === "optional" ? [e.left, e.right] : [e.right, e.left];
+        const optExpr = lowerExpr(optSide, binds);
+        const optTy = optSide.ty as Extract<Ty, { kind: "optional" }>;
+        // x === undefined / x === null / loose x == null / x == undefined
+        if (valSide.kind === "var" && (valSide.name === "undefined" || valSide.name === "null")) {
+          const isLoose = e.op === "==" || e.op === "!=";
+          const isEq = e.op === "===" || e.op === "==";
+          // Strict comparison against the OTHER sentinel (`x: T | undefined; x === null`
+          // or `x: T | null; x === undefined`) is always false (and `!==` is always true).
+          if (!isLoose && valSide.name !== optAbsent(optTy)) {
+            return { kind: "bool", value: !isEq };
+          }
+          return {
+            kind: "match", scrutinee: optExpr,
+            arms: [
+              { pattern: pCtor("some", "_"), body: { kind: "bool", value: !isEq } },
+              { pattern: pCtor("none"), body: { kind: "bool", value: isEq } },
+            ],
+          };
+        }
+        // A string literal compared against an optional user type is the variant
+        // constructor (`o === "red"` → `Some(v) => v == Color.red`), mirroring the
+        // non-optional string-literal rule above.
+        const innerTy = optSide.ty.kind === "optional" ? optSide.ty.inner : optSide.ty;
+        const valExpr: Expr = valSide.kind === "str" && innerTy.kind === "user"
+          ? { kind: "constructor", name: valSide.value, type: innerTy.name, args: [] }
+          : lowerExpr(valSide, binds);
+        // Precondition preservation (#349): JavaScript evaluates BOTH operands of
+        // `===`, `!==`, `<`, `<=`, `>`, `>=` unconditionally. When `valSide` can
+        // carry preconditions (calls, indexing, checked reads, div/mod), bind
+        // `valExpr` in a `let` BEFORE matching `optExpr` so:
+        //   1. Every precondition in `valSide` is checked even when `optExpr` is `None`.
+        //   2. Comparing `bound op _cmp` unwrapped inside `Some` preserves Z3's
+        //      sequence/map extensionality triggers (unlike `opt == Some(val)`).
+        // Pure comparisons (e.g. `res.truncatedBy === "bytes"` in pi-lemmascript)
+        // skip the `let` binding completely (zero temporary churn).
+        const op = e.left.ty.kind === "optional" ? e.op : MIRROR_OP[e.op] ?? e.op;
+        const cmpOp = BOOL_OP_MAP[op] ?? op;
+        const noneVal = (e.op === "!==" || e.op === "!=") ? true : false;
+        const bound = matchBinder("value");
+        if (!_inSpec && valExpr.kind !== "var" && hasPreconditionExpr(valSide)) {
+          const tmp = freshName(`_cmp${_cmpCounter++}`);
+          return {
+            kind: "let",
+            name: tmp,
+            value: valExpr,
+            body: {
+              kind: "match", scrutinee: optExpr,
+              arms: [
+                { pattern: pCtor("some", bound), body: { kind: "binop", op: cmpOp, left: { kind: "var", name: bound }, right: { kind: "var", name: tmp } } },
+                { pattern: pCtor("none"), body: { kind: "bool", value: noneVal } },
+              ],
+            },
+          };
+        }
+        return {
+          kind: "match", scrutinee: optExpr,
+          arms: [
+            { pattern: pCtor("some", bound), body: { kind: "binop", op: cmpOp, left: { kind: "var", name: bound }, right: valExpr } },
+            { pattern: pCtor("none"), body: { kind: "bool", value: noneVal } },
+          ],
+        };
+      }
+      // Definite non-nullable value compared against `null` or `undefined`
+      // (e.g. `x === null` inside a `someMatch` body where `x` was already unwrapped
+      // to `int`): constant-fold to `false` (for ===/==) or `true` (for !==/!=)
+      // while preserving any side-effecting lifts in the non-sentinel operand.
+      if (["===", "!==", "==", "!="].includes(e.op)) {
+        const isSentinel = (x: TExpr) => x.kind === "var" && (x.name === "null" || x.name === "undefined");
+        if (isSentinel(e.left) !== isSentinel(e.right)) {
+          const other = isSentinel(e.left) ? e.right : e.left;
+          const k = other.ty.kind;
+          if (k !== "optional" && k !== "nullish" && k !== "unknown" && k !== "void" && k !== "null") {
+            lowerExpr(other, binds);
+            return { kind: "bool", value: e.op === "!==" || e.op === "!=" };
+          }
+        }
+      }
+      // || undefined / || null on optional → identity (no-op: x || undefined = x) when the
+      // inner type is always truthy. When it can be falsy, JS still drops the
+      // wrapped value: `Some(0) || undefined === undefined`, so the Some arm
+      // re-tests and falls back to None.
+      if (e.op === "||" && e.left.ty.kind === "optional" &&
+          e.right.kind === "var" && (e.right.name === "undefined" || e.right.name === "null")) {
+        const optExpr = lowerExpr(e.left, binds);
+        const bound = matchBinder("value");
+        const truthy = valueTruthyCond({ kind: "var", name: bound }, e.left.ty.inner);
+        if (!truthy) return optExpr;
+        return {
+          kind: "match", scrutinee: optExpr,
+          arms: [
+            { pattern: pCtor("some", bound), body: {
+              kind: "if", cond: truthy,
+              then: { kind: "app", fn: "Some", args: [{ kind: "var", name: bound }] },
+              else: { kind: "var", name: "undefined" } } },
+            { pattern: pCtor("none"), body: { kind: "var", name: "undefined" } },
+          ],
+        };
+      }
+      // || on nullish → 3-arm match Value/Null/Undefined with default.
+      if (e.op === "||" && e.left.ty.kind === "nullish") {
+        const nulExpr = lowerExpr(e.left, binds);
+        const defaultExpr = lowerExpr(e.right, binds);
+        const bound = matchBinder("value");
+        const truthy = valueTruthyCond({ kind: "var", name: bound }, e.left.ty.inner);
+        const valPresent: Expr = e.ty.kind === "nullish"
+          ? { kind: "constructor", name: "nullishValue", type: "Nullish", args: [{ kind: "var", name: bound }] }
+          : e.ty.kind === "optional"
+            ? { kind: "constructor", name: "some", type: "Option", args: [{ kind: "var", name: bound }] }
+            : { kind: "var", name: bound };
+        const someBody: Expr = truthy
+          ? { kind: "if", cond: truthy, then: valPresent, else: defaultExpr }
+          : valPresent;
+        return {
+          kind: "match", scrutinee: nulExpr,
+          arms: [
+            { pattern: pCtor("nullishValue", bound), body: someBody },
+            { pattern: pCtor("nullishNull"), body: defaultExpr },
+            { pattern: pCtor("nullishUndefined"), body: defaultExpr },
+          ],
+        };
+      }
+      // || on optional → match Some/None with default. JS `||` tests falsiness of
+      // the *unwrapped* value, so when the inner type can be falsy the Some arm must
+      // re-test (`Some(0) || 1 === 1`); array/user inners are always truthy and
+      // unwrap directly. Same gate as condition-facts' `canBeFalsy`.
+      if (e.op === "||" && e.left.ty.kind === "optional") {
+        const optExpr = lowerExpr(e.left, binds);
+        const defaultExpr = lowerExpr(e.right, binds);
+        const bound = matchBinder("value");
+        const truthy = valueTruthyCond({ kind: "var", name: bound }, e.left.ty.inner);
+        const someBody: Expr = truthy
+          ? { kind: "if", cond: truthy, then: { kind: "var", name: bound }, else: defaultExpr }
+          : { kind: "var", name: bound };
+        return {
+          kind: "match", scrutinee: optExpr,
+          arms: [
+            { pattern: pCtor("some", bound), body: someBody },
+            { pattern: pCtor("none"), body: defaultExpr },
+          ],
+        };
+      }
+      // || on map index → if key in map then map[key] else default. The stored
+      // value is still subject to JS falsiness (`counts.get(k) || 1` returns 1 when
+      // the stored value is 0), so for falsy-capable value types the present branch
+      // re-tests the value too. Always-truthy value types unwrap directly.
+      if (e.op === "||" && e.left.kind === "index" && e.left.obj.ty.kind === "map") {
+        const map = lowerExpr(e.left.obj, binds);
+        const key = lowerExpr(e.left.idx, binds);
+        const right = lowerExpr(e.right, binds);
+        const got: Expr = { kind: "index", arr: map, idx: key };
+        const truthy = valueTruthyCond(got, e.left.obj.ty.value);
+        return {
+          kind: "if",
+          cond: { kind: "binop", op: "in", left: key, right: map },
+          then: truthy ? { kind: "if", cond: truthy, then: got, else: right } : got,
+          else: right,
+        };
+      }
+      // || on non-optional array → `xs` itself: every array (even `[]`) is truthy
+      // in JS, so `xs || ys` short-circuits to `xs` and `ys` is never evaluated.
+      // resolve types the whole `||` as the array, so any optional context (e.g.
+      // `xs || undefined`) gets its single Some-wrap from the standard coercion at
+      // the use site — this rule must not add one. Mirrors the `!array` rule above.
+      if (e.op === "||" && e.left.ty.kind === "array") {
+        return lowerExpr(e.left, binds);
+      }
+      // || on non-optional string/user → if non-empty then x else default
+      if (e.op === "||" && (e.left.ty.kind === "string" ||
+          (e.left.ty.kind === "user" && e.right.ty.kind === "string"))) {
+        const left = lowerExpr(e.left, binds);
+        const right = lowerExpr(e.right, binds);
+        // `s || undefined` / `s || null` produces `Option<string>` — wrap the truthy branch in Some.
+        const rightIsUndef = e.right.kind === "var" && (e.right.name === "undefined" || e.right.name === "null");
+        return {
+          kind: "if",
+          // strings carry the `length` marker — it renders to `|x|` in Dafny and
+          // `.length` in Lean (whose String has no `.size` field).
+          cond: { kind: "binop", op: ">", left: { kind: "field", obj: left, field: e.left.ty.kind === "string" ? "length" : "size" }, right: { kind: "num", value: 0 } },
+          then: rightIsUndef ? { kind: "app", fn: "Some", args: [left] } : left,
+          else: right,
+        };
+      }
+      // `bool || undefined` / `bool || null` → `if bool then Some(bool) else None`. Used in
+      // optional-field initialization where the source assigns a truthy/false
+      // bool to a `T?` field. Without this, emit produces `bool || None`,
+      // which Dafny rejects (bool || Option<?> is ill-typed).
+      if (e.op === "||" && e.left.ty.kind === "bool" &&
+          e.right.kind === "var" && (e.right.name === "undefined" || e.right.name === "null")) {
+        const left = lowerExpr(e.left, binds);
+        return {
+          kind: "if",
+          cond: left,
+          then: { kind: "app", fn: "Some", args: [left] },
+          else: { kind: "var", name: "undefined" },
+        };
+      }
+      // || on a number → `if x != 0 then x else default` (0 the only falsy int).
+      if (e.op === "||" && (e.left.ty.kind === "int" || e.left.ty.kind === "nat")) {
+        const left = lowerExpr(e.left, binds);
+        const right = lowerExpr(e.right, binds);
+        const truthy = valueTruthyCond(left, e.left.ty)!;
+        return { kind: "if", cond: truthy, then: left, else: right };
+      }
+      // String concatenation: `+` with a string operand. Stringify int/nat
+      // operands (Dafny NatToString, Lean toString) and join with arrayConcat
+      // (rendered `+` in Dafny, `++` in Lean).
+      if (e.op === "+" && (e.left.ty.kind === "string" || e.right.ty.kind === "string")) {
+        const strify = (o: TExpr): Expr => {
+          if (o.ty.kind !== "int" && o.ty.kind !== "nat") return lowerExpr(o, binds);
+          // Lean `toString` handles any Int; Dafny needs IntToString for signed
+          // ints (NatToString is nat-only).
+          const fn = _opts.backend !== "dafny" ? "ToString" : o.ty.kind === "nat" ? "NatToString" : "IntToString";
+          return { kind: "app", fn, args: [lowerExpr(o, binds)] };
+        };
+        return { kind: "binop", op: "arrayConcat", left: strify(e.left), right: strify(e.right) };
+      }
+      // JS `%` is truncated (sign of the dividend); a signed `int` differs from the
+      // Euclidean `%` of Dafny/Lean, so route it through JSRem (Lean: `Int.tmod`).
+      if (e.op === "%" && e.left.ty.kind === "int") {
+        return { kind: "app", fn: "JSRem", args: [lowerExpr(e.left, binds), lowerExpr(e.right, binds)] };
+      }
+      // JS bigint `/` truncates toward zero (`-3n / 2n === -1n`); it differs from the
+      // floored `/` of Dafny/Lean, so route it through JSTruncDiv (Lean: `Int.tdiv`).
+      if (e.op === "/" && e.ty.kind === "int") {
+        return { kind: "app", fn: "JSTruncDiv", args: [lowerExpr(e.left, binds), lowerExpr(e.right, binds)] };
+      }
+      // JS string ordering is lexicographic vs Dafny's seq prefix order, so route
+      // through JSStringLt. Dafny-only: Lean's native `<` is already lexicographic.
+      if (_opts.backend === "dafny" && ["<", "<=", ">", ">="].includes(e.op) && e.left.ty.kind === "string") {
+        const l = lowerExpr(e.left, binds), r = lowerExpr(e.right, binds);
+        const lt = (x: Expr, y: Expr): Expr => ({ kind: "app", fn: "JSStringLt", args: [x, y] });
+        const not = (x: Expr): Expr => ({ kind: "unop", op: "¬", expr: x });
+        if (e.op === "<") return lt(l, r);
+        if (e.op === ">") return lt(r, l);
+        if (e.op === "<=") return not(lt(r, l));
+        return not(lt(l, r));  // >=
+      }
+      // Numeric int→real coercion. After resolve, `/` is always real, and any
+      // arithmetic/comparison mixing real and integral operands is real-valued.
+      // Lift each integral operand to `real` so the backend sees homogeneous
+      // real operations (Dafny `as real`, Lean Int→Float).
+      if (NUMERIC_OPS.has(e.op)) {
+        const realCtx = e.ty.kind === "real" || e.left.ty.kind === "real" || e.right.ty.kind === "real";
+        if (realCtx) {
+          const lift = (operand: TExpr): Expr => {
+            const lowered = lowerExpr(operand, binds);
+            return isIntegral(operand.ty) ? { kind: "toReal", expr: lowered } : lowered;
+          };
+          return { kind: "binop", op: OP_MAP[e.op] ?? e.op, left: lift(e.left), right: lift(e.right) };
+        }
+      }
+      return {
+        kind: "binop",
+        op: OP_MAP[e.op] ?? e.op,
+        left: lowerExpr(e.left, binds),
+        right: lowerExpr(e.right, binds),
+      };
+    }
+
+    case "field":
+      if (e.field === "length" && isArray(e.obj.ty))
+        return { kind: "field", obj: transformExpr(e.obj), field: "size" };
+      if (e.field === "length" && e.obj.ty.kind === "string")
+        return { kind: "field", obj: transformExpr(e.obj), field: "length" };
+      if (e.field === "size" && (e.obj.ty.kind === "map" || e.obj.ty.kind === "set"))
+        return { kind: "field", obj: transformExpr(e.obj), field: "collectionSize" };
+      // Boolean discriminant bare access: `result.ok` where Result has variants
+      // {ok: true, ...} | {ok: false, ...}. String discriminants are always used via
+      // comparison (x.kind === 'Foo' → x.Foo?), but boolean discriminants are used
+      // as bare truthiness checks. Emit as the Dafny discriminator predicate for the
+      // 'true' variant: result.ok → result.true_?
+      if (e.isDiscriminant && e.obj.ty.kind === "user") {
+        const decl = unionDeclOfTy(_typeDecls, e.obj.ty);
+        if (decl?.variants?.some(v => v.name === "true")) {
+          return { kind: "field", obj: transformExpr(e.obj), field: "true_?" };
+        }
+        // Surviving string-discriminant read (`x.kind` used as a value —
+        // compared against another union's tag, passed as an argument, …):
+        // lower to the generated per-union discriminator function, which
+        // returns the source tag strings. Narrowing consumes discriminant
+        // *checks*; this catches reads that survive as values.
+        if (decl?.variants && decl.discriminant && decl.discriminant !== "__isArray__") {
+          _neededKindHelpers.set(decl.name, decl);
+          return { kind: "app", fn: kindHelperName(decl), args: [lowerExpr(e.obj, binds)] };
+        }
+      }
+      // Union destructor: `x.field` where x is a discriminated union and `field`
+      // is a data field of one of its variants. Dafny reads the destructor
+      // directly; Lean has no field projection on a multi-ctor inductive, so tag
+      // the node with the union's base name and let the Lean emitter `match`.
+      if (e.obj.ty.kind === "user") {
+        const baseName = tyBaseName(e.obj.ty.name);
+        const decl = declOfKind(_typeDecls, baseName, "discriminated-union");
+        const owners = decl?.variants?.filter(v => v.fields.some(f => f.name === e.field)) ?? [];
+        if (owners.length > 0) {
+          // Shared field name with differing declared types: those destructors
+          // are renamed per-constructor (e.g. `value` → `value_a`, `value_a` →
+          // `value_a_a`), so falling through to plain `sh.<field>` can resolve to
+          // a different renamed destructor and verify a false contract. Require a
+          // known variant (`e.ofVariant`) for mixed-type union projections.
+          const ownerTy = (v: VariantInfo) => v.fields.find(f => f.name === e.field)?.type;
+          const differ = owners.some(v => {
+            const a = ownerTy(v), b = ownerTy(owners[0]);
+            return a && b && !tyEqual(a, b);
+          });
+          if (differ && !e.ofVariant) {
+            throw new Error(
+              `cannot read '${e.field}' on '${baseName}' without narrowing to a variant first (variants give '${e.field}' different types)`,
+            );
+          }
+          const ctor = e.ofVariant;
+          return { kind: "field", obj: transformExpr(e.obj), field: e.field, fromUnion: baseName, ctor, datatypeField: true };
+        }
+      }
+      return { kind: "field", obj: transformExpr(e.obj), field: e.field, datatypeField: isRecordType(e.obj.ty) };
+
+    case "index": {
+      if (e.obj.ty.kind === "string") {
+        return { kind: "stringIndex", str: lowerExpr(e.obj, binds), idx: lowerExpr(e.idx, binds) };
+      }
+      const idx = transformExpr(e.idx);
+      if (e.obj.ty.kind === "tuple") {
+        // resolve guarantees a numeric-literal index here; project at that slot.
+        return { kind: "tupleProj", obj: transformExpr(e.obj), index: (e.idx as { value: number }).value, arity: e.obj.ty.elems.length };
+      }
+      if (e.obj.ty.kind === "map") {
+        // Mirrors the .get() → .getDirect switch at line ~453: when resolve has
+        // narrowed the index type to non-optional (via `k in m` atoms in scope),
+        // emit direct access; otherwise keep the Option-producing `get`.
+        const method = e.ty.kind !== "optional" ? "getDirect" : "get";
+        return { kind: "methodCall", obj: transformExpr(e.obj), objTy: e.obj.ty, method, args: [idx], monadic: false };
+      }
+      const wrappedIdx = isArray(e.obj.ty) && !isNat(e.idx.ty) ? { kind: "toNat" as const, expr: idx } : idx;
+      return { kind: "index", arr: transformExpr(e.obj), idx: wrappedIdx };
+    }
+
+    case "call": {
+      if (_opts.backend === "dafny" && e.fn.kind === "var" &&
+          (e.fn.name === "MaxOfSeq" || e.fn.name === "MinOfSeq") && e.args.length === 1) {
+        const real = e.ty.kind === "real";
+        return { kind: "app", fn: real ? `${e.fn.name}Real` : e.fn.name,
+          args: [lowerMinMaxSequence(e.args[0], real, binds)] };
+      }
+      // Array.isArray(x) on a synth array-union (discriminant "__isArray__")
+      // → constructor predicate `x.ArrayBranch?`. Used in spec ensures and
+      // anywhere `Array.isArray` escapes the narrowing rule (narrow rewrites
+      // top-level if-cond Array.isArray uses; this catches the rest).
+      if (e.fn.kind === "field" && e.fn.obj.kind === "var" && e.fn.obj.name === "Array" &&
+          e.fn.field === "isArray" && e.args.length === 1) {
+        const arg = e.args[0];
+        if (arg.ty.kind === "user") {
+          const decl = declOfTy(_typeDecls, arg.ty);
+          if (decl?.kind === "discriminated-union" && decl.discriminant === "__isArray__") {
+            return {
+              kind: "binop", op: "=",
+              left: lowerExpr(arg, binds),
+              right: { kind: "constructor", name: "ArrayBranch", type: arg.ty.name, args: [] },
+            };
+          }
+        }
+      }
+      // String.fromCharCode(n) → preamble function (inverse of charCodeAt,
+      // which lowers to `(s[i] as int)`).
+      if (e.fn.kind === "field" && e.fn.obj.kind === "var" && e.fn.obj.name === "String" &&
+          e.fn.field === "fromCharCode" && e.args.length === 1) {
+        return { kind: "app", fn: "StringFromCharCode", args: [lowerExpr(e.args[0], binds)] };
+      }
+      // Number.isSafeInteger(n) on an integer: a bigint is never a safe integer
+      // in JS, so the result is false. A `number` is an unbounded integer in the
+      // model, so the JS bound -(2^53 - 1) <= n <= 2^53 - 1 must be stated.
+      if (e.fn.kind === "field" && e.fn.obj.kind === "var" && e.fn.obj.name === "Number" &&
+          e.fn.field === "isSafeInteger" && e.args.length === 1 && isIntegral(e.args[0].ty)) {
+        if (isBigInt(e.args[0].ty)) {
+          // The result is false, but JS still evaluates the argument. Keep
+          // lifted method calls and pure expressions' proof obligations.
+          const value = lowerExpr(e.args[0], binds);
+          const result: Expr = { kind: "bool", value: false };
+          if (value.kind === "var" || value.kind === "bigint") return result;
+          const name = freshName("_safeIntegerArg");
+          if (binds) {
+            binds.push({ kind: "let", name, type: e.args[0].ty, mutable: false, value });
+            return result;
+          }
+          return { kind: "let", name, type: e.args[0].ty, value, body: result };
+        }
+        const n = lowerExpr(e.args[0], binds);
+        const max = 9007199254740991;
+        return {
+          kind: "binop", op: "∧",
+          left: { kind: "binop", op: "≤", left: { kind: "num", value: -max }, right: n },
+          right: { kind: "binop", op: "≤", left: n, right: { kind: "num", value: max } },
+        };
+      }
+      // Number.isSafeInteger(x) on a real: check integrality and safe range via
+      // a preamble predicate.
+      if (e.fn.kind === "field" && e.fn.obj.kind === "var" && e.fn.obj.name === "Number" &&
+          e.fn.field === "isSafeInteger" && e.args.length === 1 && e.args[0].ty.kind === "real") {
+        return { kind: "app", fn: "IsSafeIntegerReal", args: [lowerExpr(e.args[0], binds)] };
+      }
+      // Math.abs/min/max preserve the resolved numeric type. Mixed operands
+      // need explicit int/nat→real coercions, just like real binary operations.
+      if (e.fn.kind === "field" && e.fn.obj.kind === "var" && e.fn.obj.name === "Math") {
+        const minMax = (e.fn.field === "min" || e.fn.field === "max") && e.args.length >= 1;
+        const fn = e.fn.field === "abs" && e.args.length === 1 ? "MathAbs"
+          : minMax ? (e.fn.field === "min" ? "MathMin" : "MathMax") : null;
+        if (fn) {
+          const real = e.ty.kind === "real";
+          const args = e.args.map((arg): Expr => {
+            const lowered = lowerExpr(arg, binds);
+            if (real && isIntegral(arg.ty)) return { kind: "toReal", expr: lowered };
+            return _opts.backend === "lean" && minMax && e.ty.kind === "int" && isNat(arg.ty)
+              ? { kind: "toInt", expr: lowered } : lowered;
+          });
+          const helper = real ? `${fn}Real` : _opts.backend === "lean" && minMax
+            ? `${e.fn.field === "min" ? "Min" : "Max"}.${e.fn.field}` : fn;
+          // Unary min/max is identity. Fold positional arguments through the
+          // binary helpers so scalar bounds need no sequence/index proofs.
+          return minMax
+            ? args.slice(1).reduce<Expr>((acc, arg) => ({ kind: "app", fn: helper, args: [acc, arg] }), args[0])
+            : { kind: "app", fn: helper, args };
+        }
+      }
+      // Math.ceil(x): CeilReal on real args, identity on int
+      if (e.fn.kind === "field" && e.fn.field === "ceil" && e.fn.obj.kind === "var" && e.fn.obj.name === "Math" && e.args.length === 1) {
+        const arg = e.args[0];
+        if (arg.ty.kind === "real")
+          return { kind: "app", fn: "CeilReal", args: [lowerExpr(arg, binds)] };
+        return lowerExpr(arg, binds);
+      }
+      // Math.floor(x):
+      //   - a / b on integral operands → integer floor division, kept in
+      //     integer arithmetic (JSFloorDiv on Dafny; native Int/Nat `/` floors
+      //     on Lean). Checked first: after resolve, `a / b` is typed `real`, so
+      //     the real branch below would otherwise drag it into real arithmetic.
+      //   - real arg → FloorReal (Dafny's .Floor)
+      //   - int arg → identity
+      if (e.fn.kind === "field" && e.fn.field === "floor" && e.fn.obj.kind === "var" && e.fn.obj.name === "Math" && e.args.length === 1) {
+        const arg = e.args[0];
+        if (arg.kind === "binop" && arg.op === "/" && isIntegral(arg.left.ty) && isIntegral(arg.right.ty)) {
+          const l = lowerExpr(arg.left, binds), r = lowerExpr(arg.right, binds);
+          return _opts.backend === "dafny"
+            ? { kind: "app", fn: "JSFloorDiv", args: [l, r] }
+            : { kind: "binop", op: "/", left: l, right: r };
+        }
+        if (arg.ty.kind === "real")
+          return { kind: "app", fn: "FloorReal", args: [lowerExpr(arg, binds)] };
+        return lowerExpr(arg, binds);
+      }
+      // Math.trunc(x) / Math.round(x):
+      //   - trunc(a / b) on integral operands → JSTruncDiv (Lean: Int.tdiv),
+      //     checked first for the same reason as the floor case above
+      //   - integral arg → identity
+      //   - real arg (Dafny only) → TruncReal(x) / FloorReal(x + 0.5); JS
+      //     rounds halfway ties toward +Infinity
+      // A bigint argument (a JS TypeError) would otherwise lower to the
+      // identity, and a Lean real argument has no lowering, so both are
+      // rejected. Other calls fall through to the unsupported-call error.
+      if (e.fn.kind === "field" && (e.fn.field === "trunc" || e.fn.field === "round") &&
+          e.fn.obj.kind === "var" && e.fn.obj.name === "Math" && e.args.length === 1 &&
+          (isIntegral(e.args[0].ty) || e.args[0].ty.kind === "real")) {
+        const name = `Math.${e.fn.field}`;
+        const arg = e.args[0];
+        if (isBigInt(arg.ty))
+          throw new Error(`${name} does not accept a bigint argument (JavaScript throws TypeError)`);
+        if (e.fn.field === "trunc" && arg.kind === "binop" && arg.op === "/" &&
+            isIntegral(arg.left.ty) && isIntegral(arg.right.ty)) {
+          return { kind: "app", fn: "JSTruncDiv", args: [lowerExpr(arg.left, binds), lowerExpr(arg.right, binds)] };
+        }
+        if (isIntegral(arg.ty)) return lowerExpr(arg, binds);
+        if (_opts.backend !== "dafny")
+          throw new Error("real arithmetic is not supported by the Lean backend (needs noncomputable ℝ / Mathlib).");
+        const x = lowerExpr(arg, binds);
+        if (e.fn.field === "trunc") return { kind: "app", fn: "TruncReal", args: [x] };
+        return {
+          kind: "app", fn: "FloorReal",
+          args: [{ kind: "binop", op: "+", left: x, right: { kind: "num", value: 0.5 } }],
+        };
+      }
+      // Method call: receiver.method(args) → methodCall node
+      if (e.fn.kind === "field") {
+        const recv = lowerExpr(e.fn.obj, binds);
+        let method = e.fn.field;
+        const spec = e.builtinId !== undefined ? builtinSpec(e.builtinId) : null;
+        // Lambda-taking array builtins (registry `hof`, comparator excluded —
+        // mirrors the historical HOF_METHODS set).
+        const isHOF = spec?.hof !== undefined && spec.hof.shape !== "comparator";
+        const args = e.args.map((a, i) => {
+          const lowered = lowerExpr(a, binds);
+          // Lean: a pure fn passed to a HOF by name resolves to the monadic
+          // method; redirect to its pure `Pure.` mirror.
+          if (_opts.backend === "lean" && isHOF &&
+              lowered.kind === "var" && _pureDefNames.has(lowered.name)) {
+            return { kind: "var" as const, name: `Pure.${lowered.name}` };
+          }
+          // Array index args must be nat in Lean: `with`'s index (0), includes/indexOf `from` (1)
+          // — registry `intArgPositions`.
+          const isArrIdxArg = spec?.intArgPositions !== undefined && spec.intArgPositions.includes(i);
+          if (isArrIdxArg && !isNat(a.ty)) return { kind: "toNat" as const, expr: lowered };
+          return lowered;
+        });
+        // arr.concat(...args): each array arg is spread, each value arg appended.
+        if (method === "concat" && e.fn.obj.ty.kind === "array") {
+          let acc = recv;
+          for (let k = 0; k < args.length; k++) {
+            const piece: Expr = e.args[k].ty.kind === "array" ? args[k] : { kind: "arrayLiteral", elems: [args[k]] };
+            acc = { kind: "binop", op: "arrayConcat", left: acc, right: piece };
+          }
+          return acc;
+        }
+        // Spec-context map get: result type is non-optional → direct access
+        if (method === "get" && e.fn.obj.ty.kind === "map" && e.ty.kind !== "optional") {
+          method = "getDirect";
+        }
+        // map.set(k, v): if v is an Optional-wrapped map get, unwrap to getDirect
+        // (the desugared spread { ...m, [k]: m2[k] } becomes m.set(k, m2.get(k)),
+        // but the value should be direct access, not Optional)
+        if (method === "set" && e.fn.obj.ty.kind === "map" && args.length === 2) {
+          const val = args[1];
+          if (val.kind === "methodCall" && val.method === "get" && val.objTy.kind === "map") {
+            args[1] = { ...val, method: "getDirect" };
+          }
+        }
+        // Check if any lambda arg has monadic body
+        const needsMonadic = _opts.monadic && args.some(a => a.kind === "lambda" && isMonadicBody(a.body));
+        const indexed = spec?.hof ? lowerIndexedCallback(recv, e.fn.obj.ty, method, args,
+          spec.hof.shape, needsMonadic, _callbackCounter++) : null;
+        const result: Expr = indexed ?? { kind: "methodCall", obj: recv, objTy: e.fn.obj.ty, method, args, monadic: needsMonadic };
+        // Monadic HOF call is itself monadic — lift via binds like a method call
+        if (_opts.monadic && needsMonadic && binds) {
+          const name = freshName(`_t${_liftCounter++}`);
+          binds.push({ kind: "let-bind", name, value: result });
+          return { kind: "var", name };
+        }
+        return result;
+      }
+      if (e.fn.kind !== "var")
+        throw new Error(`Unsupported call expression: ${e.fn.kind}`);
+      // Synthetic Nullish<T> constructors and widening/narrowing helpers (#304).
+      if (e.fn.name === "NullishValue" && e.args.length === 1) {
+        return { kind: "constructor", name: "nullishValue", type: "Nullish", args: [lowerExpr(e.args[0], binds)] };
+      }
+      if ((e.fn.name === "__optUndefToNullish" || e.fn.name === "__optNullToNullish") && e.args.length === 1) {
+        const bound = matchBinder("value");
+        const noneCtor = e.fn.name === "__optNullToNullish" ? "nullishNull" : "nullishUndefined";
+        return {
+          kind: "match", scrutinee: lowerExpr(e.args[0], binds),
+          arms: [
+            { pattern: pCtor("some", bound), body: { kind: "constructor", name: "nullishValue", type: "Nullish", args: [{ kind: "var", name: bound }] } },
+            { pattern: pCtor("none"), body: { kind: "constructor", name: noneCtor, type: "Nullish", args: [] } },
+          ],
+        };
+      }
+      if (e.fn.name === "__nullishToOption" && e.args.length === 1) {
+        const bound = matchBinder("value");
+        return {
+          kind: "match", scrutinee: lowerExpr(e.args[0], binds),
+          arms: [
+            { pattern: pCtor("nullishValue", bound), body: { kind: "constructor", name: "some", type: "Option", args: [{ kind: "var", name: bound }] } },
+            { pattern: pCtor("nullishNull"), body: { kind: "constructor", name: "none", type: "Option", args: [] } },
+            { pattern: pCtor("nullishUndefined"), body: { kind: "constructor", name: "none", type: "Option", args: [] } },
+          ],
+        };
+      }
+      const prefix = e.callKind === "spec-pure" && _opts.backend === "lean" ? "Pure." : "";
+      const callArgs = e.args.map(a => lowerExpr(a, binds));
+      // Zero-parameter closures are emitted as `fun () => ...` in Lean (`Unit → T`),
+      // so calling one must supply `()`. Top-level 0-arg defs/methods do not carry
+      // a `fn` variable type and stay bare names.
+      if (_opts.backend === "lean" && callArgs.length === 0 && e.fn.ty.kind === "fn" && e.fn.ty.params.length === 0) {
+        callArgs.push({ kind: "var", name: "()" });
+      }
+      return { kind: "app", fn: prefix + e.fn.name, args: callArgs };
+    }
+
+    case "record": {
+      const lowerTypedField = (rawVal: TExpr, declaredTy: Ty | undefined): Expr => {
+        const fieldValue = declaredTy && rawVal.ty.kind === "unknown"
+          ? ({ ...rawVal, ty: declaredTy } as TExpr)
+          : rawVal;
+        let value = lowerExpr(fieldValue, binds);
+        if (declaredTy?.kind === "optional") {
+          const isUndef = rawVal.kind === "var" && (rawVal.name === "undefined" || rawVal.name === "null");
+          if (rawVal.ty.kind !== "optional" && !isUndef) {
+            value = { kind: "app", fn: "Some", args: [value] };
+          }
+        } else if (declaredTy?.kind === "nullish") {
+          value = wrapNullishBranch(value, rawVal);
+        }
+        return value;
+      };
+      const buildVariantCtor = (
+        variantName: string,
+        tyName: string,
+        baseName: string,
+        variant: VariantInfo,
+        resolveArg: (vf: { name: string; type?: Ty }) => Expr,
+      ): Expr => {
+        // Bare-constructor shortcut only when the variant truly has no fields —
+        // a variant with only optional fields still needs its argument list.
+        if (variant.fields.length === 0) {
+          return { kind: "constructor", name: variantName, type: tyName, args: [] };
+        }
+        // Constructor with args: match variant field order. Emit a bare `app`
+        // (Dafny renders `variantName(args)`) tagged with `ctorOf` so Lean
+        // qualifies it as `BaseType.variantName args` (using the base name).
+        return { kind: "app", fn: variantName, args: variant.fields.map(resolveArg), ctorOf: baseName };
+      };
+
+      // Discriminated union: { kind: 'NoOp' } → constructor NoOp
+      if (e.ty.kind === "user" && !e.spread) {
+        const tyName = e.ty.name;
+        // Match base type name (strip generic args: "Result<Model, Err>" → "Result")
+        const baseName = tyBaseName(tyName);
+        const decl = declOfKind(_typeDecls, baseName, "discriminated-union", "string-union");
+        if (decl && decl.discriminant) {
+          const discField = e.fields.find(f => f.name === decl.discriminant);
+          if (discField && (discField.value.kind === "str" || discField.value.kind === "bool")) {
+            const variantName = String(discField.value.value);
+            const variant = decl.variants?.find(v => v.name === variantName);
+            if (variant) {
+              const nonDiscFields = e.fields.filter(f => f.name !== decl.discriminant);
+              return buildVariantCtor(variantName, tyName, baseName, variant, vf => {
+                const ef = nonDiscFields.find(f => f.name === vf.name);
+                if (ef) return lowerExpr(ef.value, binds);
+                if (vf.type?.kind === "nullish") {
+                  return { kind: "constructor" as const, name: "nullishUndefined", type: "Nullish", args: [] };
+                }
+                return { kind: "var" as const, name: "None" };
+              });
+            }
+          }
+        }
+      }
+      // For spread records, propagate declared field types and wrap optionals
+      if (e.spread) {
+        const spreadTy = e.spread.ty.kind === "optional" ? e.spread.ty.inner : e.spread.ty;
+        const structName = spreadTy.kind === "user" ? spreadTy.name : undefined;
+        const baseName = structName ? tyBaseName(structName) : undefined;
+        const structDecl = baseName ? declOfKind(_typeDecls, baseName, "record") : undefined;
+        // Also check discriminated-union variants for field types
+        const unionDecl = baseName ? declOfKind(_typeDecls, baseName, "discriminated-union") : undefined;
+        // Tag-overriding spread on a discriminated union (`{ ...sh, kind: "b", ... }`):
+        // once a spread explicitly overrides the discriminant, ordinary field update
+        // is the wrong operation (it can silently write a colliding renamed payload
+        // destructor such as `value_a` and preserve the old constructor). Either
+        // construct the target variant faithfully or reject with a diagnostic.
+        if (unionDecl?.discriminant) {
+          const discField = e.fields.find(f => f.name === unionDecl.discriminant);
+          if (discField) {
+            if (discField.value.kind !== "str" && discField.value.kind !== "bool") {
+              throw new Error(
+                `spread on '${unionDecl.name}' must set '${unionDecl.discriminant}' to a literal tag`,
+              );
+            }
+            const variantName = String(discField.value.value);
+            const targetVariant = unionDecl.variants?.find(v => v.name === variantName);
+            if (!targetVariant) {
+              throw new Error(
+                `unknown '${unionDecl.name}' variant '${variantName}' in spread`,
+              );
+            }
+            const sourceVariant = e.spreadOfVariant
+              ? unionDecl.variants?.find(v => v.name === e.spreadOfVariant)
+              : undefined;
+            const possibleSources = sourceVariant ? [sourceVariant] : (unionDecl.variants ?? []);
+            const spreadExpr = lowerExpr(e.spread, binds);
+            const overriddenByName = new Map<string, Expr>();
+            for (const f of e.fields) {
+              if (f.name === unionDecl.discriminant) continue;
+              const declaredTy = targetVariant.fields.find(vf => vf.name === f.name)?.type;
+              overriddenByName.set(f.name, lowerTypedField(f.value, declaredTy));
+            }
+            return buildVariantCtor(variantName, structName!, baseName!, targetVariant, vf => {
+              const explicit = overriddenByName.get(vf.name);
+              if (explicit !== undefined) return explicit;
+              for (const sv of possibleSources) {
+                const sf = sv.fields.find(f => f.name === vf.name);
+                if (!sf?.type || !vf.type || !tyEqual(sf.type, vf.type)) {
+                  throw new Error(
+                    `cannot change '${unionDecl.name}' from '${sv.name}' to '${variantName}' via spread: pass '${vf.name}' explicitly`,
+                  );
+                }
+              }
+              return {
+                kind: "field" as const,
+                obj: spreadExpr,
+                field: vf.name,
+                fromUnion: baseName,
+                ctor: sourceVariant?.name,
+                datatypeField: true,
+              };
+            });
+          }
+        }
+        const pinnedVariant = unionDecl && e.ofVariant
+          ? unionDecl.variants?.find(v => v.name === e.ofVariant)
+          : undefined;
+        // Un-narrowed union spread where an overridden field has differing types
+        // across variants (e.g. `a.value: number` vs `b.value: number | undefined`):
+        // expand to a per-variant `match` so each constructor receives the right
+        // coercion (`5` vs `Some(5)`) and destructor in both Dafny and Lean.
+        if (unionDecl?.variants && !pinnedVariant) {
+          const hasMixedField = e.fields.some(f => {
+            const tys = unionDecl.variants!
+              .map(v => v.fields.find(vf => vf.name === f.name)?.type)
+              .filter((t): t is Ty => t !== undefined);
+            return tys.length > 1 && tys.some(t => !tyEqual(t, tys[0]!));
+          });
+          if (hasMixedField) {
+            const spreadExpr = lowerExpr(e.spread, binds);
+            const baseFieldExprs = new Map(e.fields.map(f => [f.name, lowerExpr(f.value, binds)]));
+            const rawFieldByName = new Map(e.fields.map(f => [f.name, f.value]));
+            const arms = unionDecl.variants.map(v => {
+              const binders: string[] = [];
+              const fieldExprs = new Map<string, Expr>();
+              v.fields.forEach((vf, idx) => {
+                const rawVal = rawFieldByName.get(vf.name);
+                if (rawVal !== undefined) {
+                  binders.push("_");
+                  let val = baseFieldExprs.get(vf.name)!;
+                  if (vf.type?.kind === "optional") {
+                    const isUndef = rawVal.kind === "var" && (rawVal.name === "undefined" || rawVal.name === "null");
+                    if (rawVal.ty.kind !== "optional" && !isUndef) {
+                      val = { kind: "app", fn: "Some", args: [val] };
+                    }
+                  } else if (vf.type?.kind === "nullish") {
+                    val = wrapNullishBranch(val, rawVal);
+                  }
+                  fieldExprs.set(vf.name, val);
+                } else {
+                  const bv = freshName(`_sp${idx}`);
+                  binders.push(bv);
+                  fieldExprs.set(vf.name, { kind: "var", name: bv });
+                }
+              });
+              const body = buildVariantCtor(v.name, structName!, baseName!, v, vf => fieldExprs.get(vf.name)!);
+              return { pattern: { kind: "ctor" as const, ctor: v.name, binders }, body };
+            });
+            return { kind: "match", scrutinee: spreadExpr, arms };
+          }
+        }
+        const loweredFields = e.fields.map(f => {
+          const fieldDecl = structDecl?.fields?.find(sf => sf.name === f.name);
+          let declaredTy: Ty | undefined;
+          if (fieldDecl) {
+            declaredTy = fieldDecl.type;
+          } else if (pinnedVariant) {
+            declaredTy = pinnedVariant.fields.find(vf => vf.name === f.name)?.type;
+          } else if (unionDecl?.variants) {
+            for (const v of unionDecl.variants) {
+              const vf = v.fields.find(vf => vf.name === f.name);
+              if (vf) { declaredTy = vf.type; break; }
+            }
+          }
+          return { name: f.name, value: lowerTypedField(f.value, declaredTy) };
+        });
+        return {
+          kind: "record",
+          spread: lowerExpr(e.spread, binds),
+          fields: loweredFields,
+          ...(unionDecl && baseName ? { ctor: e.ofVariant, ctorOf: baseName } : {}),
+        };
+      }
+      // Empty record with map type → empty map
+      if (e.fields.length === 0 && !e.spread && e.ty.kind === "map") {
+        return { kind: "emptyMap" };
+      }
+      // Non-empty record literal with map type — emit as a flat Dafny map
+      // literal `map[k1 := v1, k2 := v2, ...]`. (A chain of `m["k" := v]`
+      // works for a handful of entries but Dafny's type resolver stack-
+      // overflows on hundreds; the flat form is fine at any size.)
+      if (e.fields.length > 0 && !e.spread && e.ty.kind === "map") {
+        return {
+          kind: "mapLiteral",
+          entries: e.fields.map(f => ({
+            key: { kind: "str" as const, value: f.name },
+            value: lowerExpr(f.value, binds),
+          })),
+        };
+      }
+      // Carry the resolved record type so the emitter can pick the right
+      // constructor when two datatypes share a field-name set (Event vs
+      // SparseEvent) — structural matching alone would take the first-declared.
+      const recName = e.ty.kind === "user" ? tyBaseName(e.ty.name) : undefined;
+      const ctor = recName && declOfKind(_typeDecls, recName, "record") ? recName : undefined;
+      return { kind: "record", spread: null, ctor, fields: e.fields.map(f => ({ name: f.name, value: lowerExpr(f.value, binds) })) };
+    }
+
+    case "arrayLiteral":
+      if (e.ty.kind === "map" && e.elems.length === 0) return { kind: "emptyMap" };
+      if (e.ty.kind === "set" && e.elems.length === 0) return { kind: "emptySet" };
+      // Set with initial elements: new Set([a, b]) → {a, b}
+      if (e.ty.kind === "set") return { kind: "app", fn: "SetLiteral", args: e.elems.map(el => lowerExpr(el, binds)) };
+      if (e.ty.kind === "tuple") return { kind: "tupleLiteral", elems: e.elems.map(el => lowerExpr(el, binds)) };
+      return { kind: "arrayLiteral", elems: e.elems.map(el => lowerExpr(el, binds)) };
+
+    case "lambda": {
+      if (e.params.some(p => p.rest || p.defaultValue)) {
+        throw new Error("lambda rest/default bindings require a known callback argument list");
+      }
+      // Pass the module typeDecls (not []), so type lookups inside the lambda
+      // body — e.g. a `switch`'s variant fields — resolve. A bare `[]` left a
+      // discriminated-union switch in a lambda with binderless patterns.
+      const body = transformStmts(e.body, _typeDecls);
+      // Flatten an if/let/return-shaped multi-statement body into a single
+      // `return <expr>` so both backends' single-return-lambda fast path emits
+      // it (Dafny lambdas are expression-only; Lean prefers the expression form
+      // over a `do` block). Bodies with shapes we can't reduce (loops, bare
+      // side effects) are left as-is.
+      const flat = flattenLambdaBody(body);
+      return {
+        kind: "lambda",
+        params: e.params.map(p => ({ name: p.name, type: p.ty })),
+        body: flat === null ? body : [{ kind: "return", value: flat }],
+      };
+    }
+
+    case "forall":
+      return { kind: "forall", var: e.var, type: e.varTy, body: transformExpr(e.body) };
+
+    case "exists":
+      return { kind: "exists", var: e.var, type: e.varTy, body: transformExpr(e.body) };
+
+    case "conditional": {
+      // JS truthiness coercion (string/array/int → ... > 0).  Matches SPEC §3.1
+      // negation forms (`!s` → `s == ""`).  Optional conds are already
+      // rewritten to someMatch by narrow.ts.
+      const cond = lowerExpr(asCondition(e.cond), binds);
+      const thenBinds: Stmt[] | null = binds ? [] : null;
+      const elseBinds: Stmt[] | null = binds ? [] : null;
+      let thenExpr = lowerExpr(e.then, thenBinds);
+      let elseExpr = lowerExpr(e.else, elseBinds);
+      if (e.ty.kind === "optional") {
+        thenExpr = wrapOptionalBranch(thenExpr, e.then);
+        elseExpr = wrapOptionalBranch(elseExpr, e.else);
+      } else if (e.ty.kind === "nullish") {
+        thenExpr = wrapNullishBranch(thenExpr, e.then);
+        elseExpr = wrapNullishBranch(elseExpr, e.else);
+      }
+      if (binds && (thenBinds?.length || elseBinds?.length)) {
+        const name = freshName(`_branch${_branchCounter++}`);
+        // Both arms assign before the result is read. This initializer is not
+        // observable and supplies no assumption about the selected result.
+        binds.push({ kind: "let", name, type: e.ty, mutable: true,
+          value: { kind: _opts.backend === "dafny" ? "havoc" : "default", type: e.ty } });
+        binds.push({ kind: "if", cond,
+          then: [...(thenBinds ?? []), { kind: "assign", target: name, value: thenExpr }],
+          else: [...(elseBinds ?? []), { kind: "assign", target: name, value: elseExpr }] });
+        return { kind: "var", name };
+      }
+      return { kind: "if", cond, then: thenExpr, else: elseExpr };
+    }
+
+    case "optChain": {
+      if (e.obj.ty.kind === "nullish") {
+        const scrutinee = lowerExpr(e.obj, binds);
+        const binder = freshName(`_oc${_liftCounter++}_val`);
+        let bodyT: TExpr = { kind: "var", name: binder, ty: e.obj.ty.inner };
+        for (const step of e.chain) {
+          if (step.kind === "field") bodyT = { kind: "field", obj: bodyT, field: step.name, ty: step.ty };
+          else if (step.kind === "index") bodyT = { kind: "index", obj: bodyT, idx: step.idx, ty: step.ty };
+          else bodyT = { kind: "call", fn: bodyT, args: step.args, ty: step.ty, callKind: step.callKind,
+            ...(step.builtinId ? { builtinId: step.builtinId } : {}) };
+        }
+        let valBody = lowerExpr(bodyT, binds);
+        let absentBody: Expr;
+        if (e.ty.kind === "nullish") {
+          valBody = wrapNullishBranch(valBody, bodyT);
+          absentBody = { kind: "constructor", name: "nullishUndefined", type: "Nullish", args: [] };
+        } else {
+          valBody = wrapOptionalBranch(valBody, bodyT);
+          absentBody = { kind: "constructor", name: "none", type: "Option", args: [] };
+        }
+        return {
+          kind: "match", scrutinee,
+          arms: [
+            { pattern: pCtor("nullishValue", binder), body: valBody },
+            { pattern: pCtor("nullishNull"), body: absentBody },
+            { pattern: pCtor("nullishUndefined"), body: absentBody },
+          ],
+        };
+      }
+      // Narrow should have rewritten non-nullish optChain to someMatch.
+      throw new Error(`optChain reached transform — narrow should have rewritten it: ${JSON.stringify(e).slice(0, 400)}`);
+    }
+
+    case "nullish": {
+      if (e.left.ty.kind === "nullish") {
+        const scrutinee = lowerExpr(e.left, binds);
+        const binder = freshName(`_oc${_liftCounter++}_val`);
+        const rawBinder: TExpr = { kind: "var", name: binder, ty: e.left.ty.inner };
+        let valBody: Expr = { kind: "var", name: binder };
+        let rightBody = lowerExpr(e.right, binds);
+        if (e.ty.kind === "optional") {
+          valBody = wrapOptionalBranch(valBody, rawBinder);
+          rightBody = wrapOptionalBranch(rightBody, e.right);
+        } else if (e.ty.kind === "nullish") {
+          valBody = wrapNullishBranch(valBody, rawBinder);
+          rightBody = wrapNullishBranch(rightBody, e.right);
+        }
+        return {
+          kind: "match", scrutinee,
+          arms: [
+            { pattern: pCtor("nullishValue", binder), body: valBody },
+            { pattern: pCtor("nullishNull"), body: rightBody },
+            { pattern: pCtor("nullishUndefined"), body: rightBody },
+          ],
+        };
+      }
+      // Narrow should have rewritten non-nullish ?? to someMatch.
+      throw new Error(`nullish reached transform — narrow should have rewritten it: ${JSON.stringify(e).slice(0, 300)}`);
+    }
+
+    case "havoc":
+      // Dafny's * only works in var/assign positions — lift to own declaration
+      if (binds) {
+        const name = freshName(`_t${_liftCounter++}`);
+        binds.push({ kind: "let", name, type: e.ty, mutable: false, value: { kind: "havoc", type: e.ty } });
+        return { kind: "var", name };
+      }
+      return { kind: "havoc", type: e.ty };
+
+    case "checkedUnwrap":
+      return { kind: "checkedUnwrap", expr: lowerExpr(e.expr, binds) };
+
+    case "someMatch": {
+      let someBody: Expr;
+      let scrutinee: Expr | string;
+      const path = asTAccessPath(e.scrutinee);
+      if (path) {
+        // Pure access path (var or any depth of obj.f.g.h) — substitute the
+        // path with the binder pre-lowering.
+        const replaced = replacePathInTExpr(e.someBody, path, e.binder, e.binderTy);
+        someBody = lowerExpr(replaced, binds);
+        // Bare-var shortcut, but route \result through lowerExpr so the
+        // lemma-side replaceVar pass can substitute it with the function call.
+        scrutinee = path.fields.length === 0 && path.rootVar !== "\\result"
+          ? varE(path.rootVar)
+          : lowerExpr(e.scrutinee, binds);
+      } else {
+        // Complex scrutinee — narrow pre-bound the someBody to use the binder directly,
+        // so no substitution needed. Used by optChain rewrites.
+        someBody = lowerExpr(e.someBody, binds);
+        scrutinee = lowerExpr(e.scrutinee, binds);
+      }
+      let noneBody = lowerExpr(e.noneBody, binds);
+      if (e.ty.kind === "optional") {
+        someBody = wrapOptionalBranch(someBody, e.someBody);
+        noneBody = wrapOptionalBranch(noneBody, e.noneBody);
+      } else if (e.ty.kind === "nullish") {
+        someBody = wrapNullishBranch(someBody, e.someBody);
+        noneBody = wrapNullishBranch(noneBody, e.noneBody);
+      }
+      return {
+        kind: "match", scrutinee,
+        arms: [
+          { pattern: pCtor("some", e.binder), body: someBody },
+          { pattern: pCtor("none"), body: noneBody },
+        ],
+      };
+    }
+
+    case "tagMatch": {
+      // Expression-form tagMatch — emitted by `ruleImplArrayIsArray` for spec
+      // implications like `Array.isArray(x) ==> B` and by
+      // `ruleConditionalArrayIsArray` for ternary narrowing. Substitutes
+      // scrutinee field accesses and (for synth array-unions) scrutinee
+      // path occurrences inside each arm with the variant's payload binder.
+      // Path scrutinees (e.g. `m.content`) get a synthesized hint derived
+      // from the last field/var name so the binder reads naturally.
+      const scrutinee = lowerExpr(e.scrutinee, binds);
+      const decl = declOf(_typeDecls, e.typeName);
+      const isSynthArrayUnion = decl?.discriminant === "__isArray__";
+      const varName = e.scrutinee.kind === "var" ? e.scrutinee.name : undefined;
+      const pathHint = varName ?? scrutineeHint(e.scrutinee);
+      const wrapOpt = e.ty.kind === "optional";
+      const wrapNullish = e.ty.kind === "nullish";
+      const lowered = e.cases.map(c => lowerExpr(c.body, binds));
+      const loweredFallthrough = e.fallthrough ? lowerExpr(e.fallthrough, binds) : null;
+      // The arms may already read a binder minted for an enclosing narrowing
+      // with the same hint (`u` and `m.u` both give `_u_arr`). Prime this
+      // match's binders past those names so the arm does not capture them.
+      const read = new Set<string>();
+      for (const b of [...lowered, ...(loweredFallthrough ? [loweredFallthrough] : [])])
+        anyExpr(b, x => { if (x.kind === "var") read.add(x.name); return false; });
+      const taken = (n: string) => read.has(n);
+      const arms: MatchArm[] = e.cases.map((c, i) => {
+        const variant = decl?.variants?.find(v => v.name === c.variant);
+        const fields = variant?.fields ?? [];
+        let body = lowered[i];
+        if (varName && fields.length > 0) {
+          body = replaceFieldAccess(body, varName, fields, c.variant, tyBaseName(e.typeName), taken);
+          if (isSynthArrayUnion && fields.length === 1) {
+            body = replaceVarInExpr(body, varName, matchBinder(fields[0].name, varName, taken));
+          }
+        } else if (!varName && isSynthArrayUnion && fields.length === 1) {
+          // Path scrutinee (e.g. `m.content`): replace both projected
+          // `m.content.arr` (inserted by checked-reads) and bare `m.content`
+          // with the binder var ref.
+          const binderName = matchBinder(fields[0].name, pathHint, taken);
+          const projectedField: Expr = { kind: "field", obj: scrutinee, field: fields[0].name };
+          body = replaceExprInExpr(body, projectedField, { kind: "var", name: binderName });
+          body = replaceExprInExpr(body, scrutinee, { kind: "var", name: binderName });
+        }
+        if (wrapOpt) body = wrapOptionalBranch(body, c.body);
+        else if (wrapNullish) body = wrapNullishBranch(body, c.body);
+        return { pattern: buildMatchPattern(c.variant, fields, pathHint, taken), body };
+      });
+      if (e.fallthrough && loweredFallthrough) {
+        let body = loweredFallthrough;
+        if (wrapOpt) body = wrapOptionalBranch(body, e.fallthrough);
+        else if (wrapNullish) body = wrapNullishBranch(body, e.fallthrough);
+        arms.push({ pattern: pWild(), body });
+      }
+      return { kind: "match", scrutinee: varName !== undefined ? varE(varName) : scrutinee, arms };
+    }
+  }
+}
+
+function flattenImpl(e: TExpr): { premises: TExpr[]; conclusion: TExpr } {
+  if (e.kind === "binop" && e.op === "==>") {
+    const lhs = splitConj(e.left);
+    const rest = flattenImpl(e.right);
+    return { premises: [...lhs, ...rest.premises], conclusion: rest.conclusion };
+  }
+  return { premises: [], conclusion: e };
+}
+
+function splitConj(e: TExpr): TExpr[] {
+  if (e.kind === "binop" && e.op === "&&") return [...splitConj(e.left), ...splitConj(e.right)];
+  return [e];
+}
+
+// ── Ensures-to-match for discriminated unions ────────────────
+
+function ensuresToMatch(e: TExpr, typeDecls: TypeDeclInfo[]): Expr | null {
+  if (e.kind !== "binop" || e.op !== "==>") return null;
+  if (e.left.kind !== "binop" || e.left.op !== "===") return null;
+  if (e.left.left.kind !== "field" || !e.left.left.isDiscriminant || e.left.right.kind !== "str") return null;
+
+  const obj = e.left.left.obj;
+  if (obj.kind !== "var" || obj.ty.kind !== "user") return null;
+  const typeName = obj.ty.name;
+  const decl = declOfKind(typeDecls, typeName, "discriminated-union");
+  if (!decl) return null;
+
+  const variantName = e.left.right.value;
+  const variant = decl.variants?.find(v => v.name === variantName);
+  if (!variant) return null;
+
+  const fields = variant.fields;
+  const pattern = buildMatchPattern(variantName, fields, obj.name);
+
+  let rhs = transformExpr(e.right);
+  rhs = replaceFieldAccess(rhs, obj.name, fields);
+
+  return { kind: "match", scrutinee: varE(obj.name), arms: [{ pattern, body: rhs }, { pattern: pWild(), body: { kind: "bool", value: true } }] };
+}
+
+/** Substitution into a nested `match` that is capture-avoiding. An arm whose
+ *  pattern rebinds `oldName` keeps its body. An arm that binds one of the
+ *  `introduced` names, while its body still reads `oldName`, has that binder
+ *  renamed to a fresh name first. Without the rename, the substituted
+ *  reference would resolve to the inner binder instead of the outer one. */
+function substIntoMatch(x: Expr & { kind: "match" }, oldName: string, introduced: string[],
+                        sub: (e: Expr) => Expr): Expr {
+  return { ...x, scrutinee: sub(x.scrutinee), arms: x.arms.map(a => {
+    if (patternBinders(a.pattern).includes(oldName)) return a;
+    const readsOld = anyExpr(a.body, y => y.kind === "var" && y.name === oldName);
+    if (!readsOld || a.pattern.kind !== "ctor") return { ...a, body: sub(a.body) };
+    const binders = [...a.pattern.binders];
+    let body = a.body;
+    for (let i = 0; i < binders.length; i++) {
+      const b = binders[i];
+      if (!introduced.includes(b)) continue;
+      const fresh = freshNameWhere(b, n => isUserName(n) || introduced.includes(n) || binders.includes(n) ||
+        anyExpr(body, y => y.kind === "var" && y.name === n));
+      binders[i] = fresh;
+      body = renameFreeVar(body, b, fresh);
+    }
+    const pattern: MatchPattern = { ...a.pattern, binders };
+    return { ...a, pattern, body: sub(body) };
+  }) };
+}
+
+function replaceFieldAccess(e: Expr, varName: string, fields: { name: string; tsType: string }[], ctorName?: string, ctorOf?: string,
+                            taken?: (name: string) => boolean): Expr {
+  const introduced = fields.map(f => matchBinder(f.name, varName, taken));
+  const fn = (x: Expr): Expr | null => {
+    if (x.kind === "lambda") return mapLambdaBody(x, varName, fn);
+    if ((x.kind === "forall" || x.kind === "exists") && x.var === varName) return x;
+    if (x.kind === "match") {
+      return substIntoMatch(x, varName, introduced, y => replaceFieldAccess(y, varName, fields, ctorName, ctorOf, taken));
+    }
+    const objMatches = x.kind === "field" && (
+      (x.obj.kind === "var" && x.obj.name === varName) ||
+      (x.obj.kind === "checkedUnwrap" && x.obj.expr.kind === "var" && x.obj.expr.name === varName)
+    );
+    if (objMatches && x.kind === "field") {
+      const f = fields.find(f => f.name === x.field);
+      if (f) return { kind: "var", name: matchBinder(f.name, varName, taken) };
+    }
+    // Datatype update of the scrutinee (`{ ...vn, f: v }`): the arm knows the
+    // variant, so stamp it — emitters need it for per-constructor destructor
+    // names. Recurse manually (returning a node stops mapExpr's own descent).
+    if (ctorName && x.kind === "record" && !x.ctor && x.spread &&
+        x.spread.kind === "var" && x.spread.name === varName) {
+      return { ...x, ctor: ctorName, ctorOf,
+        fields: x.fields.map(f => ({ ...f, value: replaceFieldAccess(f.value, varName, fields, ctorName, ctorOf, taken) })) };
+    }
+    // If this let shadows the matched variable, stop replacing in the body
+    if (x.kind === "let" && x.name === varName) return { ...x, value: replaceFieldAccess(x.value, varName, fields, ctorName, ctorOf, taken) };
+    return null;
+  };
+  return mapExpr(e, fn);
+}
+
+/** Replace bare `var(oldName)` references → `var(newName)` in lowered IR.
+ *  Used inside synth array-union match arms: the user code refers to the
+ *  scrutinee by its bare name (`content`), but in the arm body that name
+ *  must refer to the variant's sole payload binder (`i_content_arr`). */
+function replaceVarInExpr(e: Expr, oldName: string, newName: string): Expr {
+  const fn = (x: Expr): Expr | null => {
+    if (x.kind === "var" && x.name === oldName) return { kind: "var", name: newName };
+    if (x.kind === "match") return substIntoMatch(x, oldName, [newName], y => replaceVarInExpr(y, oldName, newName));
+    if (x.kind === "lambda") return mapLambdaBody(x, oldName, fn);
+    // If a binding shadows the name, stop substituting inside its body.
+    if (x.kind === "let" && x.name === oldName) return { ...x, value: replaceVarInExpr(x.value, oldName, newName) };
+    if ((x.kind === "forall" || x.kind === "exists") && x.var === oldName) return x;
+    return null;
+  };
+  return mapExpr(e, fn);
+}
+
+/** Structural equality on Expr access-paths (var / field chain). Enough to
+ *  match the scrutinee `m.content` against later occurrences in a match arm. */
+function exprPathEqual(a: Expr, b: Expr): boolean {
+  if (a.kind !== b.kind) return false;
+  if (a.kind === "var" && b.kind === "var") return a.name === b.name;
+  if (a.kind === "field" && b.kind === "field") return a.field === b.field && exprPathEqual(a.obj, b.obj);
+  return false;
+}
+
+/** Extract the root variable name of an access-path Expr (e.g. `m.u` → `m`). */
+function exprPathRoot(e: Expr): string | null {
+  let cur = e;
+  while (cur.kind === "field") cur = cur.obj;
+  return cur.kind === "var" ? cur.name : null;
+}
+
+/** Substitute every occurrence of `target` (an access-path Expr) with `repl`
+ *  inside `e`. Mirror of `replaceVarInExpr` but keyed on a sub-path rather
+ *  than a bare name — needed when the narrowing scrutinee is `m.content`
+ *  (field access) rather than a bare `content` (var). */
+function replaceExprInExpr(e: Expr, target: Expr, repl: Expr): Expr {
+  const root = exprPathRoot(target);
+  const introduced = repl.kind === "var" ? [repl.name] : [];
+  const fn = (x: Expr): Expr | null => {
+    if (exprPathEqual(x, target)) return repl;
+    if (root) {
+      if (x.kind === "match") return substIntoMatch(x, root, introduced, y => replaceExprInExpr(y, target, repl));
+      if (x.kind === "lambda") return mapLambdaBody(x, root, fn);
+      if (x.kind === "let" && x.name === root) return { ...x, value: replaceExprInExpr(x.value, target, repl) };
+      if ((x.kind === "forall" || x.kind === "exists") && x.var === root) return x;
+    }
+    return null;
+  };
+  return mapExpr(e, fn);
+}
+
+/** Extract a short reader-friendly hint for a TExpr access-path: the last
+ *  field name in a field chain, or the var name. Used to derive a stable
+ *  binder prefix when the scrutinee isn't a bare var. */
+function scrutineeHint(e: TExpr): string {
+  if (e.kind === "var") return e.name;
+  if (e.kind === "field") return e.field;
+  return "x";
+}
+
+// ── Transform statements ─────────────────────────────────────
+
+// `if (X) continue; rest` → `if (!X) { rest }` at the top of a loop body.
+// Dafny's lowered while-loops have the index increment at the bottom, so a
+// `continue` would skip it and loop forever; rewriting to if/else lets the
+// loop fall through normally. The operand is already-lowered IR, where
+// negation is spelled `¬` (lowerExpr rewrites `!`).
+function negateExpr(e: Expr): Expr {
+  if (e.kind === "unop" && e.op === "¬") return e.expr;
+  return { kind: "unop", op: "¬", expr: e };
+}
+
+/** Lower an array `.pop()` or `.shift()` call on any writable Place receiver
+ *  into `{ method, result, writeStmts }`:
+ *  - `result` reads the removed element from the original receiver,
+ *  - `writeStmts` writes the shortened array
+ *    back through the original receiver Place + enclosing `someMatch` frames.
+ *  A consumed nonoptional result reads an element directly, already requiring
+ *  nonemptiness. Optional or discarded results still need an empty-array guard.
+ *  Value callers evaluate `result` before `writeStmts` and only assign to the
+ *  destination afterward so `t = t.children.shift()!` mutates the original `t`. */
+function lowerArrayPopOrShift(e: TExpr, usage: "value" | "discard"): { method: "pop" | "shift"; result: Expr; writeStmts: Stmt[] } | null {
+  if (e.kind !== "call" || e.fn.kind !== "field" || e.fn.obj.ty.kind !== "array") return null;
+  const method = e.fn.field;
+  if (method !== "pop" && method !== "shift") return null;
+  const obj = e.fn.obj;
+  const arrExpr = lowerExpr(obj, null);
+  const arrLen: Expr = { kind: "field", obj: arrExpr, field: "size" };
+  const isNonEmpty: Expr = { kind: "binop", op: ">", left: arrLen, right: { kind: "num", value: 0 } };
+  const index: Expr = method === "pop"
+    ? { kind: "binop", op: "-", left: arrLen, right: { kind: "num", value: 1 } }
+    : { kind: "num", value: 0 };
+  const elemValue: Expr = { kind: "index", arr: arrExpr, idx: index };
+  const isOptResult = e.ty.kind === "optional" || e.ty.kind === "nullish";
+  const result: Expr = isOptResult
+    ? { kind: "if", cond: isNonEmpty, then: { kind: "app", fn: "Some", args: [elemValue] }, else: { kind: "var", name: "undefined" } }
+    : elemValue;
+  const truncated: Expr = { kind: "methodCall", obj: arrExpr, objTy: obj.ty, method: "slice",
+    args: method === "pop" ? [{ kind: "num", value: 0 }, index] : [{ kind: "num", value: 1 }], monadic: false };
+  const needsEmptyGuard = usage === "discard" || isOptResult;
+  const nextArr: Expr = needsEmptyGuard
+    ? { kind: "if", cond: isNonEmpty, then: truncated, else: arrExpr }
+    : truncated;
+  const write = buildPlaceWrite(obj, nextArr);
+  if (!write) return null;
+  return {
+    method,
+    result,
+    writeStmts: [
+      { kind: "assign", target: write.target, value: write.value },
+      ...emitWriteBacksForTarget(write.target, _writeBackFrames),
+    ],
+  };
+}
+/**
+ * Velvet (Lean backend) rejects `return` inside a loop. For a function shaped as
+ * `…; while (…) { … early returns … }; return fallthrough`, hoist a mutable
+ * result variable: each in-loop `return e` becomes `_loopRet := e; break`, then
+ * `return _loopRet` after the loop. The trailing fallthrough return seeds
+ * `_loopRet`, so a normal loop exit returns it unchanged. Dafny is untouched —
+ * it keeps the native early returns.
+ */
+function stmtsContainReturn(stmts: Stmt[]): boolean {
+  for (const s of stmts) {
+    if (s.kind === "return") return true;
+    if (s.kind === "if" && (stmtsContainReturn(s.then) || stmtsContainReturn(s.else))) return true;
+    if (s.kind === "match" && s.arms.some(a => stmtsContainReturn(a.body))) return true;
+    // Don't descend into a nested while — its returns would target that loop.
+  }
+  return false;
+}
+
+function replaceReturnsWithBreak(stmts: Stmt[], retVar: string): Stmt[] {
+  return stmts.flatMap((s): Stmt[] => {
+    if (s.kind === "return") return [{ kind: "assign", target: retVar, value: s.value }, { kind: "break" }];
+    if (s.kind === "if") return [{ ...s, then: replaceReturnsWithBreak(s.then, retVar), else: replaceReturnsWithBreak(s.else, retVar) }];
+    if (s.kind === "match") return [{ ...s, arms: s.arms.map(a => ({ ...a, body: replaceReturnsWithBreak(a.body, retVar) })) }];
+    return [s];
+  });
+}
+
+// Seed value for `_loopRet` when a return-in-loop function has no trailing
+// fallthrough return. Readable literals for the primitives; everything else
+// (user types, arrays, maps, optionals) gets a typed `default : T` rather than a
+// type-incorrect `0` — these types derive `Inhabited`, so the default exists.
+function defaultExprForTy(ty: Ty): Expr {
+  switch (ty.kind) {
+    case "bool": return { kind: "bool", value: false };
+    case "string": return { kind: "str", value: "" };
+    case "nat": case "int": case "real": return { kind: "num", value: 0 };
+    default: return { kind: "default", type: ty };
+  }
+}
+
+function eliminateReturnInLoops(stmts: Stmt[], retTy: Ty, resultInvariants: Expr[]): Stmt[] {
+  const out: Stmt[] = [];
+  for (let i = 0; i < stmts.length; i++) {
+    const s = stmts[i];
+    if (s.kind === "while" && stmtsContainReturn(s.body)) {
+      const retVar = "_loopRet";
+      const next = stmts[i + 1];
+      const init: Expr = next && next.kind === "return" ? next.value : defaultExprForTy(retTy);
+      out.push({ kind: "let", name: retVar, type: retTy, mutable: true, value: init });
+      // The result variable carries the postcondition (the function's `ensures`
+      // with `\result` → `_loopRet`) as a loop invariant: it holds initially (the
+      // fallthrough seed) and after each `_loopRet := e; break`, so the
+      // postcondition is re-established from the invariant when the loop exits.
+      // Where Dafny discharged the postcondition at each `return` site, the
+      // break-rewrite discharges it once, after the loop.
+      out.push({ ...s, invariants: [...s.invariants, ...resultInvariants], body: replaceReturnsWithBreak(s.body, retVar) });
+      out.push({ kind: "return", value: { kind: "var", name: retVar } });
+      if (next && next.kind === "return") i++; // consume the seeded fallthrough return
+    } else {
+      out.push(s);
+    }
+  }
+  return out;
+}
+
+/** True if `name` is referenced as a variable anywhere in `stmts`. Conservative:
+ *  counts every occurrence and ignores shadowing — a spurious hit only costs an
+ *  unused `let`, whereas a miss would leave a binder unbound. */
+function stmtsUseVar(stmts: Stmt[], name: string): boolean {
+  return anyExprInStmts(stmts, e => e.kind === "var" && e.name === name);
+}
+
+/**
+ * Velvet (Lean backend) cannot synthesize a `WPGen` for a monadic statement
+ * `match` on a user inductive in a method body (loom's matcher-WPGen drops a
+ * `sorry`). loom *can* handle method-body `if`s (cf. examples/arrayEquals), so
+ * lower such matches to discriminator `if`-chains: `match x with | .C f.. => B`
+ * becomes `if x.C? then (let f := x.f-destructor; B) else …`. Constructor field
+ * binders become `let`s bound to the (already-supported) union destructor. Option
+ * matches and other non-user matches are left alone (loom handles those). Dafny
+ * is untouched — it keeps the native match.
+ */
+function matchToIfChains(stmts: Stmt[]): Stmt[] {
+  return stmts.flatMap((s): Stmt[] => {
+    if (s.kind === "if") return [{ ...s, then: matchToIfChains(s.then), else: matchToIfChains(s.else) }];
+    if (s.kind === "while") return [{ ...s, body: matchToIfChains(s.body) }];
+    if (s.kind === "forin") return [{ ...s, body: matchToIfChains(s.body) }];
+    if (s.kind !== "match") return [s];
+
+    const arms = s.arms.map(a => ({ ...a, body: matchToIfChains(a.body) }));
+    // Literal-value matches are not user-inductive matches and need no
+    // discriminator rewrite. In particular, don't let a later ctor arm make us
+    // accidentally drop an earlier literal arm from a malformed mixed match.
+    if (arms.some(a => a.pattern.kind === "literal")) return [{ ...s, arms }];
+    const ctorArms = arms.filter(a => a.pattern.kind === "ctor");
+    const firstCtor = ctorArms[0] ? patternCtor(ctorArms[0].pattern) : undefined;
+    const decl = firstCtor ? declWithVariant(_typeDecls, firstCtor) : undefined;
+    if (!decl) return [{ ...s, arms }]; // not a user union (e.g. Option) — leave as match
+
+    const scrutExpr: Expr = s.scrutinee;
+    const defaultArm = arms.find(a => a.pattern.kind === "wild");
+    const declaredCtors = decl.kind === "discriminated-union"
+      ? decl.variants?.map(v => v.name)
+      : decl.kind === "string-union" ? decl.values : undefined;
+    const coveredCtors = new Set(ctorArms.map(a => patternCtor(a.pattern)).filter((c): c is string => !!c));
+    const exhaustiveWithoutDefault = !defaultArm && !!declaredCtors && declaredCtors.every(c => coveredCtors.has(c));
+    let elseBranch: Stmt[] = defaultArm ? defaultArm.body : [];
+    for (let k = ctorArms.length - 1; k >= 0; k--) {
+      const armBody = ctorArms[k].body;
+      if (armBody.length === 0) continue; // empty arm (no-op) — let it fall through to `else`
+      const ctor = patternCtor(ctorArms[k].pattern) ?? "";
+      const binders = patternBinders(ctorArms[k].pattern);
+      const variant = decl.variants?.find(v => v.name === ctor);
+      // Discriminator condition. A nullary discriminated-union constructor would
+      // need `DecidableEq` for `x = .Ctor` (which such unions don't derive), so
+      // use a match-bool instead. Multi-field ctors already lower to a match-bool;
+      // string-unions derive DecidableEq, so `=` is fine there.
+      const cond: Expr = decl.kind === "discriminated-union" && binders.length === 0
+        ? { kind: "match", scrutinee: scrutExpr, arms: [
+            { pattern: pCtor(ctor), body: { kind: "bool", value: true } },
+            { pattern: pWild(), body: { kind: "bool", value: false } }] }
+        : { kind: "binop", op: "=", left: scrutExpr, right: { kind: "constructor", name: ctor, type: decl.name, args: [] } };
+      // Bind only the constructor-field binders the body actually uses, pinning the
+      // owning ctor so the destructor doesn't guess (variants share field names).
+      const lets: Stmt[] = [];
+      binders.forEach((b, i) => {
+        const f = variant?.fields[i];
+        if (b !== "_" && f && stmtsUseVar(armBody, b)) lets.push({
+          kind: "let", name: b, type: f.type ?? { kind: "unknown" }, mutable: false,
+          value: { kind: "field", obj: scrutExpr, field: f.name, fromUnion: decl.name, ctor },
+        });
+      });
+      // An exhaustive source match has no fallthrough. Use its final arm as
+      // the unconditional else branch; emitting `else pure ()` would force a
+      // Unit result even when every arm returns the method's result type.
+      if (exhaustiveWithoutDefault && k === ctorArms.length - 1) {
+        elseBranch = [...lets, ...armBody];
+        continue;
+      }
+      elseBranch = [{ kind: "if", cond, then: [...lets, ...armBody], else: elseBranch }];
+    }
+    return elseBranch;
+  });
+}
+
+/** True if `stmts` contain a `break` not nested inside another while. */
+function stmtsContainBreak(stmts: Stmt[]): boolean {
+  for (const s of stmts) {
+    if (s.kind === "break") return true;
+    if (s.kind === "if" && (stmtsContainBreak(s.then) || stmtsContainBreak(s.else))) return true;
+    if (s.kind === "match" && s.arms.some(a => stmtsContainBreak(a.body))) return true;
+  }
+  return false;
+}
+
+/**
+ * loom's default loop-exit fact is `¬guard`, which does not hold for a loop that
+ * `break`s (a break exits with the guard still true). Such loops need an explicit
+ * `//@ done_with` in the TS source (`//@ done_with true` when the loop invariant
+ * alone carries the exit facts). Rather than silently supplying one, reject —
+ * the exit fact is part of the spec and belongs beside the invariants.
+ * Lean-only; Dafny derives loop-exit facts from the break sites themselves.
+ */
+function requireDoneWithForBreaks(stmts: Stmt[], fnName: string): void {
+  for (const s of stmts) {
+    if (s.kind === "if") { requireDoneWithForBreaks(s.then, fnName); requireDoneWithForBreaks(s.else, fnName); }
+    if (s.kind === "match") for (const a of s.arms) requireDoneWithForBreaks(a.body, fnName);
+    if (s.kind === "while") {
+      if (!s.doneWith && stmtsContainBreak(s.body)) {
+        throw new Error(
+          `${fnName}: loop with break needs //@ done_with on the Lean backend ` +
+          `(an early return in a loop also lowers to a break). ` +
+          `Use //@ done_with true when the loop invariants carry the exit facts.`);
+      }
+      requireDoneWithForBreaks(s.body, fnName);
+    }
+  }
+}
+
+/** The forin emission places the index increment at the loop-body end, so a
+ *  surviving `continue` would skip it. Insert the increment immediately
+ *  before every same-scope continue (nested loops own their continues),
+ *  mirroring the C-style-for desugar's discipline. */
+function insertIncrementBeforeContinue(stmts: Stmt[], idxName: string): Stmt[] {
+  const incr: Stmt = { kind: "assign", target: idxName,
+    value: { kind: "binop", op: "+", left: { kind: "var", name: idxName }, right: { kind: "num", value: 1 } } };
+  const walk = (ss: Stmt[]): Stmt[] => {
+    const out: Stmt[] = [];
+    for (const s of ss) {
+      if (s.kind === "continue") { out.push(incr, s); continue; }
+      if (s.kind === "if") { out.push({ ...s, then: walk(s.then), else: walk(s.else) }); continue; }
+      if (s.kind === "match") { out.push({ ...s, arms: s.arms.map(a => ({ ...a, body: walk(a.body) })) }); continue; }
+      out.push(s);
+    }
+    return out;
+  };
+  return walk(stmts);
+}
+
+function eliminateTopLevelContinue(stmts: Stmt[]): Stmt[] {
+  const out: Stmt[] = [];
+  for (let i = 0; i < stmts.length; i++) {
+    const s = stmts[i];
+    // `if (X) {...A, continue}; rest` (empty else, trailing continue in then)
+    // — if A is empty, rewrite to `if (!X) { rest }`; otherwise rewrite to
+    // `if (X) { ...A } else { rest }`. Either form lets the loop fall through
+    // naturally past the bottom of the body.
+    if (s.kind === "if" && s.else.length === 0 &&
+        s.then.length >= 1 && s.then[s.then.length - 1].kind === "continue") {
+      const rest = eliminateTopLevelContinue(stmts.slice(i + 1));
+      const thenWithoutContinue = s.then.slice(0, -1);
+      if (thenWithoutContinue.length === 0) {
+        out.push({ kind: "if", cond: negateExpr(s.cond), then: rest, else: [] });
+      } else {
+        out.push({ kind: "if", cond: s.cond, then: thenWithoutContinue, else: rest });
+      }
+      return out;
+    }
+    // narrow.ts's ruleEarlyReturnConsume rewrites `if (!x) continue; rest`
+    // (when x is Optional) to a someMatch which transform.ts then emits as a
+    // `match`. A trailing `continue` inside a match arm is a no-op when the
+    // match is the last statement in the loop body — drop it.
+    if (s.kind === "match" && i === stmts.length - 1) {
+      const arms = s.arms.map(arm => {
+        const b = arm.body;
+        if (b.length > 0 && b[b.length - 1].kind === "continue") {
+          return { ...arm, body: b.slice(0, -1) };
+        }
+        return arm;
+      });
+      out.push({ ...s, arms });
+      continue;
+    }
+    out.push(s);
+  }
+  return out;
+}
+
+function transformStmts(stmts: TStmt[], typeDecls: TypeDeclInfo[]): Stmt[] {
+  const result: Stmt[] = [];
+  let i = 0;
+  while (i < stmts.length) {
+    const s = stmts[i];
+    // Transform for-of → for-in over range
+    if (s.kind === "forof") {
+      const headName = s.names[0];
+      const headTy = s.nameTypes[0] ?? { kind: "unknown" as const };
+      const iterExpr = transformExpr(s.iterable);
+
+      // All for-of shapes lower to the same range loop `for idx in 0..seq.size`;
+      // they differ only in (a) which indexable `seq` is iterated and (b) the
+      // per-iteration `let`s that bind the loop names. The counter name was
+      // minted by resolve, where specs naming it are resolved; the suffix
+      // numbers this loop's helper names. Each shape fills in `seq` + `perIter`.
+      const count = _forofCounters.get(headName) ?? 0;
+      _forofCounters.set(headName, count + 1);
+      const suffix = count === 0 ? "" : `${count + 1}`;
+      const idxName = s.idx;
+      const idxVar: Expr = { kind: "var", name: idxName };
+
+      let seq: Expr;
+      let perIter: Stmt[];
+
+      if (s.iterable.ty.kind === "map") {
+        // for (const k of map) / for (const [k, v] of map): materialize the keys
+        // as a seq and index into it; a value name looks up via getDirect.
+        const keyTy = s.nameTypes[0] ?? s.iterable.ty.key ?? { kind: "unknown" as const };
+        const keysSeqName = freshName(`_${headName}_keys${suffix}`);
+        result.push({ kind: "let", name: keysSeqName, type: { kind: "array", elem: keyTy }, mutable: false,
+          value: { kind: "app", fn: "SetToSeq", args: [{ kind: "field", obj: iterExpr, field: "keys" }] } });
+        seq = { kind: "var", name: keysSeqName };
+        const letKey: Stmt = { kind: "let", name: headName, type: keyTy, mutable: false, value: { kind: "index", arr: seq, idx: idxVar } };
+        if (s.names.length >= 2) {
+          const valueTy = s.nameTypes[1] ?? { kind: "unknown" as const };
+          const letVal: Stmt = { kind: "let", name: s.names[1], type: valueTy, mutable: false,
+            value: { kind: "methodCall", obj: iterExpr, objTy: s.iterable.ty, method: "getDirect", args: [{ kind: "var", name: headName }], monadic: false } };
+          perIter = [letKey, letVal];
+        } else {
+          perIter = [letKey];
+        }
+      } else if (s.names.length >= 2 && s.iterable.ty.kind === "array" && s.iterable.ty.elem.kind === "tuple") {
+        // for (const [a, b] of tupleArr): bind the element once, then destructure
+        // it into each name via a tuple projection.
+        const tupleTy = s.iterable.ty.elem;
+        seq = iterExpr;
+        const elemName = freshName(`_${headName}_elem${suffix}`);
+        const letElem: Stmt = { kind: "let", name: elemName, type: tupleTy, mutable: false, value: { kind: "index", arr: seq, idx: idxVar } };
+        perIter = [letElem, ...s.names.map((n, k): Stmt => ({
+          kind: "let", name: n, type: tupleTy.elems[k] ?? { kind: "unknown" }, mutable: false,
+          value: { kind: "tupleProj", obj: { kind: "var", name: elemName }, index: k, arity: tupleTy.elems.length },
+        }))];
+      } else {
+        // Single element by index. Sets aren't indexable, so materialize first.
+        if (s.iterable.ty.kind === "set") {
+          const seqName = freshName(`_${headName}_seq${suffix}`);
+          const elemTy: Ty = headTy.kind !== "unknown" ? headTy : { kind: "string" };
+          result.push({ kind: "let", name: seqName, type: { kind: "array", elem: elemTy }, mutable: false,
+            value: { kind: "app", fn: "SetToSeq", args: [iterExpr] } });
+          seq = { kind: "var", name: seqName };
+        } else {
+          seq = iterExpr;
+        }
+        perIter = [{ kind: "let", name: headName, type: headTy, mutable: false, value: { kind: "index", arr: seq, idx: idxVar } }];
+      }
+
+      const arrSize: Expr = { kind: "field", obj: seq, field: "size" };
+      // Auto-add bound invariant: idx ≤ bound (always true for range loops)
+      const boundInv: Expr = { kind: "binop", op: "≤", left: idxVar, right: arrSize };
+      const bodyStmts = insertIncrementBeforeContinue(
+        eliminateTopLevelContinue(transformStmts(s.body, typeDecls)), idxName);
+      result.push({
+        kind: "forin", idx: idxName, bound: arrSize,
+        invariants: [boundInv, ...s.invariants.map(transformSpecExpr)],
+        body: [...perIter, ...bodyStmts],
+      });
+      i++;
+      continue;
+    }
+    result.push(...transformStmt(s, typeDecls));
+    i++;
+  }
+  return result;
+}
+
+let _liftCounter = 0;
+let _callbackCounter = 0;
+// Branch results must not renumber the existing lifted-call temporaries.
+let _branchCounter = 0;
+let _cmpCounter = 0;
+// True while lowering proof-only spec clauses (`requires`, `ensures`, `invariants`,
+// `decreases`, `doneWith`). Prevents executable-only rewrites like `#349` `let _cmp`
+// from firing inside specifications.
+let _inSpec = false;
+
+function transformSpecExpr(e: TExpr): Expr {
+  const prev = _inSpec;
+  _inSpec = true;
+  try {
+    return transformExpr(e);
+  } finally {
+    _inSpec = prev;
+  }
+}
+// Active narrowing write-back frames (`someMatch` unwraps & union variant arms).
+let _writeBackFrames: WriteBackFrame[] = [];
+// Declared types of in-scope variables and narrowing binders (for optional-field wrap checks).
+let _varTypes: Map<string, Ty> = new Map();
+
+/** Look up the declared field type and union-owner tags reached by walking
+ *  `fields` from `rootTy`. */
+function lookupFieldPathInfo(
+  rootTy: Ty | undefined,
+  fields: string[],
+  typeDecls: TypeDeclInfo[],
+  ownerVariants?: (string | undefined)[],
+): { fieldTy: Ty | null; unionsByDepth: ({ ctor?: string; ctorOf: string } | undefined)[] } {
+  let cur: Ty | undefined = rootTy;
+  const unionsByDepth: ({ ctor?: string; ctorOf: string } | undefined)[] = [];
+  for (let i = 0; i < fields.length; i++) {
+    const field = fields[i]!;
+    if (!cur) return { fieldTy: null, unionsByDepth };
+    if (cur.kind === "optional" || cur.kind === "nullish") cur = cur.inner;
+    if (cur.kind !== "user") return { fieldTy: null, unionsByDepth };
+    const decl = declOfTy(typeDecls, cur);
+    if (!decl) return { fieldTy: null, unionsByDepth };
+    if (decl.kind === "record" && decl.fields) {
+      unionsByDepth.push(undefined);
+      const f = decl.fields.find(fi => fi.name === field);
+      if (!f) return { fieldTy: null, unionsByDepth };
+      cur = f.type ?? parseTsType(f.tsType);
+    } else if (decl.kind === "discriminated-union" && decl.variants) {
+      const ov = ownerVariants?.[i];
+      unionsByDepth.push({ ctor: ov, ctorOf: decl.name });
+      const variant = (ov ? decl.variants.find(v => v.name === ov) : undefined)
+        ?? decl.variants.find(v => v.fields.some(fi => fi.name === field));
+      const f = variant?.fields.find(fi => fi.name === field);
+      if (!f) return { fieldTy: null, unionsByDepth };
+      cur = f.type ?? parseTsType(f.tsType);
+    } else {
+      return { fieldTy: null, unionsByDepth };
+    }
+  }
+  return { fieldTy: cur ?? null, unionsByDepth };
+}
+
+/** True if `e` contains any subexpression that can carry a backend precondition
+ *  (calls, indexing, checked unwraps, division/modulo). Used to ensure optional
+ *  comparisons evaluate `valSide` unconditionally instead of skipping it in a
+ *  `None` match arm (#349), while leaving pure literal/variable comparisons
+ *  untouched (zero churn on `pi-lemmascript` and existing `examples/`). */
+const TOTAL_PURE_BUILTINS = new Set([
+  "set.has", "map.has", "array.includes", "string.includes",
+  "string.startsWith", "string.endsWith", "string.indexOf", "string.lastIndexOf",
+  "string.trim", "string.toLowerCase", "string.toUpperCase",
+]);
+
+function hasPreconditionExpr(e: TExpr): boolean {
+  switch (e.kind) {
+    case "call":
+      if (e.builtinId && TOTAL_PURE_BUILTINS.has(e.builtinId)) {
+        return hasPreconditionExpr(e.fn) || e.args.some(hasPreconditionExpr);
+      }
+      return true;
+    case "index":
+      return true;
+    case "checkedUnwrap":
+      return true;
+    case "binop":
+      return e.op === "/" || e.op === "%" || hasPreconditionExpr(e.left) || hasPreconditionExpr(e.right);
+    case "unop":
+      return hasPreconditionExpr(e.expr);
+    case "field":
+      return hasPreconditionExpr(e.obj);
+    case "record":
+      return (e.spread !== null && hasPreconditionExpr(e.spread)) || e.fields.some(f => hasPreconditionExpr(f.value));
+    case "arrayLiteral":
+      return e.elems.some(hasPreconditionExpr);
+    case "conditional":
+      return hasPreconditionExpr(e.cond) || hasPreconditionExpr(e.then) || hasPreconditionExpr(e.else);
+    case "nullish":
+      return hasPreconditionExpr(e.left) || hasPreconditionExpr(e.right);
+    case "someMatch":
+      return hasPreconditionExpr(e.scrutinee) || hasPreconditionExpr(e.someBody) || hasPreconditionExpr(e.noneBody);
+    case "tagMatch":
+      return hasPreconditionExpr(e.scrutinee) || e.cases.some(c => hasPreconditionExpr(c.body)) || (e.fallthrough !== null && hasPreconditionExpr(e.fallthrough));
+    default:
+      return false;
+  }
+}
+
+function liftMethodCalls(e: TExpr): { binds: Stmt[]; expr: Expr } {
+  const binds: Stmt[] = [];
+  return { binds, expr: lowerExpr(e, binds) };
+}
+
+// ── Transform statements ─────────────────────────────────────
+
+function transformStmt(s: TStmt, typeDecls: TypeDeclInfo[]): Stmt[] {
+  switch (s.kind) {
+    case "let": {
+      _varTypes.set(s.name, s.ty);
+      // Whole-init havoc: emit directly, no lifting
+      if (s.init.kind === "havoc") {
+        return [{ kind: "let", name: s.name, type: s.ty, mutable: s.mutable, value: { kind: "havoc", type: s.init.ty } }];
+      }
+      // let x = recv.shift() / recv.pop(): bind removed element from original receiver,
+      // then write shortened array back through the receiver Place.
+      const init = s.init.kind === "call" ? s.init : undefined;
+      const popOrShiftLet = lowerArrayPopOrShift(s.init, "value");
+      if (popOrShiftLet) {
+        return [
+          { kind: "let", name: s.name, type: s.ty, mutable: s.mutable, value: popOrShiftLet.result },
+          ...popOrShiftLet.writeStmts,
+        ];
+      }
+      // new Map(arr.map(n => [n.field, n])) → let m = map[]; for (n of arr) m[n.field] := n
+      if (init && init.fn.kind === "var" && init.fn.name === "__mapFromArray" &&
+          init.args.length === 1 && init.args[0].kind === "call" &&
+          init.args[0].fn.kind === "field" && init.args[0].fn.field === "map" &&
+          init.args[0].args.length === 1 && init.args[0].args[0].kind === "lambda") {
+        const arrExpr = init.args[0].fn.obj;
+        const lam = init.args[0].args[0];
+        const param = lam.params[0]?.name ?? "_";
+        const lamBody = Array.isArray(lam.body) ? lam.body : [{ kind: "return" as const, value: lam.body }];
+        const retStmt = lamBody.find(b => b.kind === "return") as { kind: "return"; value: TExpr } | undefined;
+        if (retStmt && retStmt.value.kind === "arrayLiteral" && retStmt.value.elems.length === 2) {
+          const keyExpr = retStmt.value.elems[0];
+          const valExpr = retStmt.value.elems[1];
+          const arrIR = transformExpr(arrExpr);
+          const arrTy = arrExpr.ty;
+          const elemTy = arrTy.kind === "array" ? arrTy.elem : { kind: "unknown" as const };
+          const idxName = freshName(`_${param}_idx`);
+          const idx: Expr = { kind: "var", name: idxName };
+          const arrSize: Expr = { kind: "field", obj: arrIR, field: "size" };
+          const keyIR = transformExpr(keyExpr);
+          const valIR = transformExpr(valExpr);
+          const mapSet: Expr = { kind: "methodCall", obj: { kind: "var", name: s.name }, objTy: s.ty, method: "set", args: [keyIR, valIR], monadic: false };
+          // Auto-invariant: all processed elements' keys are in the map. The
+          // quantifier wraps user expressions, so its binder must be fresh.
+          const kiName = freshName("ki");
+          const kVar: Expr = { kind: "var", name: kiName };
+          const mapHasKey: Expr = {
+            kind: "implies",
+            premises: [
+              { kind: "binop", op: "≥", left: kVar, right: { kind: "num", value: 0 } },
+              { kind: "binop", op: "<", left: kVar, right: idx },
+            ],
+            conclusion: { kind: "methodCall", obj: { kind: "var", name: s.name }, objTy: s.ty, method: "has", args: [keyIR.kind === "field" ? { kind: "field", obj: { kind: "index", arr: arrIR, idx: kVar }, field: (keyIR as any).field } : keyIR], monadic: false },
+          };
+          const autoInv: Expr = { kind: "forall", var: kiName, type: { kind: "int" }, body: mapHasKey };
+          const stmts: Stmt[] = [
+            { kind: "let", name: s.name, type: s.ty, mutable: true, value: { kind: "emptyMap" } },
+            { kind: "forin", idx: idxName, bound: arrSize,
+              invariants: [{ kind: "binop", op: "≤", left: idx, right: arrSize }, autoInv],
+              body: [
+                { kind: "let", name: param, type: elemTy, mutable: false, value: { kind: "index", arr: arrIR, idx } },
+                { kind: "assign", target: s.name, value: mapSet },
+              ] },
+          ];
+          return stmts;
+        }
+      }
+      const { binds, expr } = liftMethodCalls(s.init);
+      return [...binds, { kind: "let", name: s.name, type: s.ty, mutable: s.mutable, value: expr }];
+    }
+
+    case "assign": {
+      // target = recv.shift() / recv.pop(): save the removed element first,
+      // write the shortened array back through the original receiver, and only
+      // then assign the saved result to `s.target` (so `t = t.children.shift()!`
+      // mutates the original `t`, not the shifted child).
+      const popOrShiftAssign = lowerArrayPopOrShift(s.value, "value");
+      if (popOrShiftAssign) {
+        const tmp = freshName(`_${popOrShiftAssign.method}${_liftCounter++}`);
+        const assignTmp: TStmt = { ...s, value: { kind: "var", name: tmp, ty: s.value.ty } };
+        return [
+          { kind: "let", name: tmp, type: s.value.ty, mutable: false, value: popOrShiftAssign.result },
+          ...popOrShiftAssign.writeStmts,
+          ...transformStmt(assignTmp, typeDecls),
+        ];
+      }
+      // Non-`this.` dotted field assignment on a record, union variant, or narrowed
+      // optional/nullish record (e.g. `b.count = 5`, `u.v = 99`, `u.items[0] = 10`, `u.box.count = 42`):
+      // lower through active `unwrap` & `variant` frames with cascading write-back.
+      if (s.target.includes(".") && !s.target.startsWith("this.")) {
+        const parts = s.target.split(".");
+        const rootVar = parts[0]!;
+        const fields = parts.slice(1);
+        const { binds, expr } = liftMethodCalls(s.value);
+        const isUndefRhs = s.value.kind === "var" && (s.value.name === "undefined" || s.value.name === "null");
+        const isOptRhs = s.value.ty.kind === "optional" || isUndefRhs;
+        const resolved = resolveWriteTargetThroughFrames(rootVar, fields, _writeBackFrames);
+        if (resolved.leafUnwrapFrame) {
+          const frame = resolved.leafUnwrapFrame;
+          if (!isOptRhs) {
+            return [
+              ...binds,
+              { kind: "assign", target: frame.binder, value: expr },
+              ...emitWriteBacksForTarget(frame.binder, _writeBackFrames),
+            ];
+          }
+          // Assigning `undefined`/`null` or an `Option<T>` value to a narrowed optional field:
+          // write directly to the enclosing record field without double-wrapping in `Some`.
+          const optExpr: Expr = isUndefRhs
+            ? { kind: "constructor", name: "none", type: "Option", args: [] }
+            : expr;
+          if (frame.fields.length > 0) {
+            return [
+              ...binds,
+              { kind: "assign", target: frame.rootVar, value: buildNestedFieldExpr({ kind: "var", name: frame.rootVar }, frame.fields, optExpr) },
+              ...emitWriteBacksForTarget(frame.rootVar, _writeBackFrames),
+            ];
+          }
+          return [
+            ...binds,
+            { kind: "assign", target: frame.rootVar, value: optExpr },
+            ...emitWriteBacksForTarget(frame.rootVar, _writeBackFrames),
+          ];
+        }
+        if (resolved.remainingFields.length > 0) {
+          const rootTy = _varTypes.get(resolved.currentRoot);
+          const skippedDepth = fields.length - resolved.remainingFields.length;
+          const remOwnerVariants = s.ownerVariants?.slice(skippedDepth);
+          const { fieldTy, unionsByDepth } = lookupFieldPathInfo(rootTy, resolved.remainingFields, typeDecls, remOwnerVariants);
+          const rhsExpr = fieldTy?.kind === "nullish"
+            ? wrapNullishBranch(expr, s.value)
+            : fieldTy?.kind === "optional"
+              ? wrapOptionalBranch(expr, s.value)
+              : expr;
+          const rootExpr: Expr = { kind: "var", name: resolved.currentRoot };
+          const isOptRoot = rootTy?.kind === "nullish" || rootTy?.kind === "optional";
+          const baseExpr: Expr = isOptRoot ? { kind: "checkedUnwrap", expr: rootExpr } : rootExpr;
+          const hasAnyUnion = unionsByDepth.some(u => u !== undefined);
+          const updated = buildNestedFieldExpr(baseExpr, resolved.remainingFields, rhsExpr, hasAnyUnion ? unionsByDepth : undefined);
+          return [
+            ...binds,
+            { kind: "assign", target: resolved.currentRoot, value: isOptRoot ? wrapCheckedUnwrapValue(updated, rootTy) : updated },
+            ...emitWriteBacksForTarget(resolved.currentRoot, _writeBackFrames),
+          ];
+        }
+      }
+      // Assignment to a narrowed optional variable (e.g., `arr[0] = v` desugared to
+      // `arr = arr.with(0, v)` or `a = 10` coerced to `Some(10)` by resolve):
+      // update the match binder and write back `arr := Option.Some(binder)` so
+      // storage and binder stay in sync (#342).
+      const activeUnwrap = !s.target.includes(".")
+        ? findActiveUnwrapFrame(s.target, [], _writeBackFrames)
+        : null;
+      if (activeUnwrap) {
+        if (s.value.kind === "call" && s.value.fn.kind === "var" &&
+            s.value.fn.name === "Some" && s.value.args.length === 1) {
+          const { binds, expr } = liftMethodCalls(s.value.args[0]!);
+          return [
+            ...binds,
+            { kind: "assign", target: activeUnwrap.binder, value: expr },
+            ...emitWriteBacksForTarget(activeUnwrap.binder, _writeBackFrames),
+          ];
+        }
+        if (s.value.ty.kind !== "optional" &&
+            !(s.value.kind === "var" && s.value.name === "undefined")) {
+          const { binds, expr } = liftMethodCalls(s.value);
+          return [
+            ...binds,
+            { kind: "assign", target: activeUnwrap.binder, value: expr },
+            ...emitWriteBacksForTarget(activeUnwrap.binder, _writeBackFrames),
+          ];
+        }
+      }
+      // Top-level method call → direct monadic bind, no lifting needed
+      if (s.value.kind === "call" && s.value.callKind === "method")
+        return [{ kind: "bind", target: s.target, value: transformExpr(s.value) }, ...emitWriteBacksForTarget(s.target, _writeBackFrames)];
+      const { binds, expr } = liftMethodCalls(s.value);
+      return [...binds, { kind: "assign", target: s.target, value: expr }, ...emitWriteBacksForTarget(s.target, _writeBackFrames)];
+    }
+
+    case "return": {
+      const { binds, expr } = liftMethodCalls(s.value);
+      return [...binds, { kind: "return", value: expr }];
+    }
+    case "break": return [{ kind: "break" }];
+    case "continue": return [{ kind: "continue" }];
+    case "expr": {
+      // Mutating collection call: m.set(k, v) → m := m.set(k, v) (same for set
+      // .add/.delete and array .push/.unshift/.sort). The receiver may be a bare
+      // var or a field path rooted at a var, with Place write-back through any
+      // enclosing narrowing frames (`someMatch` unwrap or union variant arm).
+      // Non-Place receivers (e.g. `getArr().push(1)`) fail closed instead of
+      // silently discarding the updated collection.
+      const popOrShiftExpr = lowerArrayPopOrShift(s.expr, "discard");
+      if (popOrShiftExpr) return popOrShiftExpr.writeStmts;
+      if (s.expr.kind === "call" && s.expr.fn.kind === "field") {
+        const recv = s.expr.fn.obj;
+        const f = s.expr.fn.field;
+        if (isMutatingCollectionMethod(recv.ty, f)) {
+          if (recv.kind === "var") {
+            const { binds, expr } = liftMethodCalls(s.expr);
+            return [
+              ...binds,
+              { kind: "assign", target: recv.name, value: expr },
+              ...emitWriteBacksForTarget(recv.name, _writeBackFrames),
+            ];
+          }
+          if (recv.kind === "field") {
+            const { binds, expr } = liftMethodCalls(s.expr);
+            const upd = buildNestedFieldUpdate(recv, expr);
+            if (upd) {
+              return [
+                ...binds,
+                { kind: "assign", target: upd.root, value: upd.value },
+                ...emitWriteBacksForTarget(upd.root, _writeBackFrames),
+              ];
+            }
+          }
+          if (recv.kind === "checkedUnwrap") {
+            const { binds, expr } = liftMethodCalls(s.expr);
+            const wrapped: Expr = wrapCheckedUnwrapValue(expr, recv.expr.ty);
+            if (recv.expr.kind === "var") {
+              return [
+                ...binds,
+                { kind: "assign", target: recv.expr.name, value: wrapped },
+                ...emitWriteBacksForTarget(recv.expr.name, _writeBackFrames),
+              ];
+            }
+            if (recv.expr.kind === "field") {
+              const upd = buildNestedFieldUpdate(recv.expr, wrapped);
+              if (upd) {
+                return [
+                  ...binds,
+                  { kind: "assign", target: upd.root, value: upd.value },
+                  ...emitWriteBacksForTarget(upd.root, _writeBackFrames),
+                ];
+              }
+            }
+          }
+          throw new Error(
+            `Unsupported in-place mutation \`${describeReceiver(recv)}.${f}(...)\`: ` +
+            `receiver is not a writable Place rooted at a variable (bind it to a variable or mutate through a field path).`,
+          );
+        }
+      }
+      // Optional chaining on map.get at statement level: m.get(k)?.push(v)
+      // → if k in m { m[k] := m[k] + [v] } (actual mutation, not value-discard).
+      // Narrow rewrote this to a someMatch — destructure to find the underlying
+      // m.get(k) scrutinee and the .push(v) body call.
+      if (s.expr.kind === "someMatch" &&
+          s.expr.scrutinee.kind === "call" && s.expr.scrutinee.fn.kind === "field" &&
+          s.expr.scrutinee.fn.field === "get" && s.expr.scrutinee.fn.obj.ty.kind === "map" &&
+          s.expr.someBody.kind === "call" && s.expr.someBody.fn.kind === "field" &&
+          s.expr.someBody.fn.field === "push") {
+        const mapExpr = s.expr.scrutinee.fn.obj;
+        const mapName = mapExpr.kind === "var" ? mapExpr.name : undefined;
+        const keyExpr = lowerExpr(s.expr.scrutinee.args[0], null);
+        const pushArg = lowerExpr(s.expr.someBody.args[0], null);
+        if (mapName) {
+          const mapVar: Expr = { kind: "var", name: mapName };
+          const directGet: Expr = { kind: "methodCall", obj: mapVar, objTy: mapExpr.ty, method: "getDirect", args: [keyExpr], monadic: false };
+          const pushed: Expr = { kind: "methodCall", obj: directGet, objTy: (mapExpr.ty as any).value, method: "push", args: [pushArg], monadic: false };
+          const updated: Expr = { kind: "methodCall", obj: mapVar, objTy: mapExpr.ty, method: "set", args: [keyExpr, pushed], monadic: false };
+          const hasCond: Expr = { kind: "methodCall", obj: mapVar, objTy: mapExpr.ty, method: "has", args: [keyExpr], monadic: false };
+          return [{
+            kind: "if",
+            cond: hasCond,
+            then: [{ kind: "assign", target: mapName, value: updated }, ...emitWriteBacksForTarget(mapName, _writeBackFrames)],
+            else: [],
+          }];
+        }
+      }
+      const { binds, expr } = liftMethodCalls(s.expr);
+      return [...binds, { kind: "assign", target: "_", value: expr }];
+    }
+
+    case "if": {
+      // Lift from condition only (Lean rule: don't lift from branches).
+      const { binds, expr: cond } = liftMethodCalls(asCondition(s.cond));
+      return [...binds, { kind: "if", cond, then: transformStmts(s.then, typeDecls), else: transformStmts(s.else, typeDecls) }];
+    }
+
+    case "while":
+      return [{
+        kind: "while",
+        cond: transformExpr(asCondition(s.cond)),
+        invariants: s.invariants.map(transformSpecExpr),
+        decreasing: s.decreases ? transformSpecExpr(s.decreases) : null,
+        doneWith: s.doneWith ? transformSpecExpr(s.doneWith) : null,
+        body: eliminateTopLevelContinue(transformStmts(s.body, typeDecls)),
+      }];
+
+    case "throw":
+      return [{ kind: "assert", expr: { kind: "bool", value: false } }];
+
+    case "forof":
+      throw new Error("forof should be transformed to forin (range loop) in transformStmts");
+
+    case "switch":
+      return [emitSwitchStmt(s, typeDecls)];
+
+    case "ghostLet":
+      return [{ kind: "ghostLet", name: s.name, type: s.ty, value: transformExpr(s.init) }];
+
+    case "ghostAssign":
+      return [{ kind: "ghostAssign", target: s.target, value: transformExpr(s.value) }];
+
+    case "assert":
+      return [{ kind: "assert", expr: transformExpr(s.expr), assumed: s.assumed }];
+
+    case "someMatch": {
+      const path = asTAccessPath(s.scrutinee);
+      if (path) {
+        const replaced = replacePathInTStmts(s.someBody, path, s.binder, s.binderTy);
+        _varTypes.set(s.binder, s.binderTy);
+        _writeBackFrames.push(makeUnwrapFrame(s.binder, path.rootVar, path.fields));
+        let someBody: Stmt[];
+        try {
+          someBody = transformStmts(replaced, typeDecls);
+        } finally {
+          _writeBackFrames.pop();
+        }
+        if (_opts.backend === "lean" && collectAssignedIrTargets(someBody).has(s.binder)) {
+          someBody = [
+            { kind: "let", name: s.binder, type: s.binderTy, mutable: true, value: varE(s.binder) },
+            ...someBody,
+          ];
+        }
+        const noneBody = transformStmts(s.noneBody, typeDecls);
+        const scrutinee: Expr = path.fields.length === 0 ? varE(path.rootVar) : transformExpr(s.scrutinee);
+        return [{
+          kind: "match", scrutinee,
+          arms: [
+            { pattern: pCtor("some", s.binder), body: someBody },
+            { pattern: pCtor("none"), body: noneBody },
+          ],
+        }];
+      }
+      throw new Error(`someMatch stmt scrutinee must be a pure access path, got ${s.scrutinee.kind}`);
+    }
+
+    case "tagMatch":
+      return [emitMatchStmt(s.scrutinee, s.typeName, s.cases, s.fallthrough, typeDecls)];
+  }
+}
+
+// ── Discriminant if-chain detection ──────────────────────────
+
+interface Chain {
+  varName: string;
+  typeName: string;
+  cases: { variant: string; body: TStmt[] }[];
+  fallthrough: TStmt[];
+}
+
+/** Build match arms from variant cases — shared by imperative and pure paths.
+ *  Pure paths bind constructor fields via `buildMatchPattern`; imperative paths
+ *  pass `wildcard: true` so arms read and update live storage directly (#405). */
+function buildMatchArms<T>(
+  cases: { name: string; body: TStmt[] }[],
+  varName: string | undefined, typeName: string, typeDecls: TypeDeclInfo[],
+  transformBody: (body: TStmt[], varName: string | undefined, fields: { name: string; tsType: string }[], ctorName?: string) => T | null,
+  wildcard = false,
+): { pattern: MatchPattern; body: T }[] | null {
+  const decl = declOf(typeDecls, typeName);
+  if (!decl || (decl.kind !== "string-union" && decl.kind !== "discriminated-union")) {
+    throw new Error(`match type ${typeName} is not a declared union`);
+  }
+  const arms: { pattern: MatchPattern; body: T }[] = [];
+  for (const c of cases) {
+    const variant = decl?.variants?.find(v => v.name === c.name);
+    const declared = decl.kind === "string-union"
+      ? decl.values?.includes(c.name)
+      : !!variant;
+    if (!declared) throw new Error(`case ${JSON.stringify(c.name)} is not a variant of ${typeName}`);
+    const fields = variant?.fields ?? [];
+    const pattern = wildcard
+      ? buildWildcardMatchPattern(c.name, fields)
+      : buildMatchPattern(c.name, fields, varName);
+    const body = transformBody(c.body, varName, fields, c.name);
+    if (body === null) return null;
+    arms.push({ pattern, body });
+  }
+  return arms;
+}
+
+/** Build value-pattern arms for a switch on a plain string. Case labels have
+ *  already been validated and decoded by extraction; unlike datatype cases,
+ *  these are literal values and introduce no constructor-field binders. */
+function buildLiteralMatchArms<T>(
+  cases: { name: string; body: TStmt[] }[],
+  transformBody: (body: TStmt[]) => T | null,
+): { pattern: MatchPattern; body: T }[] | null {
+  const arms: { pattern: MatchPattern; body: T }[] = [];
+  for (const c of cases) {
+    const body = transformBody(c.body);
+    if (body === null) return null;
+    arms.push({ pattern: pLiteral(c.name), body });
+  }
+  return arms;
+}
+
+function emitMatchStmt(
+  scrutinee: TExpr,
+  typeName: string,
+  cases: { variant: string; body: TStmt[] }[],
+  fallthrough: TStmt[],
+  typeDecls: TypeDeclInfo[],
+): Stmt {
+  const decl = declOf(typeDecls, typeName);
+  const armCases = cases.map(c => ({ name: c.variant, body: c.body }));
+  const arms = buildMatchArms(armCases, undefined, typeName, typeDecls,
+    (body) => transformStmts(body, typeDecls), /* wildcard */ true)!;
+  const allCovered = !!decl?.variants && cases.length >= decl.variants.length;
+  if (!allCovered) {
+    const remaining = remainingVariant(decl, cases.map(c => c.variant));
+    if (remaining) {
+      arms.push({
+        pattern: buildWildcardMatchPattern(remaining.name, remaining.fields),
+        body: transformStmts(fallthrough, typeDecls),
+      });
+    } else {
+      arms.push({ pattern: pWild(), body: transformStmts(fallthrough, typeDecls) });
+    }
+  }
+  return { kind: "match", scrutinee: transformExpr(scrutinee), arms };
+}
+
+/** `switch(obj.field)` is stripped at extraction to scrutinee `obj` + discriminant
+ *  `field`, assuming `obj` is a discriminated union with `field` as its
+ *  discriminant. When that's NOT so — e.g. `obj` is a plain record with an
+ *  enum- or string-typed `field` — the switch is really on the field VALUE. This
+ *  returns the scrutinee `obj.field` (+ its resolved type) to match directly; null
+ *  for a genuine discriminant switch or `switch(localVar)`, which callers handle
+ *  their usual way. Shared by emitSwitchStmt and transformPureSwitch. */
+function enumFieldSwitch(s: TStmt & { kind: "switch" }, typeDecls: TypeDeclInfo[]): { scrutinee: Expr; fieldTy: Ty | undefined } | null {
+  if (!s.discriminant) return null;
+  const objDecl = declOfTy(typeDecls, s.expr.ty);
+  if (objDecl?.kind === "discriminated-union" && objDecl.discriminant === s.discriminant) return null;
+  const fieldTy = objDecl?.kind === "record" ? objDecl.fields?.find(f => f.name === s.discriminant)?.type : undefined;
+  return {
+    scrutinee: { kind: "field", obj: transformExpr(s.expr), field: s.discriminant },
+    fieldTy,
+  };
+}
+
+/** Declared datatype matched by a switch, excluding records/aliases/opaque
+ *  types. A plain `string` intentionally has no declaration and uses literal
+ *  patterns instead. */
+function switchCtorDecl(typeDecls: TypeDeclInfo[], ty: Ty | undefined): TypeDeclInfo | undefined {
+  if (!ty) return undefined;
+  const decl = declOfTy(typeDecls, ty);
+  return decl?.kind === "string-union" || decl?.kind === "discriminated-union" ? decl : undefined;
+}
+
+/** A default covering one union variant needs the same variant pattern as an
+ *  explicit case, in both pure and imperative lowering. */
+function withExplicitVariantDefault(s: TStmt & { kind: "switch" }, typeDecls: TypeDeclInfo[]): TStmt & { kind: "switch" } {
+  if (s.defaultBody.length === 0) return s;
+  const decl = unionDeclOfTy(typeDecls, s.expr.ty);
+  if (decl?.discriminant !== s.discriminant) return s;
+  const remaining = remainingVariant(decl, s.cases.map(c => c.label));
+  return remaining ? { ...s, cases: [...s.cases, { label: remaining.name, body: s.defaultBody }], defaultBody: [] } : s;
+}
+
+function emitSwitchStmt(s: TStmt & { kind: "switch" }, typeDecls: TypeDeclInfo[]): Stmt {
+  s = withExplicitVariantDefault(s, typeDecls);
+  const cases = s.cases.map(c => ({ name: c.label, body: c.body }));
+  const ef = enumFieldSwitch(s, typeDecls);
+  const matchTy = ef ? ef.fieldTy : s.expr.ty;
+  const literalCases = matchTy?.kind === "string";
+  const ctorDecl = switchCtorDecl(typeDecls, matchTy);
+  if (!literalCases && !ctorDecl) {
+    const typeName = !matchTy ? "unknown" : matchTy.kind === "user" ? matchTy.name : matchTy.kind;
+    throw new Error(`switch scrutinee must be string-typed or a declared union, got ${typeName}`);
+  }
+  const arms = literalCases
+    ? buildLiteralMatchArms(cases, (body) => transformStmts(body, typeDecls))!
+    : buildMatchArms(cases, undefined, ctorDecl!.name, typeDecls,
+      (body) => transformStmts(body, typeDecls), /* wildcard */ true)!;
+  if (s.defaultBody.length > 0) arms.push({ pattern: pWild(), body: transformStmts(s.defaultBody, typeDecls) });
+  const scrutinee: Expr = ef ? ef.scrutinee : transformExpr(s.expr);
+  return { kind: "match", scrutinee, arms };
+}
+
+/** A pure access path — chain of field accesses rooted at a var. */
+interface AccessPath { rootVar: string; fields: string[] }
+
+function asTAccessPath(e: TExpr): AccessPath | null {
+  if (e.kind === "var") return { rootVar: e.name, fields: [] };
+  if (e.kind === "checkedUnwrap") return asTAccessPath(e.expr);
+  if (e.kind === "field") {
+    const inner = asTAccessPath(e.obj);
+    if (!inner) return null;
+    return { rootVar: inner.rootVar, fields: [...inner.fields, e.field] };
+  }
+  return null;
+}
+
+/** Does TExpr `e` match the given access path exactly? */
+function matchesAccessPath(e: TExpr, path: AccessPath): boolean {
+  const collected: string[] = [];
+  let cur = e;
+  while (cur.kind === "field" || cur.kind === "checkedUnwrap") {
+    if (cur.kind === "field") { collected.unshift(cur.field); cur = cur.obj; }
+    else { cur = cur.expr; }
+  }
+  if (cur.kind !== "var" || cur.name !== path.rootVar) return false;
+  if (collected.length !== path.fields.length) return false;
+  return collected.every((f, i) => f === path.fields[i]);
+}
+
+/** Replace every read of `path` with `var(binder, binderTy)`. Extraction
+ *  leaves no binding that shadows another (see LexicalNames), so the name
+ *  identifies the variable, also inside a lambda that captures it. */
+function replacePathInTExpr(expr: TExpr, path: AccessPath, binder: string, binderTy: Ty): TExpr {
+  return mapTExpr(expr, e =>
+    matchesAccessPath(e, path) ? { kind: "var", name: binder, ty: binderTy } : null);
+}
+
+function replacePathInTStmts(stmts: TStmt[], path: AccessPath, binder: string, binderTy: Ty): TStmt[] {
+  return stmts.map(s => mapTStmt(s, e =>
+    matchesAccessPath(e, path) ? { kind: "var", name: binder, ty: binderTy } : null));
+}
+
+
+// ── Pure function generation ─────────────────────────────────
+
+function transformPureBody(stmts: TStmt[], typeDecls: TypeDeclInfo[]): Expr | null {
+  // tagMatch (from narrow's discriminant detection) is the leading stmt and consumes the rest.
+  if (stmts.length > 0 && stmts[0].kind === "tagMatch") {
+    const t = stmts[0];
+    const varName = t.scrutinee.kind === "var" ? t.scrutinee.name : "?";
+    const chain: Chain = { varName, typeName: t.typeName, cases: t.cases, fallthrough: t.fallthrough };
+    return transformPureMatch(chain, typeDecls);
+  }
+
+  for (let i = 0; i < stmts.length; i++) {
+    const s = stmts[i];
+    const rest = stmts.slice(i + 1);
+    switch (s.kind) {
+      case "return": return transformExpr(s.value);
+      case "let": {
+        // Mutating array methods (`pop`, `shift`) update the receiver in place
+        // and cannot be lowered as a pure expression.
+        if (s.init.kind === "call" && s.init.fn.kind === "field" &&
+            (s.init.fn.field === "pop" || s.init.fn.field === "shift") &&
+            s.init.fn.obj.ty.kind === "array") {
+          return null;
+        }
+        const restExpr = transformPureBody(rest, typeDecls);
+        if (!restExpr) return null;
+        return { kind: "let", name: s.name, value: transformExpr(s.init), body: restExpr };
+      }
+      case "if": {
+        // Append rest to both branches so nested ifs that fall through
+        // can reach the continuation (e.g. early return inside then-branch).
+        const thenExpr = transformPureBody([...s.then, ...rest], typeDecls);
+        if (!thenExpr) return null;
+        const elseStmts = s.else.length > 0 ? [...s.else, ...rest] : rest;
+        const elseExpr = transformPureBody(elseStmts, typeDecls);
+        if (!elseExpr) return null;
+        return { kind: "if", cond: transformExpr(asCondition(s.cond)), then: thenExpr, else: elseExpr };
+      }
+      case "switch": return transformPureSwitch(s, typeDecls);
+      case "someMatch": {
+        const path = asTAccessPath(s.scrutinee);
+        if (path) {
+          const replaced = replacePathInTStmts(s.someBody, path, s.binder, s.binderTy);
+          const someExpr = transformPureBody([...replaced, ...rest], typeDecls);
+          if (!someExpr) return null;
+          const noneExpr = transformPureBody([...s.noneBody, ...rest], typeDecls);
+          if (!noneExpr) return null;
+          const scrutinee: Expr = path.fields.length === 0 ? varE(path.rootVar) : transformExpr(s.scrutinee);
+          return {
+            kind: "match", scrutinee,
+            arms: [
+              { pattern: pCtor("some", s.binder), body: someExpr },
+              { pattern: pCtor("none"), body: noneExpr },
+            ],
+          };
+        }
+        throw new Error(`someMatch pure-body scrutinee must be a pure access path, got ${s.scrutinee.kind}`);
+      }
+      default: return null;
+    }
+  }
+  return null;
+}
+
+function transformPureSwitch(s: TStmt & { kind: "switch" }, typeDecls: TypeDeclInfo[]): Expr | null {
+  s = withExplicitVariantDefault(s, typeDecls);
+  const ef = enumFieldSwitch(s, typeDecls);
+  if (ef) {
+    const cases = s.cases.map(c => ({ name: c.label, body: c.body }));
+    const literalCases = ef.fieldTy?.kind === "string";
+    const ctorDecl = switchCtorDecl(typeDecls, ef.fieldTy);
+    if (!literalCases && !ctorDecl) return null;
+    const arms = literalCases
+      ? buildLiteralMatchArms(cases, (body) => transformPureBody(body, typeDecls))
+      : buildMatchArms(cases, undefined, ctorDecl!.name, typeDecls, (body) => transformPureBody(body, typeDecls));
+    if (!arms) return null;
+    if (s.defaultBody.length > 0) {
+      const body = transformPureBody(s.defaultBody, typeDecls);
+      if (!body) return null;
+      arms.push({ pattern: pWild(), body });
+    }
+    return { kind: "match", scrutinee: ef.scrutinee, arms };
+  }
+  const ctorDecl = switchCtorDecl(typeDecls, s.expr.ty);
+  if (!ctorDecl) return null;
+  const typeName = ctorDecl.name;
+  const varName = s.expr.kind === "var" ? s.expr.name
+    : s.expr.kind === "checkedUnwrap" && s.expr.expr.kind === "var" ? s.expr.expr.name : undefined;
+  const cases = s.cases.map(c => ({ name: c.label, body: c.body }));
+  const arms = buildMatchArms(cases, varName, typeName, typeDecls,
+    (body, vn, fields, ctorName) => {
+      let result = transformPureBody(body, typeDecls);
+      if (!result) return null;
+      if (fields.length > 0 && vn) result = replaceFieldAccess(result, vn, fields, ctorName, tyBaseName(typeName));
+      return result;
+    });
+  if (!arms) return null;
+  if (s.defaultBody.length > 0) {
+    const body = transformPureBody(s.defaultBody, typeDecls);
+    if (!body) return null;
+    arms.push({ pattern: pWild(), body });
+  }
+  if (s.expr.kind === "checkedUnwrap") return { kind: "match", scrutinee: transformExpr(s.expr), arms };
+  if (s.expr.kind !== "var") return null;
+  return { kind: "match", scrutinee: varE(s.expr.name), arms };
+}
+
+function transformPureMatch(chain: Chain, typeDecls: TypeDeclInfo[]): Expr | null {
+  const cases = chain.cases.map(c => ({ name: c.variant, body: c.body }));
+  const decl = declOf(typeDecls, chain.typeName);
+  // Synth array-unions have single-field variants and user code refers to the
+  // scrutinee by its bare name, not field-accessed. See emitMatchStmt for
+  // the statement-level counterpart of this substitution.
+  const isSynthArrayUnion = decl?.discriminant === "__isArray__";
+  const arms = buildMatchArms(cases, chain.varName, chain.typeName, typeDecls,
+    (body, vn, fields, ctorName) => {
+      let result = transformPureBody(body, typeDecls);
+      if (!result) return null;
+      if (fields.length > 0 && vn) result = replaceFieldAccess(result, vn, fields, ctorName, tyBaseName(chain.typeName));
+      if (isSynthArrayUnion && fields.length === 1 && vn) {
+        result = replaceVarInExpr(result, vn, matchBinder(fields[0].name, vn));
+      }
+      return result;
+    });
+  if (!arms) return null;
+  // Idiomatic TS often has an unreachable fallthrough after exhaustive if-chains on
+  // discriminated unions. Skip the catch-all arm when all variants are matched,
+  // since Lean errors on redundant match arms.
+  const allCovered = decl?.variants && chain.cases.length >= decl.variants.length;
+  if (chain.fallthrough.length > 0 && !allCovered) {
+    const remaining = remainingVariant(decl, chain.cases.map(c => c.variant));
+    if (remaining) {
+      // Exactly one variant left — destructure for variant-specific field access.
+      let body = transformPureBody(chain.fallthrough, typeDecls);
+      if (!body) return null;
+      if (remaining.fields.length > 0) body = replaceFieldAccess(body, chain.varName, remaining.fields, remaining.name, tyBaseName(chain.typeName));
+      if (isSynthArrayUnion && remaining.fields.length === 1) {
+        body = replaceVarInExpr(body, chain.varName, matchBinder(remaining.fields[0].name, chain.varName));
+      }
+      arms.push({ pattern: buildMatchPattern(remaining.name, remaining.fields, chain.varName), body });
+    } else {
+      const body = transformPureBody(chain.fallthrough, typeDecls);
+      if (!body) return null;
+      arms.push({ pattern: pWild(), body });
+    }
+  }
+  return { kind: "match", scrutinee: varE(chain.varName), arms };
+}
+
+// ── Generate type declarations ───────────────────────────────
+
+function transformTypeDecl(d: TypeDeclInfo): Decl {
+  if (d.kind === "string-union") {
+    return {
+      kind: "inductive", name: d.name,
+      constructors: d.values!.map(v => ({ name: v, fields: [] })),
+      deriving: ["Repr", "Inhabited", "DecidableEq"],
+    };
+  } else if (d.kind === "discriminated-union") {
+    return {
+      kind: "inductive", name: d.name,
+      typeParams: d.typeParams,
+      constructors: d.variants!.map(v => ({
+        name: v.name,
+        fields: v.fields.map(f => ({ name: f.name, type: f.type! })),
+      })),
+      deriving: ["Repr", "Inhabited"],
+    };
+  } else if (d.kind === "alias") {
+    return {
+      kind: "type-alias", name: d.name,
+      target: d.aliasOfTy!,
+    };
+  } else if (d.kind === "opaque") {
+    return { kind: "opaque-type", name: d.name };
+  } else {
+    return {
+      kind: "structure", name: d.name,
+      typeParams: d.typeParams,
+      fields: d.fields!.map(f => ({ name: f.name, type: f.type! })),
+      deriving: ["Repr", "Inhabited", "DecidableEq"],
+    };
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────────
+
+/** Find parameter names that are reassigned anywhere in the body. */
+function findReassignedNames(stmts: TStmt[], names: Set<string>): Set<string> {
+  const found = new Set<string>();
+  const markRoot = (root: string | null) => {
+    if (root && names.has(root)) found.add(root);
+  };
+  function scan(stmts: TStmt[]) {
+    for (const s of stmts) {
+      if (s.kind === "assign") {
+        markRoot(s.target.split(".")[0]!);
+        if (s.value.kind === "call" && s.value.fn.kind === "field" &&
+            (s.value.fn.field === "pop" || s.value.fn.field === "shift") && s.value.fn.obj.ty.kind === "array") {
+          markRoot(placeRootVar(s.value.fn.obj));
+        }
+      }
+      if (s.kind === "ghostAssign" && names.has(s.target)) found.add(s.target);
+      if (s.kind === "let" && s.init.kind === "call" && s.init.fn.kind === "field" &&
+          (s.init.fn.field === "pop" || s.init.fn.field === "shift") && s.init.fn.obj.ty.kind === "array") {
+        markRoot(placeRootVar(s.init.fn.obj));
+      }
+      // Mutating collection calls: s.add(x), m.set(k,v), s.delete(x), arr.push(x), b.items.pop()
+      if (s.kind === "expr" && s.expr.kind === "call" && s.expr.fn.kind === "field" &&
+          ["add", "set", "delete", "push", "unshift", "sort", "pop", "shift"].includes(s.expr.fn.field)) {
+        markRoot(placeRootVar(s.expr.fn.obj));
+      }
+      if (s.kind === "if") { scan(s.then); scan(s.else); }
+      if (s.kind === "while") scan(s.body);
+      if (s.kind === "forof") scan(s.body);
+      if (s.kind === "switch") { for (const c of s.cases) scan(c.body); scan(s.defaultBody); }
+      if (s.kind === "someMatch") { scan(s.someBody); scan(s.noneBody); }
+      if (s.kind === "tagMatch") { for (const c of s.cases) scan(c.body); scan(s.fallthrough); }
+    }
+  }
+  scan(stmts);
+  return found;
+}
+
+/** Replace all occurrences of a variable name with a new expression. */
+/**
+ * Replace all occurrences of variable `name` with `replacement`.
+ * If `narrowing` is true, the replacement is an unwrapped Optional value
+ * (e.g., replacing `x: Option<T>` with `x_val: T`). In that case, when the
+ * variable appears directly as a record spread field value, it's wrapped in
+ * Some() to preserve the field's Optional type.
+ */
+function replaceVar(e: Expr, name: string, replacement: Expr, narrowing?: boolean): Expr {
+  const rec = (expr: Expr) => replaceVar(expr, name, replacement, narrowing);
+  return mapExpr(e, x => {
+    if (x.kind === "var" && x.name === name) return replacement;
+    // Record spread: wrap direct variable uses in field values with Some when narrowing
+    if (narrowing && x.kind === "record" && x.spread) {
+      return {
+        ...x,
+        spread: rec(x.spread),
+        fields: x.fields.map(f => {
+          if (f.value.kind === "var" && f.value.name === name) {
+            return { ...f, value: { kind: "app" as const, fn: "Some", args: [replacement] } };
+          }
+          return { ...f, value: rec(f.value) };
+        }),
+      };
+    }
+    // Don't descend past bindings that shadow the name
+    if (x.kind === "forall" && x.var === name) return x;
+    if (x.kind === "exists" && x.var === name) return x;
+    if (x.kind === "let" && x.name === name) return { ...x, value: replaceVar(x.value, name, replacement, narrowing) };
+    return null;
+  });
+}
+
+// ── Top-level transform ──────────────────────────────────────
+
+/** Transform for Lean backend — same logic, Lean options. */
+export function transformModuleLean(mod: TModule, specImport?: string, moduleBase?: string): { typesFile: Module | null; defFile: Module } {
+  const prev = _opts;
+  _opts = LEAN_OPTIONS;
+  try {
+    return transformModule(mod, specImport, moduleBase);
+  } finally {
+    _opts = prev;
+  }
+}
+
+/** Transform for Dafny backend — same logic, Dafny options. */
+export function transformModuleDafny(mod: TModule): { typesFile: Module | null; defFile: Module } {
+  const prev = _opts;
+  _opts = DAFNY_OPTIONS;
+  try {
+    return transformModule(mod);
+  } finally {
+    _opts = prev;
+  }
+}
+
+export function transformModule(mod: TModule, specImport?: string, moduleBaseOverride?: string): { typesFile: Module | null; defFile: Module } {
+  _forofCounters.clear();
+  _liftCounter = 0;
+  _callbackCounter = 0;
+  _branchCounter = 0;
+  _cmpCounter = 0;
+  _inSpec = false;
+  _writeBackFrames = [];
+  _typeDecls = mod.typeDecls;
+  _neededKindHelpers = new Map();
+  _pureDefNames = new Set(mod.functions.filter(f => f.isPure).map(f => f.name));
+  const typeDecls = mod.typeDecls.map(transformTypeDecl);
+
+  // Module-level constants
+  const constDecls: ConstDecl[] = (mod.constants ?? []).map(c => ({
+    kind: "const" as const,
+    name: c.name,
+    type: c.ty,
+    value: transformExpr(c.value),
+  }));
+
+  // Pure function mirrors
+  const pureDefs: FnDef[] = [];
+  const defByMethods: FnDefByMethod[] = [];
+  for (const fn of mod.functions) {
+    if (!fn.isPure) continue;
+    const body = transformPureBody(fn.body, mod.typeDecls);
+    if (body) {
+      // For pure-function lemmas, replace \result with the function call.
+      const fnCall: Expr = { kind: "app", fn: fn.name, args: fn.params.map(p => ({ kind: "var" as const, name: p.name })) };
+      const ensures = fn.ensures.map(e => replaceVar(transformSpecExpr(e), "\\result", fnCall));
+      pureDefs.push({
+        kind: "def",
+        name: fn.name,
+        typeParams: fn.typeParams,
+        params: fn.params.map(p => ({ name: p.name, type: p.ty })),
+        returnType: fn.returnTy,
+        requires: fn.requires.map(transformSpecExpr),
+        ensures,
+        decreases: fn.decreases ? transformSpecExpr(fn.decreases) : null,
+        body,
+      });
+    } else if (fn.forcePure) {
+      // //@ pure but body can't be auto-converted — emit function by method
+      _forofCounters.clear();
+      _writeBackFrames = [];
+      const methodBody = promoteAssignedLets(transformStmts(fn.body, mod.typeDecls));
+      defByMethods.push({
+        kind: "def-by-method",
+        name: fn.name,
+        typeParams: fn.typeParams,
+        params: fn.params.map(p => ({ name: p.name, type: p.ty })),
+        returnType: fn.returnTy,
+        requires: fn.requires.map(transformSpecExpr),
+        ensures: fn.ensures.map(transformSpecExpr),
+        decreases: fn.decreases ? transformSpecExpr(fn.decreases) : null,
+        methodBody,
+      });
+    }
+  }
+
+  if (_opts.backend === "lean") {
+    // A pure mirror would erase the failure on an empty spread. Keep these
+    // functions and their transitive callers as methods, where WP checks it.
+    const checked = new Set(["LemmaScript.maxOfArray", "LemmaScript.minOfArray"]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const def of pureDefs) {
+        if (!checked.has(def.name) && anyExpr(def.body, e => {
+          const name = e.kind === "app" ? e.fn : e.kind === "var" ? e.name : "";
+          return checked.has(name.replace(/^Pure\./, ""));
+        })) {
+          checked.add(def.name);
+          changed = true;
+        }
+      }
+    }
+    for (let i = pureDefs.length - 1; i >= 0; i--) {
+      if (checked.has(pureDefs[i].name)) {
+        _pureDefNames.delete(pureDefs[i].name);
+        pureDefs.splice(i, 1);
+      }
+    }
+  }
+
+  const base = mod.file.split("/").pop()?.replace(/\.ts$/, "") ?? "module";
+  // Lean module base — overridable via `//@ lean-module` (see lsc.ts). Only the
+  // def→types import below reads it; Dafny never passes an override.
+  const moduleBase = moduleBaseOverride ?? base;
+
+  // Externs: effectively pure declarations become uninterpreted functions;
+  // impure declarations become body-less methods with independent results.
+  // Contracts come along in either case. A pure extern's `\result` denotes its
+  // application; an impure extern keeps `\result` for the method out-parameter.
+  const externDecls: Decl[] = (mod.externs ?? []).map(ext => {
+    const fnCall: Expr = { kind: "app", fn: ext.flat, args: ext.params.map(p => ({ kind: "var" as const, name: p.name })) };
+    return {
+      kind: "extern" as const,
+      name: ext.flat,
+      typeParams: ext.typeParams,
+      params: ext.params.map(p => ({ name: p.name, type: p.ty })),
+      returnType: ext.returnTy,
+      requires: ext.requires.map(transformSpecExpr),
+      ensures: ext.ensures.map(e => ext.impure
+        ? transformSpecExpr(e)
+        : replaceVar(transformSpecExpr(e), "\\result", fnCall)),
+      impure: ext.impure,
+    };
+  });
+
+  // Def file: Velvet methods
+  // Pure functions get a thin wrapper. Lean keeps pure definitions in the
+  // `Pure` namespace; Dafny flattens that namespace, so its call is unqualified.
+  // def-by-method functions also skip their method wrappers
+  const pureDefNames = new Set([...pureDefs.map(d => d.name), ...defByMethods.map(d => d.name)]);
+  const methods: FnMethod[] = mod.functions.map(fn => {
+    const ensures: Expr[] = [];
+    const prevInSpec = _inSpec;
+    _inSpec = true;
+    try {
+      for (const e of fn.ensures) {
+        const m = ensuresToMatch(e, mod.typeDecls);
+        if (m) ensures.push(m);
+        else ensures.push(transformExpr(e));
+      }
+    } finally {
+      _inSpec = prevInSpec;
+    }
+
+    _forofCounters.clear();
+    _writeBackFrames = [];
+    _varTypes = new Map(fn.params.map(p => [p.name, p.ty]));
+    let body = pureDefNames.has(fn.name)
+      ? [{ kind: "return" as const, value: { kind: "app" as const, fn: _opts.backend === "lean" ? `Pure.${fn.name}` : fn.name, args: fn.params.map(p => ({ kind: "var" as const, name: p.name })) } }]
+      : promoteAssignedLets(transformStmts(fn.body, mod.typeDecls));
+
+    // Lean-only method-body rewrites (Velvet can't WP-synthesize monadic matches
+    // and forbids `return` in loops):
+    //   1. monadic statement-`match` on a user union → discriminator `if`-chains
+    //   2. `return` inside a loop → result var + break (postcondition as invariant)
+    // Dafny keeps the native forms. Breaking loops (including those synthesized
+    // by rewrite 2) must carry a `//@ done_with` in the TS source — enforced here,
+    // since loom's default loop-exit fact `¬guard` does not hold across a break.
+    if (_opts.backend === "lean" && !pureDefNames.has(fn.name)) {
+      body = matchToIfChains(body);
+      const resultInvariants = fn.ensures.map(e => replaceVar(transformSpecExpr(e), "\\result", { kind: "var", name: "_loopRet" }));
+      body = eliminateReturnInLoops(body, fn.returnTy, resultInvariants);
+      requireDoneWithForBreaks(body, fn.name);
+    }
+
+    // Shadow reassigned parameters with mutable locals (including parameters
+    // written back via Place lowering inside `someMatch`, `tagMatch`, or `switch`).
+    const paramNames = new Set(fn.params.map(p => p.name));
+    const reassigned = findReassignedNames(fn.body, paramNames);
+    for (const target of collectAssignedIrTargets(body)) {
+      if (paramNames.has(target)) reassigned.add(target);
+    }
+    if (reassigned.size > 0) {
+      const shadows: Stmt[] = fn.params
+        .filter(p => reassigned.has(p.name))
+        .map(p => ({ kind: "let" as const, name: p.name, type: p.ty, mutable: true, value: { kind: "var" as const, name: p.name } }));
+      body = [...shadows, ...body];
+    }
+
+    return {
+      kind: "method" as const,
+      name: fn.name,
+      typeParams: fn.typeParams,
+      params: fn.params.map(p => ({ name: p.name, type: p.ty })),
+      returnType: fn.returnTy,
+      requires: fn.requires.map(transformSpecExpr),
+      ensures,
+      decreases: fn.decreases ? transformSpecExpr(fn.decreases) : null,
+      body,
+    };
+  });
+
+  // Class declarations
+  const classDecls: Decl[] = (mod.classes ?? []).map(cls => {
+    const classMethods: FnMethod[] = cls.methods.map(fn => {
+      const ensures: Expr[] = fn.ensures.map(transformSpecExpr);
+      _forofCounters.clear();
+      _writeBackFrames = [];
+      _varTypes = new Map(fn.params.map(p => [p.name, p.ty]));
+      let body = promoteAssignedLets(transformStmts(fn.body, mod.typeDecls));
+      const paramNames = new Set(fn.params.map(p => p.name));
+      const reassigned = findReassignedNames(fn.body, paramNames);
+      for (const target of collectAssignedIrTargets(body)) {
+        if (paramNames.has(target)) reassigned.add(target);
+      }
+      if (reassigned.size > 0) {
+        const shadows: Stmt[] = fn.params
+          .filter(p => reassigned.has(p.name))
+          .map(p => ({ kind: "let" as const, name: p.name, type: p.ty, mutable: true, value: { kind: "var" as const, name: p.name } }));
+        body = [...shadows, ...body];
+      }
+      return {
+        kind: "method" as const,
+        name: fn.name,
+        typeParams: fn.typeParams,
+        params: fn.params.map(p => ({ name: p.name, type: p.ty })),
+        returnType: fn.returnTy,
+        requires: fn.requires.map(transformSpecExpr),
+        ensures,
+        decreases: fn.decreases ? transformSpecExpr(fn.decreases) : null,
+        body,
+      };
+    });
+    return {
+      kind: "class" as const,
+      name: cls.name,
+      fields: cls.fields.map(f => ({ name: f.name, type: f.ty })),
+      methods: classMethods,
+    };
+  });
+
+  // Types file — assembled after all body transforms, so needs discovered
+  // there (discriminator kind-helpers) are included.
+  const kindHelpers: Decl[] = [..._neededKindHelpers.values()].map(kindHelperDecl);
+
+  // ── Imported / undeclared user types: opaque by default ─────────────
+  // A module may reference types it imports (ir.ts uses typedir's `Ty`).
+  // Standalone compilation has no declaration for them; synthesize an
+  // opaque type — the value passes through, uninspectable, which is the
+  // only sound use of an undeclared type (same doctrine as _synthOpaque).
+  // Any attempted inspection still fails loudly: an opaque type has no
+  // constructors and no operations. Signature-level coverage (type-decl
+  // fields, params, returns, class fields, externs, consts); a body-level
+  // reference to an undeclared type still errors in the backend.
+  const referenced = new Set<string>();
+  const collectTy = (ty: Ty): void => {
+    switch (ty.kind) {
+      case "user": referenced.add(tyBaseName(ty.name)); return;
+      case "array": case "set": collectTy(ty.elem); return;
+      case "optional": collectTy(ty.inner); return;
+      case "map": collectTy(ty.key); collectTy(ty.value); return;
+      case "tuple": ty.elems.forEach(collectTy); return;
+      case "fn": ty.params.forEach(collectTy); collectTy(ty.result); return;
+      default: return;
+    }
+  };
+  const knownTypeNames = new Set<string>(typeDecls.map(d => (d as { name: string }).name));
+  for (const cls of mod.classes ?? []) knownTypeNames.add(cls.name);
+  const allTypeParams = new Set<string>();
+  // Exclude type params from the *source* decls — the transformed IR drops
+  // them for aliases (`type Step<S, A> = …`), and a generic alias's params
+  // must not be mistaken for imported types. Params may carry a `//@ type`
+  // decoration ("S(==)"); references collect as the bare name, so strip it.
+  const addTp = (tp: string): void => { allTypeParams.add(tp.replace(/\(.*$/, "").trim()); };
+  for (const d of mod.typeDecls) d.typeParams?.forEach(addTp);
+  for (const d of typeDecls) {
+    if (d.kind === "inductive") d.constructors.forEach(c => c.fields.forEach(f => collectTy(f.type)));
+    else if (d.kind === "structure") d.fields.forEach(f => collectTy(f.type));
+    else if (d.kind === "type-alias") collectTy(d.target);
+  }
+  for (const fn of mod.functions) { fn.typeParams.forEach(addTp); fn.params.forEach(p => collectTy(p.ty)); collectTy(fn.returnTy); }
+  for (const cls of mod.classes ?? []) {
+    cls.fields.forEach(f => collectTy(f.ty));
+    for (const m of cls.methods) { m.typeParams.forEach(addTp); m.params.forEach(p => collectTy(p.ty)); collectTy(m.returnTy); }
+  }
+  for (const ext of mod.externs ?? []) { ext.typeParams.forEach(addTp); ext.params.forEach(p => collectTy(p.ty)); collectTy(ext.returnTy); }
+  for (const c of mod.constants ?? []) collectTy(c.ty);
+  const opaqueImports: Decl[] = [...referenced]
+    .filter(n => !knownTypeNames.has(n) && !allTypeParams.has(n))
+    .map(n => ({ kind: "opaque-type" as const, name: n }));
+  const typesImports: string[] = ["LemmaScript"];
+  let typesFile: Module | null = null;
+  const pureNamespace: Decl[] = pureDefs.length > 0
+    ? [{ kind: "namespace", name: "Pure", decls: pureDefs }]
+    : [];
+  if (typeDecls.length > 0 || pureDefs.length > 0 || externDecls.length > 0 || opaqueImports.length > 0) {
+    // Declaration order differs by backend. Dafny allows forward references, so
+    // externs go first to be in scope everywhere. Lean requires definition-before-use:
+    // an extern's signature may reference a declared type (e.g. `estimateTokens(m: AgentMessage)`),
+    // so types must precede externs, which in turn precede the pure mirrors that may call them.
+    // Kind-helpers sit right after the datatypes they discriminate.
+    const decls = _opts.backend === "lean"
+      ? [...opaqueImports, ...typeDecls, ...kindHelpers, ...externDecls, ...pureNamespace]
+      : [...externDecls, ...opaqueImports, ...typeDecls, ...kindHelpers, ...pureNamespace];
+    typesFile = {
+      comment: "  Generated by lsc — Lean types and pure function mirrors.",
+      imports: typesImports,
+      options: [],
+      decls,
+    };
+  }
+
+  const defImport = specImport ?? (typesFile ? `«${moduleBase}.types»` : null);
+  const defBaseImports: string[] = defImport ? [defImport] : ["LemmaScript"];
+  const defFile: Module = {
+    comment: "  Generated by lsc from " + (mod.file.split("/").pop() ?? "") + "\n  Do not edit — re-run `lsc gen` to regenerate.",
+    imports: defBaseImports,
+    options: [
+      { key: "velvet.semantics.termination", value: '"total"' },
+    ],
+    decls: [...constDecls, ...defByMethods, ...methods, ...classDecls],
+  };
+
+  return { typesFile, defFile };
+}

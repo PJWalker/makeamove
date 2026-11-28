@@ -56,7 +56,7 @@ export class OverlayLayer {
         g.poly(screenCorners(t, cam));
       }
       g.stroke({
-        color: element.locked ? 0xFF_FF_FF : ACCENT,
+        color: element.locked ? 0xff_ff_ff : ACCENT,
         alpha: element.locked ? 0.5 : 1,
         width: 2,
       });

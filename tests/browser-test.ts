@@ -11,7 +11,7 @@ import {
 import { createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { expect as vitestExpect, test as vitestTest, type Assertion } from "vite-plus/test";
-import { App } from "../src/app/App";
+import App from "../src/app/App";
 import { pendingInvite, routeCampaignId } from "../src/navigation/router";
 import { autohide } from "../src/workspace/autohide";
 import "../src/styles/base.css";

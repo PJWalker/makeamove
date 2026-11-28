@@ -9,8 +9,8 @@ import type { Campaign } from "../campaign/campaign";
 import { device } from "../platform/device";
 import { useQuery } from "../ui/useQuery";
 import Button from "../ui/Button";
-import { poolFormula  } from "../features/dice/pool";
-import type {TrayPick} from "../features/dice/pool";
+import { poolFormula } from "../features/dice/pool";
+import type { TrayPick } from "../features/dice/pool";
 import { colourOf } from "../scene/presence";
 import { canWork } from "../features/chat/types";
 import { readRollState } from "../features/chat/rollState";
@@ -32,7 +32,10 @@ const VISIBILITY_LABEL: Record<RollVisibility, string> = {
   private: "Secret: you and the GM",
 };
 
-interface Thrown { arriving: boolean; mine: boolean }
+interface Thrown {
+  arriving: boolean;
+  mine: boolean;
+}
 
 /** The dice of a roll take the colour of the player who rolled them. */
 const rollerDiceColour = (m: MoveMessage | RollMessage) =>
@@ -112,8 +115,12 @@ export function PendingRollCard({
           sides={entry.sides}
           index={index}
           release={releaseOf(entry, index)}
-          onLanded={() => { onDieLanded(index); }}
-          onEntered={() => { onDieEntered(entryKey); }}
+          onLanded={() => {
+            onDieLanded(index);
+          }}
+          onEntered={() => {
+            onDieEntered(entryKey);
+          }}
         />
       );
     }
@@ -164,7 +171,8 @@ function useSharedRoll(campaign: Campaign, message: MoveMessage | RollMessage) {
     allowed,
     rerollAll: () => context.execute(reroll, { id: message.id }),
     reroll: (term: number, die: number) => context.execute(reroll, { id: message.id, term, die }),
-    toggle: (term: number, die: number) => context.execute(toggleDie, { id: message.id, term, die }),
+    toggle: (term: number, die: number) =>
+      context.execute(toggleDie, { id: message.id, term, die }),
   };
 }
 
@@ -257,7 +265,7 @@ function RollTerms({
   colour: string;
   interaction: RollInteraction;
 }) {
-  const {seeds} = (interaction.snapshot!);
+  const { seeds } = interaction.snapshot!;
   const initial = useConstant(() => new Set(seeds.flat()));
   // Each die and chip is keyed by its own seed, so it keeps its place as others are rerolled, added or taken away.
   return (

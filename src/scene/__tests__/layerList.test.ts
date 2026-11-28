@@ -36,9 +36,9 @@ const els = [
 describe("the list of what's on a scene", () => {
   it("shows layers and their rows from the top down, a group where its topmost member is", () => {
     const list = layerList(els);
-    expect(list.map((s) => s.layer)).toEqual(["over", "token", "under", "map"]);
-    expect(list[0]!.rows.map((row) => rowIds(row))).toEqual([["c", "a"], ["b"]]);
-    expect(list[3]!.rows.map((row) => rowIds(row))).toEqual([["map"]]);
+    expect(list.map((s) => s.layer)).toEqual(["aboveFog", "over", "token", "under", "map"]);
+    expect(list[1]!.rows.map((row) => rowIds(row))).toEqual([["c", "a"], ["b"]]);
+    expect(list[4]!.rows.map((row) => rowIds(row))).toEqual([["map"]]);
   });
 
   it("calls an element by its name, or else by what it is", () => {

@@ -7,6 +7,48 @@
       "skillPath": "skills/dry-refactoring/SKILL.md",
       "computedHash": "a1271fcaf6f275edf3b71f06371efe0ce346c44d1095114b311d66e6a9ed3d82"
     },
+    "lemmascript": {
+      "source": "midspiral/lemmascript-skills",
+      "commit": "1267837b6647a93a534b6f99f4a2f61834daec3e",
+      "sourceType": "github",
+      "skillPath": "lemmascript/SKILL.md",
+      "computedHash": "4d0b32559de76874d6aed473ab430d3bc901670063a30cd1828094a8f51931f7"
+    },
+    "lemmascript-claimcheck": {
+      "source": "midspiral/lemmascript-skills",
+      "commit": "1267837b6647a93a534b6f99f4a2f61834daec3e",
+      "sourceType": "github",
+      "skillPath": "lemmascript-claimcheck/SKILL.md",
+      "computedHash": "27d5abf9fa53a5534964c2780d168c6548f7e290cc927150598f1b393b6fb154"
+    },
+    "lemmascript-dafny-extract-counterexample": {
+      "source": "midspiral/lemmascript-skills",
+      "commit": "1267837b6647a93a534b6f99f4a2f61834daec3e",
+      "sourceType": "github",
+      "skillPath": "lemmascript-dafny-extract-counterexample/SKILL.md",
+      "computedHash": "09e357aba4b6a53f6f373b84ae03715a2ea0e333c16d41b6cf59a5247dc1575b"
+    },
+    "lemmascript-design-doc": {
+      "source": "midspiral/lemmascript-skills",
+      "commit": "1267837b6647a93a534b6f99f4a2f61834daec3e",
+      "sourceType": "github",
+      "skillPath": "lemmascript-design-doc/SKILL.md",
+      "computedHash": "1dcfc1af9dc648127d616eb65bc7633bd56a1a6375f3e858803cc38bee98e558"
+    },
+    "lemmascript-proof-review": {
+      "source": "midspiral/lemmascript-skills",
+      "commit": "1267837b6647a93a534b6f99f4a2f61834daec3e",
+      "sourceType": "github",
+      "skillPath": "lemmascript-proof-review/SKILL.md",
+      "computedHash": "ddf12c2f23934deea9e58b18da43616722fb0b3601e4357262bd9ae353a24dc6"
+    },
+    "lemmascript-verified-codebase-rules": {
+      "source": "midspiral/lemmascript-skills",
+      "commit": "1267837b6647a93a534b6f99f4a2f61834daec3e",
+      "sourceType": "github",
+      "skillPath": "lemmascript-verified-codebase-rules/SKILL.md",
+      "computedHash": "ef36e34641124789a83d9cd629e7f44840c7287c45894c5e5bd1970285d7fd3e"
+    },
     "react-aria": {
       "source": "react-aria.adobe.com",
       "sourceUrl": "https://react-aria.adobe.com",

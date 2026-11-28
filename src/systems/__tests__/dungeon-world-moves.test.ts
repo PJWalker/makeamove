@@ -147,7 +147,9 @@ describe("performMove", () => {
     );
     expect(resolveDifficulty({ kind: "target", value: "ac" }, derived, 14)).toBe(14);
     expect(resolveDifficulty({ kind: "target", value: "ac" }, derived, 14, 17)).toBe(17);
-    expect(() => resolveDifficulty({ kind: "fixed", value: Number.NaN }, derived)).toThrow("finite");
+    expect(() => resolveDifficulty({ kind: "fixed", value: Number.NaN }, derived)).toThrow(
+      "finite",
+    );
     expect(() =>
       resolveDifficulty({ kind: "prompt", prompt: "Difficulty", min: 1 }, derived, 0),
     ).toThrow("range");

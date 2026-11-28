@@ -1,15 +1,8 @@
 import type { JSONContent } from "@tiptap/core";
 import type { LinkKind } from "../notes/links";
 import { LINK_NODE } from "../notes/links";
-import {
-  plainParagraph,
-  plainText,
-  TRACKER_NODE,
-  trackerToken
-  
-  
-} from "../../data/richText";
-import type {RichText, TrackerButton} from "../../data/richText";
+import { plainParagraph, plainText, TRACKER_NODE, trackerToken } from "../../data/richText";
+import type { RichText, TrackerButton } from "../../data/richText";
 import { isString } from "../../lib/guards";
 
 /** A chat message's text: rich text, as everywhere else. */

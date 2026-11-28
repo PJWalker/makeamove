@@ -16,10 +16,9 @@ import {
   derive,
   instanceOf,
   actionsFor,
-  ensureSystemPart
-  
+  ensureSystemPart,
 } from "../../features/characters/store";
-import type {CharacterRec} from "../../features/characters/store";
+import type { CharacterRec } from "../../features/characters/store";
 import { rootOf } from "../../data/schema";
 import { campaignShape } from "../../campaign/schema";
 import { performMove, planMove } from "../../features/characters/moves";
@@ -35,7 +34,7 @@ const fixed = (...values: number[]) => {
 };
 
 function character(classId: string, scores: Record<string, number>, level = 1) {
-  const {characters} = rootOf(new Y.Doc(), campaignShape);
+  const { characters } = rootOf(new Y.Doc(), campaignShape);
   const id = createCharacter(characters, dnd, {
     name: "Vex",
     owner: "me",

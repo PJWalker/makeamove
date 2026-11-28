@@ -67,11 +67,7 @@ function brushTexture(brushes: Uint8Array) {
   return texture;
 }
 
-function splatCloud(
-  data: Float32Array,
-  brushes: Uint8Array,
-  lights: readonly SplatLight[],
-) {
+function splatCloud(data: Float32Array, brushes: Uint8Array, lights: readonly SplatLight[]) {
   const count = data.length / STRIDE;
   const rows = Math.ceil(count / PER_ROW);
   const sort = splatSorter(data);

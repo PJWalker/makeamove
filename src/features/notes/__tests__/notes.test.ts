@@ -141,7 +141,7 @@ describe("the GM vault", () => {
 
   it("is only opened on GM devices", async () => {
     const c = await setUp();
-    const {id} = c;
+    const { id } = c;
     c.destroy();
     device.value = { id: "pat", name: "Pat" };
     const asPlayer = await Campaign.open(id);

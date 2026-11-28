@@ -1,6 +1,7 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "ignoreFiles": [
+    ".agents/**",
     ".claude/hooks/react-doctor.mjs",
     "eslint/noRawYjs.config.js",
     "vitest.browser.config.ts"

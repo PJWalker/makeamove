@@ -25,7 +25,7 @@ export interface DragEntity {
     to: (characterId: string) => void;
     canGive?: (characterId: string) => boolean;
   };
-  /** Place it on the map as a token. */
+  /** Place it on the map as a token; without one, a link goes down as a pin. */
   token?: TokenSpec;
   /** The Library entry it comes from, for drops that take rules entities (a struggle, a class). */
   libraryEntry?: { kind: string; id: string };
@@ -141,6 +141,13 @@ export function dropTargetAt(
   };
 }
 
+/** Put an entity down on the scene: as its token, or as a pin leading to it if it has no token of its own (pages, scenes). */
+function dropOnScene(canvas: CanvasState, entity: DragEntity, { x, y }: { x: number; y: number }) {
+  if (!entity.token && entity.link)
+    return canvas.pinDrop.value?.(x, y, `${entity.link.kind}:${entity.link.id}`) ?? false;
+  return canvas.tokenDrop.value?.(x, y, entity.token ?? { name: entity.label }) ?? false;
+}
+
 /** Drop an entity on a target from dropTargetAt; it flashes to say it landed. */
 export function dropOn(
   canvas: CanvasState,
@@ -166,7 +173,7 @@ export function dropOn(
       entity.give.to(target.characterId);
       if (target.tokenId) canvas.flashSceneDrop(target.tokenId);
     } else if (target.element.matches(".scene-canvas")) {
-      if (!canvas.tokenDrop.value?.(x, y, entity.token ?? { name: entity.label })) return false;
+      if (!dropOnScene(canvas, entity, { x, y })) return false;
     } else return false;
   }
   target.element.dataset["dropped"] = "true";
@@ -276,15 +283,20 @@ export function dragEntity(
     document.documentElement.classList.remove("is-reordering");
     // The click that ends a drag is not a press on the row.
     suppressNextClick();
-    if (!commit) { ghost.remove(); return; }
+    if (!commit) {
+      ghost.remove();
+      return;
+    }
     if (onBar(event)) {
       ghost.remove();
-      entity.pin!(indexAmong(hotbarSlots(), "x", event)); return;
+      entity.pin!(indexAmong(hotbarSlots(), "x", event));
+      return;
     }
     if (target?.tokenId && target.tokenCenter && target.characterId && entity.give) {
       sendGhostToToken(ghost, target.tokenCenter, () =>
         dropOn(canvas, target, entity, event.clientX, event.clientY),
-      ); return;
+      );
+      return;
     }
     ghost.remove();
     if (target) dropOn(canvas, target, entity, event.clientX, event.clientY);

@@ -35,7 +35,12 @@ export function discHull(radius: number, thickness: number, sides = 16): DieHull
     faces: [
       Array.from({ length: sides }, (_, index) => index),
       Array.from({ length: sides }, (_, index) => 2 * sides - 1 - index),
-      ...Array.from({ length: sides }, (_, index) => [sides + index, sides + next(index), next(index), index]),
+      ...Array.from({ length: sides }, (_, index) => [
+        sides + index,
+        sides + next(index),
+        next(index),
+        index,
+      ]),
     ],
   };
 }
@@ -147,7 +152,8 @@ const PARALLEL = 1e-6;
 function separatingAxes(normals: Vec3[]) {
   const axes: Vec3[] = [];
   for (const normal of normals)
-    if (!axes.some((axis) => Math.abs(Math.abs(axis.dot(normal)) - 1) < PARALLEL)) axes.push(normal);
+    if (!axes.some((axis) => Math.abs(Math.abs(axis.dot(normal)) - 1) < PARALLEL))
+      axes.push(normal);
   return axes;
 }
 
@@ -241,7 +247,7 @@ class TrayWorld {
 
   /** Keeps a die's hull inside the walls, however fast it was going. */
   contain(body: Body, vertices: Vec3[], restitution: number) {
-    const {tray} = this;
+    const { tray } = this;
     const offsets = vertices.map((vertex) => body.quaternion.vmult(vertex));
     for (const [axis, minimum, maximum] of [
       ["x", tray.left, tray.right],
@@ -347,19 +353,46 @@ export class DiceFlight {
     const trayWorld = new TrayWorld(tray);
     this.trayWorld = trayWorld;
     const width = tray.right - tray.left;
-    this.dice = throws.map(({ hull, seed, delay = 0, state, target: toward, heavy = false }, index) => {
-      const random = seededRandom(seed);
-      const target = new Vec3(toward.x, -toward.y, 0);
-      const vertices = hull.vertices.map(([x, y, z]) => new Vec3(x, y, z));
-      const labelUps = hull.labelUps?.map(([x, y, z]) => new Vec3(x, y, z));
-      const faceUp = hull.faceUp ?? false;
-      const body = trayWorld.dieBody(hull, vertices, heavy);
-      if (state) {
-        body.position.set(...state.position);
-        const q = state.quaternion;
-        body.quaternion.set(q.x, q.y, q.z, q.w);
-        body.collisionFilterMask = DICE | TRAY;
-        trayWorld.world.addBody(body);
+    this.dice = throws.map(
+      ({ hull, seed, delay = 0, state, target: toward, heavy = false }, index) => {
+        const random = seededRandom(seed);
+        const target = new Vec3(toward.x, -toward.y, 0);
+        const vertices = hull.vertices.map(([x, y, z]) => new Vec3(x, y, z));
+        const labelUps = hull.labelUps?.map(([x, y, z]) => new Vec3(x, y, z));
+        const faceUp = hull.faceUp ?? false;
+        const body = trayWorld.dieBody(hull, vertices, heavy);
+        if (state) {
+          body.position.set(...state.position);
+          const q = state.quaternion;
+          body.quaternion.set(q.x, q.y, q.z, q.w);
+          body.collisionFilterMask = DICE | TRAY;
+          trayWorld.world.addBody(body);
+          return {
+            body,
+            vertices,
+            target,
+            heavy,
+            labelUps,
+            faceUp,
+            delay: delay / 1000,
+            strike: {
+              velocity: new Vec3(...state.velocity),
+              angularVelocity: new Vec3(...state.angularVelocity),
+            },
+            active: false,
+            captured: true,
+            impact: 0,
+            age: 0,
+            still: 0,
+            home: 0,
+          };
+        }
+        // Spread across the tray's width so dice thrown together don't start inside each other.
+        const lane = (index + 0.25 + random() * 0.5) / throws.length;
+        body.position.set(tray.left + (0.15 + lane * 0.7) * width, -tray.top + 2, 4 + random() * 2);
+        body.quaternion.setFromEuler(random() * Math.PI, random() * Math.PI, random() * Math.PI);
+        body.velocity.set((random() - 0.5) * 5, -10 - random() * 6, 3 + random() * 4);
+        body.angularVelocity.set(random() * 24 - 12, random() * 24 - 12, random() * 24 - 12);
         return {
           body,
           vertices,
@@ -368,40 +401,15 @@ export class DiceFlight {
           labelUps,
           faceUp,
           delay: delay / 1000,
-          strike: {
-            velocity: new Vec3(...state.velocity),
-            angularVelocity: new Vec3(...state.angularVelocity),
-          },
           active: false,
-          captured: true,
+          captured: false,
           impact: 0,
           age: 0,
           still: 0,
           home: 0,
         };
-      }
-      // Spread across the tray's width so dice thrown together don't start inside each other.
-      const lane = (index + 0.25 + random() * 0.5) / throws.length;
-      body.position.set(tray.left + (0.15 + lane * 0.7) * width, -tray.top + 2, 4 + random() * 2);
-      body.quaternion.setFromEuler(random() * Math.PI, random() * Math.PI, random() * Math.PI);
-      body.velocity.set((random() - 0.5) * 5, -10 - random() * 6, 3 + random() * 4);
-      body.angularVelocity.set(random() * 24 - 12, random() * 24 - 12, random() * 24 - 12);
-      return {
-        body,
-        vertices,
-        target,
-        heavy,
-        labelUps,
-        faceUp,
-        delay: delay / 1000,
-        active: false,
-        captured: false,
-        impact: 0,
-        age: 0,
-        still: 0,
-        home: 0,
-      };
-    });
+      },
+    );
   }
 
   private entersTray(from: Vec3, to: Vec3, tray: DieTray) {
@@ -494,6 +502,9 @@ export class DiceFlight {
     for (const { die, from, to, fromPosition, toPosition } of finishing.eases) {
       from.slerp(to, eased, die.body.quaternion);
       fromPosition.lerp(toPosition, eased, die.body.position);
+      // Turning as it slides, it rocks up over its corners rather than through the floor.
+      const { position, quaternion } = die.body;
+      position.z = Math.max(position.z, -lowestPoint(quaternion, die.vertices));
       die.body.velocity.setZero();
       die.body.angularVelocity.setZero();
       die.impact = 0;
@@ -602,7 +613,8 @@ export class DiceFlight {
     if (!resting) return false;
     const leaning = this.dice.filter(
       (die) =>
-        (!die.heavy && tilted(die.body)) || (this.nudges < MAX_NUDGES && raised(die.body, die.vertices)),
+        (!die.heavy && tilted(die.body)) ||
+        (this.nudges < MAX_NUDGES && raised(die.body, die.vertices)),
     );
     if (leaning.length > 0 && this.nudges < MAX_NUDGES) {
       const random = seededRandom(`${this.nudges}:${this.elapsed}`);

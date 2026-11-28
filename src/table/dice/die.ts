@@ -5,6 +5,8 @@ import type { DieHull, DiePose, DieThrow, DieTray } from "./physics";
 import { CHIP_FACES, chipHull, firstLabelFor, labelOnFace, SCALE, shapeFor, SLOT } from "./shapes";
 import { simulateDiceInWorker, warmDice } from "./simulation";
 import { centreOf, glideTrack, lyingAt, rollTrack, struck } from "./tracks";
+import { atRest, carried, lifted, lowered, released } from "./dieView";
+import type { DieView } from "./dieView";
 import type { DieLook, Point, Pose, Track } from "./types";
 
 /*
@@ -40,6 +42,8 @@ export class Die {
   private motion: { stop: () => void } | undefined;
   /** A copy of its canvas, in a copy of its tray carried over the page: it's drawn there instead. */
   private carriedIn: HTMLCanvasElement | undefined;
+  /** Where it's seen: always exactly one place (dieView.ts). */
+  private view: DieView = atRest();
   private disposed = false;
 
   /** A die drawn in `canvas`, which must sit in the die's slot, in the document. */
@@ -90,7 +94,9 @@ export class Die {
   private numberFor(rotation: Quaternion) {
     if (this.flicks) return;
     const faces =
-      this.look.form === "chip" ? CHIP_FACES : shapeFor(this.look.sides).faces.map((face) => face.normal);
+      this.look.form === "chip"
+        ? CHIP_FACES
+        : shapeFor(this.look.sides).faces.map((face) => face.normal);
     const first = firstLabelFor(faces, this.look, rotation);
     if (first === this.first) return;
     this.model.dispose();
@@ -140,6 +146,16 @@ export class Die {
     this.canvas.style.setProperty("--lift", String(lift));
   }
 
+  /** Seen where `next` says: lifted or in its slot, and in the carried copy or not. */
+  private show(next: DieView) {
+    this.view = next;
+    if (next.lifted) this.lift();
+    else this.lower();
+    if (!this.carriedIn) return;
+    if (next.copyShown) this.carriedIn.style.removeProperty("visibility");
+    else this.carriedIn.style.visibility = "hidden";
+  }
+
   /** Back into its slot. */
   private lower() {
     if (this.canvas.matches(":popover-open")) this.canvas.hidePopover();
@@ -177,12 +193,12 @@ export class Die {
       const stop = () => {
         cancelAnimationFrame(frame);
         this.motion = undefined;
-        this.lower();
+        this.show(lowered(this.view));
         this.rotation.copy(final);
         if (!this.disposed) {
           this.flick();
           this.draw(this.rotation);
-          this.showCopy();
+          if (this.carriedIn) this.draw(this.rotation, this.carriedIn);
         }
         resolve();
       };
@@ -191,12 +207,17 @@ export class Die {
       const tick = (now: number) => {
         start ??= now;
         const ms = now - start;
-        if (!this.alive) { stop(); return; }
+        if (!this.alive) {
+          stop();
+          return;
+        }
         if (ms >= delay) {
           const { pose, done } = track(ms);
-          if (done) { stop(); return; }
-          this.lift();
-          if (this.carriedIn) this.carriedIn.style.visibility = "hidden";
+          if (done) {
+            stop();
+            return;
+          }
+          if (!this.view.lifted) this.show(lifted(this.view));
           this.place(pose);
           if (ms >= tumbling) this.flick(ms - tumbling);
           this.draw(pose.rotation);
@@ -210,13 +231,6 @@ export class Die {
     });
   }
 
-  /** Shows it at rest in the copy of its tray being carried, if there is one. */
-  private showCopy() {
-    if (!this.carriedIn) return;
-    this.draw(this.rotation, this.carriedIn);
-    this.carriedIn.style.removeProperty("visibility");
-  }
-
   /**
    * While its tray is carried, as a copy of it, over the page: a die still moving
    * moves with the copy, and comes to rest in it. The returned function ends that.
@@ -226,9 +240,13 @@ export class Die {
     // The copy was made of the canvas as it was, wherever it had been carried to.
     copy.style.removeProperty("transform");
     copy.style.removeProperty("--lift");
-    if (this.moving) copy.style.visibility = "hidden";
+    // A die that's flying stays flying; one that hasn't taken off yet (still
+    // waiting out its delay) is seen at rest in the copy until it does.
+    this.show(carried(this.view));
     return () => {
-      if (this.carriedIn === copy) this.carriedIn = undefined;
+      if (this.carriedIn !== copy) return;
+      this.show(released(this.view));
+      this.carriedIn = undefined;
     };
   }
 
@@ -245,7 +263,9 @@ export class Die {
 
   /** Carried, at rest, from `from` into its slot. */
   glideIn(from: Point, delay: number) {
-    return this.play(glideTrack(this.slot, from, delay, this.rotation.clone()), this.rotation, { delay });
+    return this.play(glideTrack(this.slot, from, delay, this.rotation.clone()), this.rotation, {
+      delay,
+    });
   }
 
   /**
@@ -323,7 +343,10 @@ function rollPending() {
     for (const gone of all) if (!gone.die.alive) gone.settle(Promise.resolve());
     const throws = all.filter(({ die }) => die.alive);
     if (throws.length > 0)
-      rolling.set(tray, (rolling.get(tray) ?? Promise.resolve()).then(() => roll(tray, throws)));
+      rolling.set(
+        tray,
+        (rolling.get(tray) ?? Promise.resolve()).then(() => roll(tray, throws)),
+      );
   }
 }
 
@@ -350,7 +373,15 @@ function inTrayFrame(tray: HTMLElement, throws: Throw[], lying: Die[]): [DieTray
           delay,
           target,
           ...(trayVelocity
-            ? { state: struck(die.hull, die.restingRotation, target, trayVelocity, box.height / SCALE) }
+            ? {
+                state: struck(
+                  die.hull,
+                  die.restingRotation,
+                  target,
+                  trayVelocity,
+                  box.height / SCALE,
+                ),
+              }
             : {}),
         };
       }),

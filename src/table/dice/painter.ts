@@ -57,11 +57,11 @@ async function startStage() {
   scene.environmentIntensity = 0.3;
   room.dispose();
   reflections.dispose();
-  const key = new DirectionalLight(0xFF_FF_FF, 1.1);
+  const key = new DirectionalLight(0xff_ff_ff, 1.1);
   key.position.set(-2, 3, 4);
-  const rim = new DirectionalLight(0xFF_FF_FF, 0.6);
+  const rim = new DirectionalLight(0xff_ff_ff, 0.6);
   rim.position.set(3, -1, 2);
-  scene.add(new HemisphereLight(0xFF_FF_FF, 0x33_40_55, 0.85), key, rim);
+  scene.add(new HemisphereLight(0xff_ff_ff, 0x33_40_55, 0.85), key, rim);
   const camera = new OrthographicCamera(-SLOT / 2, SLOT / 2, SLOT / 2, -SLOT / 2, -100, 100);
   return { renderer, scene, camera };
 }

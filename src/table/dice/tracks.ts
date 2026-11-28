@@ -1,7 +1,7 @@
 import { Quaternion, Vector3 } from "three/webgpu";
 import { playDiceImpact } from "../../ui/sounds";
-import { PHYSICS_STEP    } from "./physics";
-import type {DieHull, DiePose, DieState} from "./physics";
+import { PHYSICS_STEP } from "./physics";
+import type { DieHull, DiePose, DieState } from "./physics";
 import { SCALE } from "./shapes";
 import type { Point, Track } from "./types";
 
@@ -75,7 +75,8 @@ export function struck(
   };
 }
 
-const quaternion = ({ x, y, z, w }: DiePose["quaternion"], into: Quaternion) => into.set(x, y, z, w);
+const quaternion = ({ x, y, z, w }: DiePose["quaternion"], into: Quaternion) =>
+  into.set(x, y, z, w);
 
 /**
  * A die's simulated roll, as it's seen: in its tray, wherever the tray is now,
@@ -91,7 +92,10 @@ export function rollTrack(
   const step = PHYSICS_STEP * 1000;
   const last = frames.length - 1;
   const rest = frames[last]!;
-  const entry = Math.max(0, frames.findIndex((pose) => pose.captured));
+  const entry = Math.max(
+    0,
+    frames.findIndex((pose) => pose.captured),
+  );
   const launch = delay / step;
   const a = new Quaternion();
   const b = new Quaternion();
@@ -136,7 +140,12 @@ export function rollTrack(
 }
 
 /** A die carried at rest, turned as `rotation`, from `from` into its slot. */
-export function glideTrack(slot: HTMLElement, from: Point, delay: number, rotation: Quaternion): Track {
+export function glideTrack(
+  slot: HTMLElement,
+  from: Point,
+  delay: number,
+  rotation: Quaternion,
+): Track {
   return (ms) => {
     const t = Math.min(1, (ms - delay) / GLIDE_MS);
     const eased = 1 - (1 - t) ** 3;

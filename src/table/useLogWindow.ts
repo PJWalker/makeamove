@@ -31,7 +31,10 @@ const ROW_GUESS = 64;
 const JUMP_LEAD = 20;
 
 /** Where the window starts and ends: null means "WINDOW rows before the end" and "the newest row". */
-interface Span { start: string | null; end: string | null }
+interface Span {
+  start: string | null;
+  end: string | null;
+}
 
 /**
  * The window of a long chat log that's rendered, and the scroll behaviour around it: following the
@@ -97,7 +100,9 @@ function useLogWindow({
   const loadEarlier = () => {
     if (!campaign.chat.hasEarlier.value || loading) return;
     setLoading(true);
-    void campaign.chat.loadEarlier().finally(() => { setLoading(false); });
+    void campaign.chat.loadEarlier().finally(() => {
+      setLoading(false);
+    });
   };
   /** Set when the window moves to where the scrollbar was dragged: the spacers place it, so no anchoring. */
   const jumped = useRef(false);
@@ -111,7 +116,11 @@ function useLogWindow({
       return;
     }
     let index = 0;
-    for (let accumulator = unloaded; index < rows.length - 1 && accumulator + heightOf(rows[index]!) <= y; index++)
+    for (
+      let accumulator = unloaded;
+      index < rows.length - 1 && accumulator + heightOf(rows[index]!) <= y;
+      index++
+    )
       accumulator += heightOf(rows[index]!);
     const from = Math.max(0, index - JUMP_LEAD);
     showRows(from, Math.min(rows.length, from + WINDOW));
@@ -192,7 +201,9 @@ function useLogWindow({
       );
       if (row)
         element.scrollTop +=
-          row.getBoundingClientRect().top - element.getBoundingClientRect().top - anchor.current.top;
+          row.getBoundingClientRect().top -
+          element.getBoundingClientRect().top -
+          anchor.current.top;
     }
     jumped.current = false;
     // The window may still not reach far enough (a short window, rows just loaded, or a jump into unloaded chunks).
@@ -226,12 +237,15 @@ function useLogWindow({
       else noteAnchorReference.current();
     });
     ro.observe(list.current);
-    return () => { ro.disconnect(); };
+    return () => {
+      ro.disconnect();
+    };
   }, []);
 
   const onScroll = (e: { currentTarget: HTMLElement }) => {
     const element = e.currentTarget;
-    stick.current = atNewest && element.scrollHeight - element.scrollTop - element.clientHeight < 40;
+    stick.current =
+      atNewest && element.scrollHeight - element.scrollTop - element.clientHeight < 40;
     noteAnchor();
     slide();
   };

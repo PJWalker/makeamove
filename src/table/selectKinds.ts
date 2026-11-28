@@ -4,6 +4,8 @@ import {
   IconEffects,
   IconLight,
   IconMap,
+  IconMapPin,
+  IconObscure,
   IconShapes,
   IconText,
   IconToken,
@@ -18,9 +20,11 @@ const SELECT_KINDS: { id: SelectKind; label: string; Icon: Icon; gmOnly?: boolea
   { id: "drawing", label: "Drawings", Icon: IconDraw },
   { id: "shape", label: "Shapes", Icon: IconShapes },
   { id: "text", label: "Text", Icon: IconText },
+  { id: "pin", label: "Pins", Icon: IconMapPin },
   { id: "wall", label: "Walls", Icon: IconWall, gmOnly: true },
   { id: "light", label: "Lights", Icon: IconLight, gmOnly: true },
   { id: "effect", label: "Effects", Icon: IconEffects, gmOnly: true },
+  { id: "fog", label: "Fog of War", Icon: IconObscure, gmOnly: true },
 ];
 
 export default SELECT_KINDS;

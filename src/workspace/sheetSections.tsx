@@ -82,7 +82,9 @@ export function ChoicesSection({ system, c, editable, section }: SectionProperti
   const sectionChoices = section.choices ? new Set(section.choices) : undefined;
   const choices = [
     ...choicesAt(system.creation, "create", c.data),
-    ...Array.from({ length: rank }, (_, index) => choicesAt(system.creation, index + 1, c.data)).flat(),
+    ...Array.from({ length: rank }, (_, index) =>
+      choicesAt(system.creation, index + 1, c.data),
+    ).flat(),
   ].filter(
     (choice) => choice.field !== CLASS_FIELD && (!sectionChoices || sectionChoices.has(choice.id)),
   );
@@ -135,7 +137,9 @@ function DataField({
         max={item.type === "number" ? item.max : undefined}
         value={String(c.data[item.field] ?? (item.type === "number" ? 0 : ""))}
         disabled={!editable}
-        onChange={(event) => { change(event.currentTarget.value); }}
+        onChange={(event) => {
+          change(event.currentTarget.value);
+        }}
       />
     </label>
   );

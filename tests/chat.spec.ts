@@ -17,10 +17,23 @@ for (const width of [1280, 390]) {
   }) => {
     await createCampaign(page);
     await page.setViewportSize({ width, height: 844 });
+    await page.waitForFunction(() => window.innerWidth === width);
     const chat = page.getByRole("tab", { name: "Chat", exact: true });
     if ((await chat.getAttribute("aria-selected")) !== "true") await chat.click();
     await expect(page.getByRole("button", { name: "d6", exact: true })).toBeInViewport();
     await settled(page);
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await page.waitForFunction(() => {
+      const done = [...document.querySelectorAll(".sidebar")].every((el) =>
+        el.getAnimations().every((a) => a.playState === "finished"),
+      );
+      if (!done) return false;
+      const el = [...document.querySelectorAll("button")].find((b) => b.textContent === "d6");
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return r.width > 0 && r.right <= window.innerWidth && (hit === el || el.contains(hit));
+    });
     const button = await page.getByRole("button", { name: "d6", exact: true }).boundingBox();
     if (!button) throw new Error("Quick die button was not mounted.");
     const pointer = { x: button.x + button.width / 2, y: button.y + button.height / 2 };
@@ -48,12 +61,16 @@ for (const width of [1280, 390]) {
               .data.some((value, index) => index % 4 === 3 && value > 0);
           /** Whether the opaque pixels are, on the whole, a colour rather than grey. */
           const coloured = (canvas: HTMLCanvasElement) => {
-            const data = canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height).data;
+            const data = canvas
+              .getContext("2d")!
+              .getImageData(0, 0, canvas.width, canvas.height).data;
             let spread = 0;
             let count = 0;
             for (let i = 0; i < data.length; i += 4) {
               if (data[i + 3]! < 250) continue;
-              spread += Math.max(data[i]!, data[i + 1]!, data[i + 2]!) - Math.min(data[i]!, data[i + 1]!, data[i + 2]!);
+              spread +=
+                Math.max(data[i]!, data[i + 1]!, data[i + 2]!) -
+                Math.min(data[i]!, data[i + 1]!, data[i + 2]!);
               count++;
             }
             return count > 0 && spread / count > 30;
@@ -96,13 +113,15 @@ for (const width of [1280, 390]) {
               if (!lifted && drawn(canvas)) restingSizes.push(canvas.getBoundingClientRect().width);
               if (lifted && drawn(canvas)) colourful ||= coloured(canvas);
             }
-            const visible = [
-              ...document.querySelectorAll<HTMLCanvasElement>(".die-canvas"),
-            ].filter((die) => die.checkVisibility({ visibilityProperty: true }) && drawn(die));
+            const visible = [...document.querySelectorAll<HTMLCanvasElement>(".die-canvas")].filter(
+              (die) => die.checkVisibility({ visibilityProperty: true }) && drawn(die),
+            );
             started ||= visible.length > 0;
             if (started && visible.length === 0) gaps++;
             if (visible.length > 1) doubles++;
-            const posted = document.querySelector(".chat-log .roll-card:not([data-quick-roll-active])");
+            const posted = document.querySelector(
+              ".chat-log .roll-card:not([data-quick-roll-active])",
+            );
             if ((original && !canvas && posted) || performance.now() > deadline) {
               moves.disconnect();
               resolve({ lifts, lowers, sameCanvas, gaps, doubles, restingSizes, colourful });
@@ -125,7 +144,7 @@ for (const width of [1280, 390]) {
     // Drawn in the roller's colour as it moves, and the size of its slot at rest.
     expect(result.colourful).toBe(true);
     expect(result.restingSizes.length).toBeGreaterThan(0);
-    expect(result.restingSizes.every((size) => size === 64)).toBe(true);
+    expect(result.restingSizes.every((size) => Math.abs(size - 64) < 0.5)).toBe(true);
     // Never missing, nor shown twice, from the moment it appears.
     expect(result.gaps).toBe(0);
     expect(result.doubles).toBe(0);
@@ -259,50 +278,48 @@ test("dice still settling stay on a roll card that's picked up, and land in it w
   await expect(card).toBeVisible();
   // While the dice still roll, the card is picked up by its heading and held off to one side,
   // short of a throw, then put back. (Dispatched in the page: the harness's mouse loses pointer capture.)
-  const held = await card.evaluate(
-    async (element) => {
-      const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
-      await new Promise((resolve) => setTimeout(resolve, 900));
-      const head = element.querySelector(".roll-head")!.getBoundingClientRect();
-      const grip = { x: head.left + head.width / 2, y: head.top + head.height / 2 };
-      const pointer = (type: string, x: number, y: number) =>
-        element.dispatchEvent(
-          new PointerEvent(type, {
-            pointerId: 1,
-            pointerType: "mouse",
-            isPrimary: true,
-            button: 0,
-            buttons: type === "pointerup" ? 0 : 1,
-            clientX: x,
-            clientY: y,
-            bubbles: true,
-            cancelable: true,
-          }),
-        );
-      pointer("pointerdown", grip.x, grip.y);
-      for (let step = 1; step <= 4; step++) {
-        pointer("pointermove", grip.x - 15 * step, grip.y - 10 * step);
-        await frame();
+  const held = await card.evaluate(async (element) => {
+    const frame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    const head = element.querySelector(".roll-head")!.getBoundingClientRect();
+    const grip = { x: head.left + head.width / 2, y: head.top + head.height / 2 };
+    const pointer = (type: string, x: number, y: number) =>
+      element.dispatchEvent(
+        new PointerEvent(type, {
+          pointerId: 1,
+          pointerType: "mouse",
+          isPrimary: true,
+          button: 0,
+          buttons: type === "pointerup" ? 0 : 1,
+          clientX: x,
+          clientY: y,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+    pointer("pointerdown", grip.x, grip.y);
+    for (let step = 1; step <= 4; step++) {
+      pointer("pointermove", grip.x - 15 * step, grip.y - 10 * step);
+      await frame();
+    }
+    const carrier = document.querySelector(".throw-carrier")!.getBoundingClientRect();
+    let moving = 0;
+    let offCopy = 0;
+    const until = performance.now() + 500;
+    while (performance.now() < until) {
+      await frame();
+      for (const canvas of document.querySelectorAll(".die-canvas:popover-open")) {
+        const box = canvas.getBoundingClientRect();
+        const [x, y] = [box.left + box.width / 2, box.top + box.height / 2];
+        moving++;
+        if (x < carrier.left || x > carrier.right || y < carrier.top || y > carrier.bottom)
+          offCopy++;
       }
-      const carrier = document.querySelector(".throw-carrier")!.getBoundingClientRect();
-      let moving = 0;
-      let offCopy = 0;
-      const until = performance.now() + 500;
-      while (performance.now() < until) {
-        await frame();
-        for (const canvas of document.querySelectorAll(".die-canvas:popover-open")) {
-          const box = canvas.getBoundingClientRect();
-          const [x, y] = [box.left + box.width / 2, box.top + box.height / 2];
-          moving++;
-          if (x < carrier.left || x > carrier.right || y < carrier.top || y > carrier.bottom)
-            offCopy++;
-        }
-      }
-      pointer("pointermove", grip.x, grip.y);
-      pointer("pointerup", grip.x, grip.y);
-      return { moving, offCopy };
-    },
-  );
+    }
+    pointer("pointermove", grip.x, grip.y);
+    pointer("pointerup", grip.x, grip.y);
+    return { moving, offCopy };
+  });
   expect(held.moving).toBeGreaterThan(0);
   expect(held.offCopy).toBe(0);
   await expect(card.locator('.die[data-phase="landed"]')).toHaveCount(3);

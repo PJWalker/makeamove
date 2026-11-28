@@ -1,14 +1,13 @@
 import type { DataValue } from "../../data/types";
-import {
-  atLevel
-  
-  
-  
-  
-  
-  
+import { atLevel } from "../../systems/types";
+import type {
+  ChoiceDef,
+  CreationDef,
+  OptionDef,
+  ScoreMethods,
+  ScoreRule,
+  StatDef,
 } from "../../systems/types";
-import type {ChoiceDef, CreationDef, OptionDef, ScoreMethods, ScoreRule, StatDef} from "../../systems/types";
 import { commaListOf } from "../../lib/list";
 
 /*

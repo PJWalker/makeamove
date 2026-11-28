@@ -69,7 +69,9 @@ class FolderSync {
         if (document.visibilityState === "hidden") this.flush();
       };
       document.addEventListener("visibilitychange", onHide);
-      this.stops.push(() => { document.removeEventListener("visibilitychange", onHide); });
+      this.stops.push(() => {
+        document.removeEventListener("visibilitychange", onHide);
+      });
     }
     void this.save();
   }
@@ -77,9 +79,13 @@ class FolderSync {
   /** Mark a document dirty on each change, and its subdocuments as they load. */
   private watchDoc(document: Y.Doc) {
     const watchOne = (d: Y.Doc) => {
-      const onUpdate = () => { this.changed(d.guid); };
+      const onUpdate = () => {
+        this.changed(d.guid);
+      };
       d.on("update", onUpdate);
-      this.stops.push(() => { d.off("update", onUpdate); });
+      this.stops.push(() => {
+        d.off("update", onUpdate);
+      });
     };
     watchOne(document);
     for (const sub of document.getSubdocs()) if (sub.shouldLoad) watchOne(sub);
@@ -87,7 +93,9 @@ class FolderSync {
       for (const sub of loaded) watchOne(sub);
     };
     document.on("subdocs", onSubdocs);
-    this.stops.push(() => { document.off("subdocs", onSubdocs); });
+    this.stops.push(() => {
+      document.off("subdocs", onSubdocs);
+    });
   }
 
   private changed(guid: string) {
@@ -127,7 +135,11 @@ class FolderSync {
         this.setStatus(
           lost
             ? { state: "paused", folder }
-            : { state: "failed", folder, error: error instanceof Error ? error.message : String(error) },
+            : {
+                state: "failed",
+                folder,
+                error: error instanceof Error ? error.message : String(error),
+              },
         );
       })
       .finally(() => {
@@ -141,8 +153,8 @@ class FolderSync {
   }
 
   private async write() {
-    const {dirty} = this;
-    const {everything} = this;
+    const { dirty } = this;
+    const { everything } = this;
     this.dirty = new Set();
     this.everything = false;
     try {
@@ -225,7 +237,9 @@ export class FolderBackup {
       this.campaign,
       dir,
       () => this.actor.getSnapshot().context.state,
-      (state) => { this.actor.send({ type: "SET_STATE", state }); },
+      (state) => {
+        this.actor.send({ type: "SET_STATE", state });
+      },
     );
     this.#running.start();
   }
@@ -238,7 +252,7 @@ export class FolderBackup {
 
   /** Choose a folder and start backing the campaign up to it. False if the user cancels. */
   async link(): Promise<boolean> {
-    const {id} = this.campaign;
+    const { id } = this.campaign;
     const dir = await pickFolder(`backup-${id}`);
     if (!dir) return false;
     await mergeFolder(dir, id);

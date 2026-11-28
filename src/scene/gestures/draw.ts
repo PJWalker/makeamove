@@ -21,7 +21,8 @@ const NO_PRESSURE = 0.5;
  * undo turns it back into the stroke as drawn.
  */
 const draw: ToolPress = (c, e, world) => {
-  const { colour, layer, smartShapes } = c.tools.pen.value;
+  const { colour, smartShapes } = c.tools.pen.value;
+  const layer = c.tools.penLayer(c.gm);
   // The pen's width is in screen px; the stroke keeps the world width it had when drawn.
   const width = c.tools.pen.value.width / c.renderer.camera.zoom;
   const points: number[] = [];

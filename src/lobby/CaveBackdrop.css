@@ -41,8 +41,12 @@
   .cave-playback:focus-visible {
     opacity: 1;
   }
-  .cave-playback:active { transform: scale(0.94); }
+  .cave-playback:active {
+    transform: scale(0.94);
+  }
   @media (prefers-reduced-motion: reduce) {
-    .cave-playback { transition: none; }
+    .cave-playback {
+      transition: none;
+    }
   }
 }

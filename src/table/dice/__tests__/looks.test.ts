@@ -3,7 +3,9 @@ import { looksOf } from "../looks";
 
 /** How each piece of a die of `sides` that rolled `rolled` is drawn: its form, sides and the face it shows. */
 const drawn = ({ sides, rolled }: { sides: number; rolled: number }) =>
-  looksOf(sides, rolled, "red").map((look) => `${look.form} d${String(look.sides)} ${look.label(look.shown)}`);
+  looksOf(sides, rolled, "red").map(
+    (look) => `${look.form} d${String(look.sides)} ${look.label(look.shown)}`,
+  );
 
 describe("how a die is drawn", () => {
   it("draws a d100 as a tens d10 and a units d10", () => {

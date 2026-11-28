@@ -6,14 +6,8 @@ import { device } from "../../platform/device";
 import type { SystemCounterDef } from "../../systems/types";
 import { getSystem } from "../../systems";
 import { isString } from "../../lib/guards";
-import type {ChatMessage, RollMessage, RollVisibility, TextMessage} from "./types";
-import {
-  canWork
-  
-  
-  
-  
-} from "./types";
+import type { ChatMessage, RollMessage, RollVisibility, TextMessage } from "./types";
+import { canWork } from "./types";
 import type { ChatContent } from "./content";
 import { addRollDie, addRollModifier } from "./rollState";
 import { setPinned } from "./messages";

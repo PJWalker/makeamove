@@ -86,6 +86,7 @@ test("panel creation actions share the title bar when docked and floating", asyn
   await expect(gearDialog).toHaveCount(0);
   await page.getByRole("tab", { name: "Items", exact: true }).click({ button: "right" });
   await page.getByRole("menuitem", { name: "Float in a Window" }).click();
+  await settled(page);
   const itemsWindow = page.getByRole("region", { name: "Items", exact: true });
   const header = itemsWindow.locator(".panel-header");
   const title = header.getByRole("heading", { name: "Items", exact: true });

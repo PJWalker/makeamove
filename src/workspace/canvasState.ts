@@ -2,12 +2,17 @@ import { store } from "../lib/store";
 import type { SceneDoc as SceneDocument } from "../scene/sceneDoc";
 import type SceneController from "../scene/controller";
 import type { Point } from "../scene/grid";
-import type { BlobReference, EntityGraphic, EntityGraphicRef as EntityGraphicReference } from "../media/images";
+import type {
+  BlobReference,
+  EntityGraphic,
+  EntityGraphicRef as EntityGraphicReference,
+} from "../media/images";
 import type { TokenStyle } from "../scene/types";
+import type { LinkRef as LinkReference } from "../features/notes/links";
 import type { AreaSpec } from "../systems/types";
 import { backdropColour } from "../lib/colour";
-import { DEFAULT_CANVAS_COLOUR  } from "../campaign/campaign";
-import type {SceneView} from "../campaign/campaign";
+import { DEFAULT_CANVAS_COLOUR } from "../campaign/campaign";
+import type { SceneView } from "../campaign/campaign";
 
 /*
  * State shared between the scene canvas (loaded lazily, with PixiJS) and the
@@ -92,6 +97,9 @@ export class CanvasState {
    * whether the point was over the map.
    */
   readonly tokenDrop = store<((x: number, y: number, spec: TokenSpec) => boolean) | null>(null);
+
+  /** Set by the open scene canvas: puts a pin leading to `link` at a screen point. */
+  readonly pinDrop = store<((x: number, y: number, link: LinkReference) => boolean) | null>(null);
 
   /** Resolve a character token under a screen point; set by the open scene canvas. */
   readonly sceneCharacterAt = store<((x: number, y: number) => SceneCharacterHit | null) | null>(

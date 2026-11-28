@@ -24,7 +24,7 @@ import { getEntityGraphic } from "./entityGraphics";
 
 /*
  * What the campaign's things drag as (entityDrag.ts moves them): a link to
- * them, a hotbar pin, a gift to a character, a token for the map.
+ * them, a hotbar pin, a gift to a character, a token or a pin for the map.
  */
 
 /** The call that pins a link target to the hotbar, for the targets that have one. */
@@ -73,9 +73,10 @@ export function entity(
 ): DragEntity {
   const { campaign } = context;
   const key = pinnedCall(kind, id);
+  // Pages and scenes have no token of their own: on the map they're pins.
   const out: DragEntity = {
     label,
-    token: { name: label },
+    ...(kind === "note" || kind === "scene" ? {} : { token: { name: label } }),
     link: { kind, id },
     ...(key ? { pin: pinAt(context, key) } : {}),
   };
@@ -119,7 +120,7 @@ export function itemDefinitionForToken(
   campaign: Campaign,
   token: TokenElement,
 ): ItemDef | undefined {
-  const {items} = systemOf(campaign);
+  const { items } = systemOf(campaign);
   if (token.itemDefId) return items.find((item) => item.id === token.itemDefId);
   if (!token.icon) return undefined;
   const matches = items.filter(
@@ -177,9 +178,10 @@ export function actionEntity(context: CampaignContext, key: string, label: strin
   };
   const command = call?.command;
   if ((command === useItem || command === equipItem) && parameters.itemId) {
-    const item = getCharacter(context.campaign, actingCharacterId(context.campaign))?.inventory.find(
-      (entry) => entry.id === parameters.itemId,
-    );
+    const item = getCharacter(
+      context.campaign,
+      actingCharacterId(context.campaign),
+    )?.inventory.find((entry) => entry.id === parameters.itemId);
     if (item)
       return {
         label,

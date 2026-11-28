@@ -11,10 +11,9 @@ import {
   startCombat,
   tickDurations,
   turnOf,
-  turnOrder
-  
+  turnOrder,
 } from "../combat";
-import type {Combatant} from "../combat";
+import type { Combatant } from "../combat";
 import { rootOf } from "../../../data/schema";
 import { campaignShape } from "../../../campaign/schema";
 
@@ -35,22 +34,16 @@ describe("the turn tracker", () => {
     expect(turnOrder(m.combatants).map((c) => c.name)).toEqual(["Bo", "Cy", "Ann", "Di"]);
   });
 
-  it("goes round in order, counting rounds", () => {
+  // Turn stepping, rounds and passing the turn on are proved in turns.ts; this checks the tracker uses them.
+  it("moves the turn through the tracker, and ends cleanly", () => {
     const { m, ids } = fight({ init: 20 }, { init: 10 });
     expect(startCombat(m)).toEqual({ ended: null, started: ids[0], newRound: true });
-    expect(roundOf(m)).toBe(1);
     expect(nextTurn(m)).toEqual({ ended: ids[0]!, started: ids[1]!, newRound: false });
     expect(nextTurn(m)).toEqual({ ended: ids[1]!, started: ids[0]!, newRound: true });
-    expect(roundOf(m)).toBe(2);
     previousTurn(m);
     expect([roundOf(m), turnOf(m)]).toEqual([1, ids[1]!]);
-  });
-
-  it("passes the turn on when the current combatant leaves, and ends cleanly", () => {
-    const { m, ids } = fight({ init: 20 }, { init: 10 });
-    startCombat(m);
-    removeCombatant(m, ids[0]!);
-    expect(turnOf(m)).toBe(ids[1]!);
+    removeCombatant(m, ids[1]!);
+    expect(turnOf(m)).toBe(ids[0]!);
     endCombat(m);
     expect([roundOf(m), turnOf(m), m.combatants.size]).toEqual([0, null, 0]);
   });

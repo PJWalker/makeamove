@@ -1,8 +1,10 @@
+import type { LinkRef as LinkReference } from "../features/notes/links";
 import type {
   BlobReference,
   EntityGraphic,
   EntityGraphicRef as EntityGraphicReference,
 } from "../media/images";
+import type { ElementLayer } from "./fog";
 
 /*
  * Scene elements as plain values. Each is stored as a Y.Map of these fields
@@ -13,8 +15,17 @@ import type {
  * layer.
  */
 
-/** Bottom to top. Fog and presence layers arrive with M5 and M2. */
-export const LAYERS = ["map", "under", "token", "over"] as const;
+/**
+ * Bottom to top. Everything but "aboveFog" is under the fog of war; that's
+ * for notes players (and the GM, if they choose) draw over it. See fog.ts.
+ */
+export const LAYERS = [
+  "map",
+  "under",
+  "token",
+  "over",
+  "aboveFog",
+] as const satisfies readonly ElementLayer[];
 export type Layer = (typeof LAYERS)[number];
 
 export interface Transform {
@@ -248,12 +259,43 @@ export type EffectElement = Base &
     colour: string;
   };
 
+/** Whether a fog shape forces what's in it revealed to players, or hidden from them. */
+export type FogForce = "hide" | "reveal";
+
+/** How the GM sees each kind of fog shape. */
+export const FOG_COLOURS: Record<FogForce, string> = {
+  reveal: "#7be0a1",
+  hide: "#ff7a8a",
+};
+
+/**
+ * A fog of war shape (the GM's): what's in it is revealed to players, or
+ * hidden from them whatever their characters have seen (see fog.ts). Only
+ * the GM sees it, and only while the scene has fog.
+ */
+export type FogElement = Base &
+  ShapeGeometry & {
+    type: "fog";
+    force: FogForce;
+  };
+/**
+ * A map pin: a marker that opens what it links to (a note, most often) when
+ * clicked. Players see it only if they can see what it leads to, and only in
+ * their tokens' sight (pins.ts).
+ */
+export interface PinElement extends Base {
+  type: "pin";
+  link: LinkReference;
+}
+
 export type SceneElement =
   | AreaElement
   | DrawingElement
   | EffectElement
+  | FogElement
   | LightElement
   | MapElement
+  | PinElement
   | ShapeElement
   | TextElement
   | TokenElement

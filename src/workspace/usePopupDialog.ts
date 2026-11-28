@@ -3,7 +3,9 @@ import { openPopup } from "../ui/popup";
 
 function usePopupDialog() {
   const reference = useRef<HTMLDialogElement>(null);
-  useLayoutEffect(() => { openPopup(reference.current); }, []);
+  useLayoutEffect(() => {
+    openPopup(reference.current);
+  }, []);
   return reference;
 }
 

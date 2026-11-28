@@ -1,5 +1,6 @@
 import { snapPoint } from "../grid";
 import type { Point } from "../grid";
+import { canOpenPin } from "../pins";
 import type { SceneElement, TokenElement } from "../types";
 import { dragged } from "./types";
 import type { Gesture, ToolContext } from "./types";
@@ -7,7 +8,7 @@ import type { Gesture, ToolContext } from "./types";
 /**
  * Dragging the selection, its unlocked elements, from `start`. Tokens snap to
  * the grid. A lone token can be dropped on the table outside the scene, and a
- * press without a drag clicks it.
+ * press without a drag clicks it; a press on a pin without a drag opens it.
  */
 function moveSelection(c: ToolContext, start: Point): Gesture {
   const originals = new Map<string, SceneElement>(
@@ -44,6 +45,7 @@ function moveSelection(c: ToolContext, start: Point): Gesture {
     end(e) {
       if (!moved) {
         if (token) c.onTokenClick?.(token);
+        if (lone?.type === "pin" && canOpenPin(c.renderer.pinSight(lone))) c.onPinClick?.(lone);
         if (lone) return;
       } else if (token) {
         const handled = drop(token, e);

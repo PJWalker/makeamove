@@ -14,7 +14,7 @@ const noNativeConfirmation = defineRule({
   create(context) {
     return {
       CallExpression(node) {
-        const {callee} = node;
+        const { callee } = node;
         let name: string | null = null;
         if (callee.type === "Identifier") name = callee.name;
         if (

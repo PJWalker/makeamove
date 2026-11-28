@@ -14,7 +14,7 @@ import { drawPointer, INK, POINTER_ROOM, screenViewport, TOKEN_NAME, cabin } fro
 const NO_MARKS: TokenMarks = { pips: [], turn: false };
 const PIP_MIN_R = 3;
 const PIP_MAX_R = 6;
-const TURN_COLOUR = 0xF0_C2_3B;
+const TURN_COLOUR = 0xf0_c2_3b;
 /** How long a newly applied condition shows its name, in ms, before it closes to a pip. */
 const ANNOUNCE_MS = 1800;
 /** How long the ring that rings out from a newly applied condition takes, in ms. */

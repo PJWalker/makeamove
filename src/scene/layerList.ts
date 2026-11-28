@@ -9,6 +9,7 @@ import type { Layer, SceneElement } from "./types";
  */
 
 export const LAYER_LABELS: Record<Layer, string> = {
+  aboveFog: "Over Fog",
   over: "Over Tokens",
   token: "Tokens",
   under: "Under Tokens",
@@ -52,19 +53,20 @@ export function layerList(elements: readonly SceneElement[]): LayerSection[] {
   });
 }
 
+const SIMPLE_LABELS: Partial<Record<SceneElement["type"], string>> = {
+  token: "Token",
+  map: "Map",
+  drawing: "Drawing",
+  light: "Lamp",
+  pin: "Pin",
+};
+
 /** What an element is called in the list: its name, or else what it is. */
 export function elementLabel(element: SceneElement): string {
   if (element.name) return element.name;
+  const simple = SIMPLE_LABELS[element.type];
+  if (simple) return simple;
   switch (element.type) {
-    case "token": {
-      return "Token";
-    }
-    case "map": {
-      return "Map";
-    }
-    case "drawing": {
-      return "Drawing";
-    }
     case "shape": {
       return SHAPES.find((s) => s.id === element.shape)?.label ?? "Shape";
     }
@@ -75,15 +77,17 @@ export function elementLabel(element: SceneElement): string {
     case "wall": {
       return element.door ? "Door" : "Wall";
     }
-    case "light": {
-      return "Lamp";
-    }
     case "area": {
       return element.tone === "dark" ? "Area of Dark" : "Area of Light";
     }
-    // An effect: the one sort left.
-    default: {
+    case "fog": {
+      return element.force === "reveal" ? "Revealed Fog" : "Hidden Fog";
+    }
+    case "effect": {
       return EFFECTS.find((e) => e.id === element.effect)?.label ?? "Effect";
+    }
+    default: {
+      return element.type;
     }
   }
 }

@@ -10,11 +10,7 @@ const THRESHOLD = 5;
  * the pointer; releasing over the scene places a token for the character.
  * A press that never travels stays an ordinary click.
  */
-function dragToken(
-  canvas: CanvasState,
-  e: PointerEvent | ReactPointerEvent,
-  spec: TokenSpec,
-) {
+function dragToken(canvas: CanvasState, e: PointerEvent | ReactPointerEvent, spec: TokenSpec) {
   if (e.button !== 0) return;
   const source = e.currentTarget as HTMLElement;
   const box = source.getBoundingClientRect();

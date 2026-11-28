@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState , useEffect, useLayoutEffect } from "react";
+import { lazy, Suspense, useState, useEffect, useLayoutEffect } from "react";
 import { sceneOklchFromHex } from "../lib/colour";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
@@ -23,6 +23,7 @@ import ChatPopups from "./ChatPopups";
 import Sidebar from "./Sidebar";
 import CampaignDialogHost from "./CampaignDialogHost";
 import FloatingWindows from "./FloatingWindows";
+import { TutorialGuide } from "./TutorialGuide";
 
 // PixiJS is big; load it only once someone opens a table.
 const SceneCanvas = lazy(() => import("./SceneCanvas"));
@@ -37,6 +38,8 @@ function Tabletop({ campaign }: { campaign: Campaign }) {
     campaign.members,
     () => campaign.isGm() && !!systemOf(campaign).gmReference?.length,
   );
+  // The GM shadow is the GM's alone.
+  const gm = useQuery(campaign.members, () => campaign.isGm());
   // My Character is there once this device has claimed one.
   const playing = useQuery(campaign.members, () => !!playedCharacterId(campaign));
   useLayoutEffect(() => {
@@ -44,11 +47,12 @@ function Tabletop({ campaign }: { campaign: Campaign }) {
       ...(playing ? [] : (["pc"] as const)),
       ...(combat ? [] : (["combat"] as const)),
       ...(reference ? [] : (["reference"] as const)),
+      ...(gm ? [] : (["shadow"] as const)),
     ]);
     return () => {
       context.panels.unavailablePanels.set([]);
     };
-  }, [context, playing, combat, reference]);
+  }, [context, playing, combat, reference, gm]);
   const activeId = useQuery(campaign.members, () => campaign.activeSceneId());
   const scene = scenes.find((s) => s.id === activeId) ?? scenes[0];
 
@@ -120,6 +124,7 @@ function Tabletop({ campaign }: { campaign: Campaign }) {
         <LinkPopups campaign={campaign} />
         <ActionDialogs campaign={campaign} />
         <ChatPopups campaign={campaign} />
+        <TutorialGuide />
       </div>
     </SystemExtensions>
   );

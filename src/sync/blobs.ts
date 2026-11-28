@@ -39,7 +39,9 @@ export class BlobExchange {
     private readonly link: BlobLink,
     private readonly store: BlobStore,
   ) {
-    link.onBlob = (data, from) => { this.receive(data, from); };
+    link.onBlob = (data, from) => {
+      this.receive(data, from);
+    };
     link.onPeer = (peer) => {
       for (const hash of this.pending.keys()) this.request(hash, peer);
     };

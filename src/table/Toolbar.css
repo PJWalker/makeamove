@@ -21,7 +21,13 @@
   .sidebar-rail-edge {
     isolation: isolate;
     --text-muted: var(--bar-ink);
-    & :is(.btn-ghost, .btn-icon):not(:hover, :active, [aria-pressed="true"], [aria-selected="true"]) {
+    &
+      :is(.btn-ghost, .btn-icon):not(
+        :hover,
+        :active,
+        [aria-pressed="true"],
+        [aria-selected="true"]
+      ) {
       text-shadow: 0 0 4px var(--bar-halo);
       & svg {
         filter: drop-shadow(0 0 3px var(--bar-halo));
@@ -137,13 +143,13 @@
   .tool-settings {
     width: max-content;
     min-width: 100%;
-    min-height: var(--toolbar-row-height);
+    height: var(--toolbar-row-height);
     margin: 0;
     border: 0;
     display: flex;
     align-items: center;
     gap: var(--space-2);
-    padding: var(--space-2) 0;
+    padding: 0;
     white-space: nowrap;
   }
   .tool-settings > * {
@@ -202,10 +208,10 @@
       padding-inline: var(--space-1);
     }
     .toolbar-tools > .btn-icon {
-      width: 29px;
+      width: 27px;
       & svg {
-        width: 26px;
-        height: 26px;
+        width: 24px;
+        height: 24px;
       }
     }
   }

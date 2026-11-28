@@ -1,5 +1,5 @@
 import Fuse from "fuse.js";
-import type {FuseIndex, IFuseOptions} from "fuse.js";
+import type { FuseIndex, IFuseOptions } from "fuse.js";
 import { dataName } from "../../platform/dataEpoch";
 import { deleteValue, readValue, writeValue } from "../../platform/keyval";
 import { isString } from "../../lib/guards";
@@ -229,7 +229,9 @@ export class NoteTextIndex {
   private changed() {
     this.fuse = null;
     clearTimeout(this.saveTimer);
-    this.saveTimer = setTimeout(() => { this.flush(); }, SAVE_MS);
+    this.saveTimer = setTimeout(() => {
+      this.flush();
+    }, SAVE_MS);
   }
 }
 

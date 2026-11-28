@@ -314,7 +314,7 @@ tester.run("test-structure", testStructure, {
     },
     {
       filename: at("src/example.test.ts"),
-      code: 'const fake = value as unknown as Campaign;',
+      code: "const fake = value as unknown as Campaign;",
       errors: [{ messageId: "unsafeCast" }],
     },
   ],
@@ -325,7 +325,10 @@ tester.run("no-props", noProps, {
     { filename: at("a.ts"), code: 'import type { ComponentProps } from "react";' },
     { filename: at("a.ts"), code: 'import { mergeProps } from "react-aria";' },
     // Names that belong to other types: imported, destructured, read as members or keys.
-    { filename: at("a.ts"), code: 'import type { SuggestionProps } from "x"; let p: SuggestionProps | null = null;' },
+    {
+      filename: at("a.ts"),
+      code: 'import type { SuggestionProps } from "x"; let p: SuggestionProps | null = null;',
+    },
     { filename: at("a.ts"), code: "const command = ({ editor, props }) => props;" },
     { filename: at("a.ts"), code: "const x = element.props; const y = { editorProps: 1 };" },
   ],
@@ -333,7 +336,8 @@ tester.run("no-props", noProps, {
     {
       filename: at("a.ts"),
       code: "interface SheetProperties {}\nconst properties = (props: SheetProperties) => props;",
-      output: "interface SheetProperties {}\nconst properties = (properties: SheetProperties) => properties;",
+      output:
+        "interface SheetProperties {}\nconst properties = (properties: SheetProperties) => properties;",
       errors: 2,
     },
     {
@@ -381,7 +385,8 @@ tester.run("no-redundant-type-synonyms", noRedundantTypeSynonyms, {
       // Uses nested in other types and functions are all renamed, and the fix terminates.
       filename: at("a.ts"),
       code: "type SheetProps = SheetProperties;\ntype Pair = [SheetProps, SheetProps];\nfunction open(sheet: SheetProps) { const inner: SheetProps = sheet; return inner; }",
-      output: "type Pair = [SheetProperties, SheetProperties];\nfunction open(sheet: SheetProperties) { const inner: SheetProperties = sheet; return inner; }",
+      output:
+        "type Pair = [SheetProperties, SheetProperties];\nfunction open(sheet: SheetProperties) { const inner: SheetProperties = sheet; return inner; }",
       errors: 1,
     },
   ],

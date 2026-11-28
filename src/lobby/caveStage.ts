@@ -84,7 +84,11 @@ export interface CavePlayback {
 }
 
 /** Sets the cave up on a renderer, once its splats have been built. */
-function caveView(renderer: WebGPURenderer, seed: string, { splats, brushes, lights: built }: CaveResult) {
+function caveView(
+  renderer: WebGPURenderer,
+  seed: string,
+  { splats, brushes, lights: built }: CaveResult,
+) {
   const lights = built.map((light) => ({
     ...light,
     start: new Vector3(...light.at),
@@ -121,12 +125,33 @@ function caveView(renderer: WebGPURenderer, seed: string, { splats, brushes, lig
   };
 }
 
+const noop = () => undefined;
+
+/** Software WebGL (no GPU, as in headless test browsers) draws the cave at ~1 fps and starves the page. */
+function softwareRendered(): boolean {
+  const probe = document.createElement("canvas");
+  const gl = probe.getContext("webgl2") ?? probe.getContext("webgl");
+  if (!gl) return true;
+  const info = gl.getExtension("WEBGL_debug_renderer_info");
+  const name = String(gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
+  gl.getExtension("WEBGL_lose_context")?.loseContext();
+  return /swiftshader|llvmpipe|softpipe/i.test(name);
+}
+
 /** Shows the cave on `canvas` until the returned playback is disposed. */
 export function stageCave(
   canvas: HTMLCanvasElement,
   onPauseChange: (paused: boolean) => void = () => undefined,
 ): CavePlayback {
-  const renderer = new WebGPURenderer({ canvas, powerPreference: "low-power", trackTimestamp: true });
+  if (softwareRendered()) {
+    console.warn("The lobby's cave backdrop is left dark: it needs a GPU.");
+    return { pause: noop, play: noop, dispose: noop };
+  }
+  const renderer = new WebGPURenderer({
+    canvas,
+    powerPreference: "low-power",
+    trackTimestamp: true,
+  });
   renderer.setClearColor(DARK);
   /** Whether the GPU can time its own work; until then, the gaps between frames are measured. */
   let timed = false;
@@ -135,7 +160,11 @@ export function stageCave(
 
   let view: ReturnType<typeof caveView> | undefined;
   let disposed = false;
-  let state: Playback = { paused: false, hidden: document.hidden, reducedMotion: reducedMotion.matches };
+  let state: Playback = {
+    paused: false,
+    hidden: document.hidden,
+    reducedMotion: reducedMotion.matches,
+  };
   let resolution = governor();
   const eye = new Vector3(...VIEWER.eye);
   const target = new Vector3(...VIEWER.target);

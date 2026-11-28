@@ -24,7 +24,7 @@ interface Keys {
  * click a polygon's corners one at a time.
  */
 export const shape: ToolPress = (c, e, world) => {
-  const style = shapeStyle(c.tools);
+  const style = shapeStyle(c.tools, c.gm);
   return placeShape(c, e, world, c.tools.shapeTool.value, {
     key: "shape",
     style,
@@ -33,10 +33,10 @@ export const shape: ToolPress = (c, e, world) => {
 };
 
 /** How the Shapes tool paints a shape. */
-const shapeStyle = (tools: SceneTools): ShapeStyle => ({
+const shapeStyle = (tools: SceneTools, gm: boolean): ShapeStyle => ({
   ...tools.shapePaint.value,
   width: SHAPE_WIDTH,
-  layer: tools.pen.value.layer,
+  layer: tools.penLayer(gm),
 });
 
 /** How a shape shows while it's placed: its paint, outline width in world px, and the layer it goes in. */

@@ -54,7 +54,9 @@ export function startReorder(o: ReorderOptions) {
 
   const marker = dropLine(axis);
   const slot = (e: PointerEvent) => indexAmong(others(), axis, e);
-  const showLine = (index: number) => { marker.show(others(), index); };
+  const showLine = (index: number) => {
+    marker.show(others(), index);
+  };
 
   function put() {
     marker.hide();
@@ -106,7 +108,9 @@ export function startReorder(o: ReorderOptions) {
     else if (o.outside?.when === "release") o.outside.run(e);
   }
 
-  const cancel = () => { finish(); };
+  const cancel = () => {
+    finish();
+  };
 
   globalThis.addEventListener("pointermove", move);
   globalThis.addEventListener("pointerup", up);
@@ -131,7 +135,10 @@ export function dropLine(axis: "x" | "y") {
   let line: HTMLElement | null = null;
   return {
     show(items: HTMLElement[], index: number) {
-      if (items.length === 0) { this.hide(); return; }
+      if (items.length === 0) {
+        this.hide();
+        return;
+      }
       const rects = items.map((index_) => index_.getBoundingClientRect());
       const rectAt = (index: number) => {
         const rect = rects[index];

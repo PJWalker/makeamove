@@ -2,13 +2,8 @@ import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { windowLayer } from "../ui/windows";
 import type { Campaign } from "../campaign/campaign";
-import {
-  useWindowPointer,
-  useWindowRect
-  
-  
-} from "../workspace/panelLayout";
-import type {FloatingWindow, PanelId} from "../workspace/panelLayout";
+import { useWindowPointer, useWindowRect } from "../workspace/panelLayout";
+import type { FloatingWindow, PanelId } from "../workspace/panelLayout";
 import { RESIZE_DIRS } from "../ui/resizeRect";
 import WindowControls from "../workspace/WindowControls";
 import { useQuery } from "../ui/useQuery";
@@ -74,7 +69,9 @@ function WindowBody({ win, campaign }: { win: { id: PanelId }; campaign: Campaig
           className="win-resize"
           data-dir={dir}
           aria-hidden="true"
-          onPointerDown={(e) => { context.panels.startWindowResize(win.id, e.nativeEvent, dir); }}
+          onPointerDown={(e) => {
+            context.panels.startWindowResize(win.id, e.nativeEvent, dir);
+          }}
         />
       ))}
     </>
@@ -117,7 +114,9 @@ function Window({
         data-lifted={pointer !== null}
         aria-label={label}
         tabIndex={-1}
-        onPointerDown={() => { ctx.panels.raiseWindow(win.id); }}
+        onPointerDown={() => {
+          ctx.panels.raiseWindow(win.id);
+        }}
       >
         <WindowControls
           title={label}
@@ -129,9 +128,13 @@ function Window({
           beforeTitle={<PaneToggle id={win.id} />}
           afterTitle={!rolled && <PanelActionsSlot />}
           rolled={rolled}
-          onToggleRoll={() => { setRolled(!rolled); }}
+          onToggleRoll={() => {
+            setRolled(!rolled);
+          }}
           onDragStart={onHeaderPointerDown}
-          onClose={() => { ctx.panels.setPanelClosed(win.id, true); }}
+          onClose={() => {
+            ctx.panels.setPanelClosed(win.id, true);
+          }}
           closeLabel="Close (reopen from the campaign menu)"
         />
         {!rolled && <WindowBody win={win} campaign={campaign} />}
@@ -159,7 +162,18 @@ function useWindowPresentation(stored: FloatingWindow & { id: PanelId }, campaig
   const morph = useDockMorph(win.id, pointer !== null, asTab !== null);
   const to = pointer ?? { x: win.x, y: win.y };
   const toTab = `translate(${to.x - TAB / 2 - win.x}px, ${to.y - TAB / 2 - win.y}px) scale(${TAB / win.w}, ${TAB / win.h})`;
-  return { ctx: context, win, label, rolled, setRolled, pointer, asTab, morph, toTab, onHeaderPointerDown };
+  return {
+    ctx: context,
+    win,
+    label,
+    rolled,
+    setRolled,
+    pointer,
+    asTab,
+    morph,
+    toTab,
+    onHeaderPointerDown,
+  };
 }
 
 export default FloatingWindows;

@@ -18,7 +18,7 @@ export function newId(): string {
 export function newSecret(byteLength = 32): string {
   const bytes = crypto.getRandomValues(new Uint8Array(byteLength));
   return btoa(String.fromCharCode(...bytes))
-    .replaceAll('+', "-")
-    .replaceAll('/', "_")
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
     .replace(/=+$/, "");
 }

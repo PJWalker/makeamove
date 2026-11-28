@@ -11,10 +11,14 @@ function after(...events: PlaybackEvent[]) {
 
 describe("the cave's playback", () => {
   it("stays paused when the page is hidden and shown again", () => {
-    const state = after({ type: "pause" }, { type: "visibility", hidden: true }, {
-      type: "visibility",
-      hidden: false,
-    });
+    const state = after(
+      { type: "pause" },
+      { type: "visibility", hidden: true },
+      {
+        type: "visibility",
+        hidden: false,
+      },
+    );
     expect(playbackMode(state)).toBe("still");
   });
 
@@ -28,7 +32,10 @@ describe("the cave's playback", () => {
   });
 
   it("resumes animating after a hidden page comes back", () => {
-    const state = after({ type: "visibility", hidden: true }, { type: "visibility", hidden: false });
+    const state = after(
+      { type: "visibility", hidden: true },
+      { type: "visibility", hidden: false },
+    );
     expect(playbackMode(state)).toBe("animate");
   });
 });

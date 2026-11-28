@@ -9,7 +9,9 @@ function EntryActionButtons({ actions }: { actions: EntryAction[] }) {
       variant="primary"
       disabled={a.disabled}
       title={a.disabled ? a.reason : undefined}
-      onClick={() => { a.onSelect(); }}
+      onClick={() => {
+        a.onSelect();
+      }}
     >
       <a.Icon size={22} /> {a.label}
       {a.as ? ` as ${a.as}` : ""}

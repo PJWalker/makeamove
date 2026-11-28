@@ -58,7 +58,10 @@ function caveGrade(picture: Node<"vec4">) {
     vec3(0.012, 0.004, 0.035).mul(shadow),
   );
   const cell = floor(screenCoordinate.xy.div(settings.pixelRatio.mul(2)));
-  const grain = paper(cell).mul(0.08).add(paper(cell.mul(0.37).add(17)).mul(0.03)).add(0.95);
+  const grain = paper(cell)
+    .mul(0.08)
+    .add(paper(cell.mul(0.37).add(17)).mul(0.03))
+    .add(0.95);
   const corner = length(screenUV.sub(0.5).mul(vec2(1, 0.8))).mul(1.6);
   const vignetted = mix(graded.mul(grain), settings.dark, smoothstep(0.55, 1.1, corner).mul(0.3));
   const output = vec4(mix(settings.dark, vignetted, clamp(screenUV.y.div(FADE), 0, 1)), 1);

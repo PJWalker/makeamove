@@ -1,22 +1,16 @@
-import { useLayoutEffect, useRef, useState  } from "react";
-import type {ReactNode} from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type SceneController from "../scene/controller";
 import type { ElementPatch } from "../scene/sceneDoc";
 import { bounds } from "../scene/geometry";
 import { toScreen } from "../scene/camera";
 import { HANDLE_SIZE, ROTATE_HANDLE_GAP } from "../scene/render/handles";
-import { PEN_WIDTH_RANGE } from "../scene/tools";
-import type { SmartShapes } from "../scene/tools";
+import { PEN_WIDTH_RANGE, PEN_LAYERS } from "../scene/tools";
+import type { SmartShapes, PenLayer } from "../scene/tools";
 import alignToGrid from "../scene/gridAlign";
 import { drawingInk, nearShape, shapeElement, shapeName } from "../scene/smartShapes";
-import {
-  isPlainToken,
-  sharedTextStyle
-  
-  
-  
-} from "../scene/types";
-import type {EffectKind, SceneElement, ShapeKind, TextStyle} from "../scene/types";
+import { isPlainToken, sharedTextStyle } from "../scene/types";
+import type { EffectKind, SceneElement, ShapeKind, TextStyle, FogForce } from "../scene/types";
 import ColourPicker from "../ui/ColourPicker";
 import Button from "../ui/Button";
 import { Segmented } from "../ui/Segmented";
@@ -24,16 +18,15 @@ import { IconLock, IconReveal, IconSettings, IconUnlock } from "../ui/icons";
 import type { Icon } from "../ui/icons";
 import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "../workspace/campaignContext";
-import { Counter } from "../workspace/sheetParts";
-import { bumpData, bumpResource } from "../workspace/commands/characters";
-import { canEdit, getCharacter, systemOf } from "../features/characters/api";
-import { derive } from "../features/characters/store";
-import type { TokenStat } from "../systems/types";
 import ShapeGlyph from "./ShapeGlyph";
 import TextStyleFields from "./TextStyleFields";
-import EFFECT_OPTIONS from "./effectOptionsData";
+import { EFFECT_OPTIONS, FOG_FORCE_OPTIONS } from "./effectOptionsData";
 import EffectSightToggles from "./effectOptions";
 import { lightFields, wallFields } from "./visionFields";
+import { PinTargetField } from "./PinPicker";
+import TokenStats from "./TokenStats";
+import DetectWallsFields from "./DetectWallsFields";
+import AlignMapFields from "./AlignMapFields";
 import "./SelectionBar.css";
 
 /** Each shape's picture, as an icon for a button. */
@@ -113,12 +106,17 @@ function useSelectionBar(controller: SceneController) {
     const { offsetWidth: w, offsetHeight: h } = bar;
     const minY = host.top + inset.top + MARGIN;
     const above = host.top + top.y - GAP - h;
-    const y = above >= minY ? above : Math.max(minY, host.top + bottom.y + GAP);
+    const below = Math.max(minY, host.top + bottom.y + GAP);
+    // At the top of the view when the selection is too tall for either, as a map often is.
+    const fitsBelow = below + h <= host.bottom - MARGIN;
+    let y = minY;
+    if (above >= minY) y = above;
+    else if (fitsBelow) y = below;
     const minX = host.left + inset.left + MARGIN;
     const maxX = host.right - inset.right - MARGIN - w;
     const x = Math.max(minX, Math.min(maxX, host.left + top.x - w / 2));
     bar.style.translate = `${Math.round(x)}px ${Math.round(y)}px`;
-    bar.dataset["below"] = String(above < minY);
+    bar.dataset["below"] = String(above < minY && fitsBelow);
   });
 
   return { ref: reference, els, shown };
@@ -134,7 +132,14 @@ function Fields({
   sel: readonly SceneElement[];
   onTokenOptions: (id: string, from: Element) => void;
 }) {
-  return <>{useSelectionFields(controller, sel, onTokenOptions)}</>;
+  const detecting = useQuery(controller.wallDetection.state);
+  const aligning = useQuery(controller.aligning);
+  const fields = useSelectionFields(controller, sel, onTokenOptions);
+  if (detecting && sel.length === 1 && sel[0]!.id === detecting.mapId)
+    return <DetectWallsFields detector={controller.wallDetection} detection={detecting} />;
+  if (aligning && sel.length === 1 && sel[0]!.id === aligning.mapId)
+    return <AlignMapFields controller={controller} alignment={aligning} />;
+  return fields;
 }
 
 function useSelectionFields(
@@ -144,7 +149,9 @@ function useSelectionFields(
 ) {
   const context = useCampaign();
   const { smartShapes } = useQuery(context.tools.pen);
-  return buildSelectionFields(controller, sel, onTokenOptions, smartShapes, (patch) => { context.tools.setTextStyle(patch); });
+  return buildSelectionFields(controller, sel, onTokenOptions, smartShapes, (patch) => {
+    context.tools.setTextStyle(patch);
+  });
 }
 
 function buildSelectionFields(
@@ -156,15 +163,17 @@ function buildSelectionFields(
 ) {
   const ids = sel.map((element) => element.id);
   const first = sel[0]!;
-  const set = (patch: ElementPatch) => { controller.setProps(ids, patch); };
+  const set = (patch: ElementPatch) => {
+    controller.setProps(ids, patch);
+  };
   const one = sel.length === 1 ? first : null;
-  const {grid} = controller.renderer;
+  const { grid } = controller.renderer;
   const fields: ReactNode[] = [];
 
   if (one?.type === "token" && one.characterId)
     fields.push(<TokenStats key="stats" characterId={one.characterId} hidden={!!one.hideBars} />);
   if (every(sel, "effect")) {
-    const {effect} = (sel[0]!);
+    const { effect } = sel[0]!;
     fields.push(
       <Segmented
         key="effect"
@@ -172,14 +181,35 @@ function buildSelectionFields(
         // None chosen when the zones differ.
         value={sel.every((element) => element.effect === effect) ? effect : ("" as EffectKind)}
         options={EFFECT_OPTIONS}
-        onChange={(effect) => { set({ effect }); }}
+        onChange={(effect) => {
+          set({ effect });
+        }}
       />,
       <EffectSightToggles
         key="sight"
         // On only where every zone has it.
-        value={{ glow: sel.every((element) => element.glow), obscures: sel.every((element) => element.obscures) }}
-        onChange={(patch) => { set(Object.fromEntries(Object.entries(patch).map(([k, on]) => [k, on || undefined]))); }
-        }
+        value={{
+          glow: sel.every((element) => element.glow),
+          obscures: sel.every((element) => element.obscures),
+        }}
+        onChange={(patch) => {
+          set(Object.fromEntries(Object.entries(patch).map(([k, on]) => [k, on || undefined])));
+        }}
+      />,
+    );
+  }
+  if (every(sel, "fog")) {
+    const { force } = sel[0]!;
+    fields.push(
+      <Segmented
+        key="fog"
+        label="Fog of War"
+        // None chosen when the shapes differ.
+        value={sel.every((element) => element.force === force) ? force : ("" as FogForce)}
+        options={FOG_FORCE_OPTIONS}
+        onChange={(next) => {
+          set({ force: next });
+        }}
       />,
     );
   }
@@ -201,7 +231,9 @@ function buildSelectionFields(
         key="colour"
         controller={controller}
         ids={ids}
-        label={sel.every((element) => element.type === "token") ? "Background and Border" : "Colour"}
+        label={
+          sel.every((element) => element.type === "token") ? "Background and Border" : "Colour"
+        }
         value={sel[0]!.colour}
         prop="colour"
         disabled={sel.every(isPlainToken)}
@@ -245,17 +277,21 @@ function buildSelectionFields(
         />,
       );
   }
-  if (every(sel, "drawing", "shape"))
+  if (every(sel, "pin"))
+    fields.push(<PinTargetField key="pin-target" controller={controller} pins={sel} />);
+  if (every(sel, "drawing", "shape", "text"))
     fields.push(
       <Segmented
         key="layer"
         label="Layer"
-        value={first.layer === "under" ? "under" : "over"}
-        options={[
-          { id: "over", label: "Over Tokens" },
-          { id: "under", label: "Under Tokens" },
-        ]}
-        onChange={(layer) => { controller.arrange(ids, { to: "layer", layer }); }}
+        // None chosen when they differ.
+        value={
+          sel.every((element) => element.layer === first.layer) ? first.layer : ("" as PenLayer)
+        }
+        options={PEN_LAYERS}
+        onChange={(layer) => {
+          controller.arrange(ids, { to: "layer", layer });
+        }}
       />,
     );
   if (every(sel, "token"))
@@ -266,7 +302,9 @@ function buildSelectionFields(
         icon={IconReveal}
         label="Show Name"
         pressed={!sel.every((t) => t.hideName)}
-        onClick={() => { set({ hideName: sel.every((t) => !t.hideName) ? true : undefined }); }}
+        onClick={() => {
+          set({ hideName: sel.every((t) => !t.hideName) ? true : undefined });
+        }}
       />,
     );
   if (every(sel, "wall")) fields.push(...wallFields(sel, set));
@@ -281,7 +319,9 @@ function buildSelectionFields(
           { id: "light", label: "Light" },
           { id: "dark", label: "Dark" },
         ]}
-        onChange={(tone) => { set({ tone }); }}
+        onChange={(tone) => {
+          set({ tone });
+        }}
       />,
     );
   const locked = sel.every((element) => element.locked);
@@ -292,7 +332,9 @@ function buildSelectionFields(
       icon={locked ? IconLock : IconUnlock}
       label={locked ? "Unlock" : "Lock"}
       pressed={locked}
-      onClick={() => { controller.setLocked(ids, !locked); }}
+      onClick={() => {
+        controller.setLocked(ids, !locked);
+      }}
     />,
   );
   if (one?.type === "token")
@@ -302,42 +344,12 @@ function buildSelectionFields(
         variant="icon"
         icon={IconSettings}
         label="Token Options"
-        onClick={(e) => { onTokenOptions(one.id, e.currentTarget); }}
+        onClick={(e) => {
+          onTokenOptions(one.id, e.currentTarget);
+        }}
       />,
     );
   return fields;
-}
-
-/**
- * What changes about a token's character in play (HP, stress), as its system
- * shows them on the token, to change from the token. Bars hidden from the
- * table only show to those who can change them.
- */
-function TokenStats({ characterId, hidden }: { characterId: string; hidden: boolean }) {
-  const context = useCampaign();
-  const { campaign } = context;
-  const character = useQuery(campaign.characters, () => getCharacter(campaign, characterId));
-  if (!character) return null;
-  const system = systemOf(campaign);
-  const editable = canEdit(campaign, character);
-  if (hidden && !editable) return null;
-  const change = ({ source, max }: TokenStat, by: number) => {
-    const {id} = character;
-    if ("resource" in source) context.execute(bumpResource, { id, resource: source.resource, by, max });
-    else context.execute(bumpData, { id, key: source.data, by, max });
-  };
-  return system
-    .tokenStats(character, derive(character, system))
-    .map((stat) => (
-      <Counter
-        key={stat.id}
-        label={stat.label}
-        value={stat.value}
-        max={stat.max}
-        disabled={!editable}
-        onChange={(by) => { change(stat, by); }}
-      />
-    ));
 }
 
 /**
@@ -415,7 +427,9 @@ function WidthField({
       value={draft ?? value}
       aria-label="Outline Width"
       data-tip="Outline Width"
-      onChange={(e) => { preview(Number(e.currentTarget.value)); }}
+      onChange={(e) => {
+        preview(Number(e.currentTarget.value));
+      }}
       onPointerUp={commit}
       onKeyUp={commit}
       onBlur={commit}

@@ -80,9 +80,9 @@ function Dw2Bonds({
                           {move.name}:{" "}
                           {move.starting
                             ? "Starting move"
-                            : (advancedMoveIds.has(move.id)
+                            : advancedMoveIds.has(move.id)
                               ? "Unlocked"
-                              : "Locked")}
+                              : "Locked"}
                         </li>
                       ))}
                     </ul>
@@ -188,7 +188,12 @@ function BondForgeForm({
       {reinforcing && availableMoves.length > 0 && (
         <label>
           Advanced move
-          <select value={bondMoveId} onChange={(event) => { setBondMoveId(event.currentTarget.value); }}>
+          <select
+            value={bondMoveId}
+            onChange={(event) => {
+              setBondMoveId(event.currentTarget.value);
+            }}
+          >
             <option value="">Choose a move</option>
             {availableMoves.map((move) => (
               <option key={move.id} value={move.id}>

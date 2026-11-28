@@ -64,7 +64,11 @@ export class MemoryRoom {
     const i = this.options.pick?.(this.queue.length) ?? 0;
     const [next] = this.queue.splice(i, 1);
     if (!next || !this.members.has(next.to)) return;
-    const { deliverTo = (_, deliver) => { deliver(); } } = this.options;
+    const {
+      deliverTo = (_, deliver) => {
+        deliver();
+      },
+    } = this.options;
     deliverTo(next.to, next.run);
   }
 

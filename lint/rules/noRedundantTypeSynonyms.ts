@@ -21,7 +21,7 @@ const noRedundantTypeSynonyms = defineRule({
         if (node.typeAnnotation.type !== "TSTypeReference") return;
         if (node.typeAnnotation.typeName.type !== "Identifier") return;
 
-        const {name} = node.id;
+        const { name } = node.id;
         const target = node.typeAnnotation.typeName.name;
         if (name === target || target === name.replace(/Props$/, "Properties")) {
           aliases.push({ node, name, target });
@@ -35,7 +35,8 @@ const noRedundantTypeSynonyms = defineRule({
             data: { name: alias.name, target: alias.target },
             fix(fixer) {
               // `type A = A` has no other name to inline, and other files import an exported alias.
-              if (alias.name === alias.target || alias.node.parent.type.startsWith("Export")) return null;
+              if (alias.name === alias.target || alias.node.parent.type.startsWith("Export"))
+                return null;
               const text = source.getText();
               const start = text.lastIndexOf("\n", alias.node.range[0] - 1) + 1;
               let end = alias.node.range[1];
@@ -47,7 +48,9 @@ const noRedundantTypeSynonyms = defineRule({
               // instead would follow `parent` links round in circles.
               const uses = source
                 .getDeclaredVariables(alias.node)
-                .flatMap((variable) => variable.references.map((reference) => reference.identifier));
+                .flatMap((variable) =>
+                  variable.references.map((reference) => reference.identifier),
+                );
               return [
                 fixer.removeRange([start, end]),
                 ...uses.map((use) => fixer.replaceText(use, alias.target)),

@@ -1,4 +1,3 @@
-
 import { useEffect, useEffectEvent, useRef } from "react";
 import { useMachine } from "@xstate/react";
 import type { ReactNode, RefObject } from "react";
@@ -13,8 +12,15 @@ import { useQuery } from "../ui/useQuery";
 import { threeDimensionalDice } from "../workspace/diceRendering";
 import { reducedMotion } from "../ui/transition";
 import { chipLook, looksOf } from "./dice/looks";
-import type {PhysicalDie as Die} from "./rollDieHelpers";
-import { chipSign, dieColours, dieTitle, CHIP_COLOUR, loadDice, rollCarriedDice } from "./rollDieHelpers";
+import type { PhysicalDie as Die } from "./rollDieHelpers";
+import {
+  chipSign,
+  dieColours,
+  dieTitle,
+  CHIP_COLOUR,
+  loadDice,
+  rollCarriedDice,
+} from "./rollDieHelpers";
 import type { DieLook, Point } from "./dice/types";
 import pieceMachine from "./pieceMachine";
 
@@ -142,7 +148,9 @@ function usePiece(
     else {
       void loadDice();
       entered.current = new Promise((resolve) => {
-        stopWaiting = whenNear(slot.current!, () => { resolve(show()); });
+        stopWaiting = whenNear(slot.current!, () => {
+          resolve(show());
+        });
       });
     }
     const enteredDie = entered.current ?? Promise.resolve(null);
@@ -199,7 +207,8 @@ function usePiece(
 }
 
 /** The seed a piece of a die rolls by: the die's own for its first, so the pieces don't roll alike. */
-const pieceSeed = (seed: string, piece: number) => (piece === 0 ? seed : `${seed}:${String(piece)}`);
+const pieceSeed = (seed: string, piece: number) =>
+  piece === 0 ? seed : `${seed}:${String(piece)}`;
 
 /** A die's pieces, each in its own slot: its canvas, or drawn flat showing its face, or `flat` if given. */
 function PieceFaces({
@@ -317,7 +326,11 @@ export function PendingDie({
       data-pending-index={index}
       style={{ "--i": index, ...dieColours(colour) }}
       role="img"
-      aria-label={release ? `d${String(sides)}: ${String(release.value)}` : `d${String(sides)}, waiting to roll`}
+      aria-label={
+        release
+          ? `d${String(sides)}: ${String(release.value)}`
+          : `d${String(sides)}, waiting to roll`
+      }
     >
       <PieceFaces looks={looks} phase={phase} canvases={canvases} flat={[`d${String(sides)}`]} />
     </span>
@@ -367,7 +380,6 @@ export function RollDie({
   });
 
   return (
-
     <span
       ref={slot}
       className="die"

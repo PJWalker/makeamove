@@ -50,7 +50,8 @@ function stroke([x, y]: [number, number], texel: [number, number], phases: reado
   // Paint running out towards the end: the streaks break up into dry gaps.
   const dry = smoothstep(0.05, 0.95, x);
   const fibre = grain(Math.floor((across + 1) * 40) + p1 * 311, 7 + p2 * 127);
-  const gaps = 1 - dry * (1 - smoothstep(dry * 0.55, dry * 0.55 + 0.3, fibre * 0.7 + bristles * 0.3));
+  const gaps =
+    1 - dry * (1 - smoothstep(dry * 0.55, dry * 0.55 + 0.3, fibre * 0.7 + bristles * 0.3));
   const speckle = 0.84 + 0.16 * grain(texel[0] + p0 * 97, texel[1] + p3 * 53);
   const loaded = 1 + 0.12 * (1 - smoothstep(-1, -0.3, x));
   return clamp01(edge * bristles * gaps * speckle * loaded);

@@ -7,6 +7,7 @@ import {
   IconDraw,
   IconExport,
   IconFog,
+  IconHelp,
   IconImport,
   IconLibraries,
   IconMembers,
@@ -19,15 +20,17 @@ import { importFromFolder } from "../campaign/folderBackup";
 import { canUseFolders } from "../platform/files";
 import { store } from "../lib/store";
 import { device, setDeviceName } from "../platform/device";
-import { campaigns, registryReady  } from "../campaign/registry";
-import type {CampaignSummary} from "../campaign/registry";
+import { campaigns, registryReady } from "../campaign/registry";
+import type { CampaignSummary } from "../campaign/registry";
 import { getSystem, listSystems, NO_SYSTEM_ID } from "../systems";
 import Button from "../ui/Button";
 import { ContextMenu } from "../ui/ContextMenu";
 import menuTrigger from "../ui/menuTrigger";
 import { leave, showFromOrigin } from "../ui/morph";
 import { useQuery } from "../ui/useQuery";
+import { createTutorialCampaign } from "../tutorial/create";
 import CaveBackdrop from "./CaveBackdrop";
+import YourNameField from "./YourNameField";
 
 const relative = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
 
@@ -74,7 +77,9 @@ function Lobby({ error }: { error: string | null }) {
   const invite = useQuery(pendingInvite);
   const failed = useQuery(backupError);
   const [creating, setCreating] = useState(false);
-  const create = () => { setCreating(true); };
+  const create = () => {
+    setCreating(true);
+  };
 
   return (
     <main className="lobby">
@@ -114,9 +119,15 @@ function Lobby({ error }: { error: string | null }) {
             {failed}
           </p>
         )}
-        {ready && <ImportActions />}
+        {ready && <ImportActions hasCampaigns={list.length > 0} />}
 
-        {creating && <NewCampaignDialog onClose={() => { setCreating(false); }} />}
+        {creating && (
+          <NewCampaignDialog
+            onClose={() => {
+              setCreating(false);
+            }}
+          />
+        )}
         {invite && <JoinInviteDialog invite={invite} />}
       </div>
     </main>
@@ -170,13 +181,33 @@ function Welcome({ onCreate }: { onCreate: () => void }) {
       <Button variant="primary" className="welcome-cta" icon={IconAdd} onClick={onCreate} autoFocus>
         Create a Campaign
       </Button>
+      <TutorialButton />
     </section>
   );
 }
 
-function ImportActions() {
+/** Make a campaign with the tutorial's tiny dungeon in it, and open it. */
+function TutorialButton() {
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button
+      variant="ghost"
+      icon={IconHelp}
+      disabled={busy}
+      onClick={() => {
+        setBusy(true);
+        void createTutorialCampaign(device.value.name || "GM").then(goToCampaign);
+      }}
+    >
+      Learn with the Tutorial
+    </Button>
+  );
+}
+
+function ImportActions({ hasCampaigns }: { hasCampaigns: boolean }) {
   return (
     <div className="lobby-imports">
+      {hasCampaigns && <TutorialButton />}
       <Button variant="ghost" icon={IconImport} onClick={() => void runBackup(importBackupFile)}>
         Import Backup…
       </Button>
@@ -206,17 +237,20 @@ function LobbyModal({
   onClose: () => void;
   children: ReactNode;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   // In a layout effect, so a menu item's morph catches it (ui/morph.ts).
   useLayoutEffect(() => {
-    const d = dialog.current;
-    if (d) showFromOrigin(d, () => { d.showModal(); });
+    const d = dialogRef.current;
+    if (d)
+      showFromOrigin(d, () => {
+        d.showModal();
+      });
   }, []);
 
   return (
     <dialog
-      ref={dialog}
+      ref={dialogRef}
       className="lobby-modal panel window"
       aria-labelledby={titleId}
       onCancel={(e) => {
@@ -236,13 +270,18 @@ function LobbyModal({
 /** Closes the modal the event's control sits in, shrinking it back into what opened it. */
 function closeModal(e: { currentTarget: Element }) {
   const d = e.currentTarget.closest("dialog");
-  if (d) void leave(d, () => { d.close(); });
+  if (d)
+    void leave(d, () => {
+      d.close();
+    });
 }
 
 function CampaignRow({ c }: { c: CampaignSummary }) {
   const [confirming, setConfirming] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const trigger = menuTrigger((x, y) => { setMenu({ x, y }); });
+  const trigger = menuTrigger((x, y) => {
+    setMenu({ x, y });
+  });
 
   return (
     <li className="campaign-row">
@@ -250,7 +289,9 @@ function CampaignRow({ c }: { c: CampaignSummary }) {
         type="button"
         className="campaign-open"
         data-campaign-id={c.id}
-        onClick={() => { goToCampaign(c.id); }}
+        onClick={() => {
+          goToCampaign(c.id);
+        }}
         {...trigger}
       >
         <span className="campaign-name">{c.name}</span>
@@ -274,16 +315,22 @@ function CampaignRow({ c }: { c: CampaignSummary }) {
               label: "Delete…",
               Icon: IconDelete,
               danger: true,
-              onSelect: () => { setConfirming(true); },
+              onSelect: () => {
+                setConfirming(true);
+              },
             },
           ]}
-          onClose={() => { setMenu(null); }}
+          onClose={() => {
+            setMenu(null);
+          }}
         />
       )}
       {confirming && (
         <DeleteCampaignDialog
           campaignName={c.name}
-          onClose={() => { setConfirming(false); }}
+          onClose={() => {
+            setConfirming(false);
+          }}
           onConfirm={() => void deleteLocalCampaign(c.id)}
         />
       )}
@@ -347,7 +394,9 @@ function NewCampaignDialog({ onClose }: { onClose: () => void }) {
           <input
             name="name"
             value={name}
-            onInput={(e) => { setName(e.currentTarget.value); }}
+            onInput={(e) => {
+              setName(e.currentTarget.value);
+            }}
             placeholder="The Lost Barrows"
             // The field is the dialog's one input.
             // react-doctor-disable-next-line react-doctor/no-autofocus
@@ -361,7 +410,9 @@ function NewCampaignDialog({ onClose }: { onClose: () => void }) {
           <select
             name="system"
             value={systemId}
-            onChange={(e) => { setSystemId(e.currentTarget.value); }}
+            onChange={(e) => {
+              setSystemId(e.currentTarget.value);
+            }}
             required
           >
             <option value="" disabled>
@@ -406,7 +457,11 @@ function JoinInviteDialog({ invite }: { invite: NonNullable<typeof pendingInvite
   return (
     <LobbyModal title="Join a Campaign" onClose={() => (pendingInvite.value = null)}>
       <p>You&apos;ve been invited to a campaign.</p>
-      <form onSubmit={(e) => { submit(e); }}>
+      <form
+        onSubmit={(e) => {
+          submit(e);
+        }}
+      >
         {/* The field is the dialog's one input. */}
         <YourNameField value={yourName} onChange={setYourName} autoFocus />
         <div className="form-actions">
@@ -419,32 +474,6 @@ function JoinInviteDialog({ invite }: { invite: NonNullable<typeof pendingInvite
         </div>
       </form>
     </LobbyModal>
-  );
-}
-
-/** The name this device goes by, asked for when making or joining a campaign. */
-function YourNameField({
-  value,
-  onChange,
-  autoFocus = false,
-}: {
-  value: string;
-  onChange: (name: string) => void;
-  autoFocus?: boolean;
-}) {
-  return (
-    <label className="field">
-      Your name
-      <input
-        value={value}
-        onInput={(e) => { onChange(e.currentTarget.value); }}
-        placeholder="Robin"
-        autoComplete="name"
-        // react-doctor-disable-next-line react-doctor/no-autofocus
-        autoFocus={autoFocus}
-        required
-      />
-    </label>
   );
 }
 

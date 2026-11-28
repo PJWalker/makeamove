@@ -68,6 +68,42 @@ module.exports = {
       from: { path: "^src/media/", pathNot: TESTS },
       to: { path: "^src/", pathNot: "^src/(lib|platform|media)/" },
     },
+    // ── The GM shadow ──────────────────────────────────────────────────────
+    {
+      name: "shadow-never-writes-shared-state",
+      comment:
+        "The GM shadow (features/shadow) writes only to its memory in the GM vault. It reads the session through ShadowSource, and only source.ts may touch the campaign, to build that source. It never reaches sync, chat posting, commands or the workspace, so nothing it makes can reach a player.",
+      severity: "error",
+      from: {
+        path: "^src/features/shadow/",
+        pathNot: [TESTS, "^src/features/shadow/source\\.ts$"],
+      },
+      to: {
+        path: [
+          "^src/sync/",
+          "^src/campaign/",
+          "^src/workspace/",
+          "^src/kernel/",
+          "^src/features/(?!shadow/|chat/(types|content|audience)\\.ts$)",
+        ],
+      },
+    },
+    {
+      name: "shadow-source-only-reads",
+      comment:
+        "source.ts builds the shadow's read-only view of the campaign; it may not post, sync or run commands.",
+      severity: "error",
+      from: { path: "^src/features/shadow/source\\.ts$" },
+      to: {
+        path: [
+          "^src/sync/",
+          "^src/workspace/",
+          "^src/kernel/",
+          "^src/features/chat/(send|chatLog|messageState)\\.ts$",
+        ],
+      },
+    },
+
     // ── 2.0 foundations (TRANSITION.md) ────────────────────────────────────
     // data/ → kernel/ → api/ sit above lib/ and platform/ and below
     // everything else. Each may use only the layers listed for it, so the
@@ -151,22 +187,28 @@ module.exports = {
       to: { path: "node_modules/pixi\\.js/" },
     },
     {
-      name: "three-only-in-the-dice",
-      comment:
-        "three.js and cannon-es draw and roll the 3D dice, in table/dice/ alone (a lazily loaded chunk).",
+      name: "three-only-in-the-dice-and-lobby",
+      comment: "three.js draws the 3D dice and the lobby cave; only table/dice/ and lobby/ use it.",
+      severity: "error",
+      from: { pathNot: ["^src/(table/dice|lobby)/", TESTS] },
+      to: { path: "node_modules/three/" },
+    },
+    {
+      name: "cannon-only-in-the-dice",
+      comment: "cannon-es rolls the 3D dice, in table/dice/ alone (a lazily loaded chunk).",
       severity: "error",
       from: { pathNot: ["^src/table/dice/", TESTS] },
-      to: { path: "node_modules/(three|cannon-es)/" },
+      to: { path: "node_modules/cannon-es/" },
     },
     {
       name: "the-dice-load-on-demand",
       comment:
-        "The 3D dice are a lazily loaded chunk: the rest of the app imports table/dice/ by dynamic import (table/rollDieHelpers.ts loadDice), or table/dice/types.ts for its types.",
+        "The 3D dice are a lazily loaded chunk: the rest of the app imports table/dice/ by dynamic import (table/rollDieHelpers.ts loadDice), or table/dice/types.ts and looks.ts which don't load 3D code.",
       severity: "error",
       from: { pathNot: ["^src/table/dice/", TESTS] },
       to: {
         path: "^src/table/dice/",
-        pathNot: "^src/table/dice/types\\.ts$",
+        pathNot: "^src/table/dice/(types|looks)\\.ts$",
         dependencyTypesNot: ["dynamic-import"],
       },
     },

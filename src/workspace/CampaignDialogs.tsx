@@ -1,8 +1,8 @@
 import type { RefObject } from "react";
 import { useState } from "react";
 import ColourPicker from "../ui/ColourPicker";
-import { systemCampaignData  } from "../campaign/campaign";
-import type {Campaign} from "../campaign/campaign";
+import { systemCampaignData } from "../campaign/campaign";
+import type { Campaign } from "../campaign/campaign";
 import { commaListOf, formatCommaList } from "../lib/list";
 import parseInputNumber from "../lib/number";
 import { device, setDeviceColour, setDeviceName } from "../platform/device";
@@ -78,7 +78,9 @@ export function SettingsDialog({
                 { id: "always", label: "Always shown" },
                 { id: "autohide", label: "Autohide" },
               ]}
-              onChange={(v) => { setAutohide(v === "autohide"); }}
+              onChange={(v) => {
+                setAutohide(v === "autohide");
+              }}
             />
             <span className="muted">
               Autohide hides them until your pointer nears a window edge.
@@ -93,7 +95,9 @@ export function SettingsDialog({
                 { id: "3d", label: "3D" },
                 { id: "flat", label: "Flat" },
               ]}
-              onChange={(v) => { setThreeDimensionalDice(v === "3d"); }}
+              onChange={(v) => {
+                setThreeDimensionalDice(v === "3d");
+              }}
             />
           </div>
         </div>
@@ -177,7 +181,10 @@ function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
               value={String(values[field.id] ?? field.default)}
               disabled={!editable}
               onChange={(event) =>
-                context.execute(setCampaignField, { field: field.id, value: event.currentTarget.value })
+                context.execute(setCampaignField, {
+                  field: field.id,
+                  value: event.currentTarget.value,
+                })
               }
             >
               {field.options?.map((option) => (
@@ -186,7 +193,7 @@ function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
                 </option>
               ))}
             </select>
-          ) : (field.type === "multiselect" ? (
+          ) : field.type === "multiselect" ? (
             (() => {
               const selected = new Set(commaListOf(values[field.id]));
               return (
@@ -225,7 +232,7 @@ function SystemCampaignFields({ campaign }: { campaign: Campaign }) {
                 context.execute(setCampaignField, { field: field.id, value });
               }}
             />
-          ))}
+          )}
         </label>
       ))}
     </section>
@@ -320,14 +327,18 @@ function InviteField({ campaign }: { campaign: Campaign }) {
             aria-label="Invite link"
             readOnly
             value={url}
-            onFocus={(e) => { e.currentTarget.select(); }}
+            onFocus={(e) => {
+              e.currentTarget.select();
+            }}
           />
           <Button
             variant="secondary"
             onClick={() => {
               void navigator.clipboard.writeText(url).then(() => {
                 setCopied(true);
-                setTimeout(() => { setCopied(false); }, 1500);
+                setTimeout(() => {
+                  setCopied(false);
+                }, 1500);
               });
             }}
           >

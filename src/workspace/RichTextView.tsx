@@ -1,10 +1,10 @@
-import { createContext, useContext, useMemo  } from "react";
-import type {ReactNode} from "react";
+import { createContext, useContext, useMemo } from "react";
+import type { ReactNode } from "react";
 import type { Node } from "@tiptap/pm/model";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import type { Campaign } from "../campaign/campaign";
-import { TRACKER_NODE   } from "../data/richText";
-import type {RichText, TrackerButton} from "../data/richText";
+import { TRACKER_NODE } from "../data/richText";
+import type { RichText, TrackerButton } from "../data/richText";
 import { getCharacter } from "../features/characters/api";
 import { trackerBlock } from "../features/characters/trackers";
 import { useQuery } from "../ui/useQuery";
@@ -89,7 +89,11 @@ export function TrackerButtonView({
       aria-disabled={blocked ? true : undefined}
       data-tip={trackerTip(campaign, characterId, b)}
       onClick={(e) => {
-        if (blocked || !characterId || !context.execute(pressTrackerButton, { characterId, button: b }))
+        if (
+          blocked ||
+          !characterId ||
+          !context.execute(pressTrackerButton, { characterId, button: b })
+        )
           shake(e.currentTarget);
       }}
     >

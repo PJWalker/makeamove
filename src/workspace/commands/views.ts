@@ -12,7 +12,7 @@ import type { Action, AnyTableCommand, MenuSection, Offer, TableCommand, Target 
  */
 
 /** The table's commands. Everything registered on a table's context is one. */
-const commands = (context: CampaignContext) => context.commands.all() as AnyTableCommand[];
+export const registered = (context: CampaignContext) => context.commands.all() as AnyTableCommand[];
 
 /** What a command shows (its title, source, detail) for a call: fixed, or worked out from it. */
 export const shown = <T, P>(
@@ -65,6 +65,7 @@ export function actionFor(
     ...(command.checked ? { checked: command.checked(context, params) } : {}),
     ...(offer.mine ? { mine: true } : {}),
     ...(offer.open ? { open: offer.open } : {}),
+    ...("verb" in offer ? { verb: callKey(command.id, offer.verb) } : {}),
   };
 }
 
@@ -76,7 +77,7 @@ const permitted = (context: CampaignContext, command: AnyTableCommand, parameter
 export function listActions(context: CampaignContext): Action[] {
   const seen = new Set<string>();
   const out: Action[] = [];
-  for (const command of commands(context)) {
+  for (const command of registered(context)) {
     for (const offer of command.offers?.(context) ?? []) {
       if (!permitted(context, command, offer.params)) continue;
       const action = actionFor(context, command, offer);
@@ -110,7 +111,7 @@ export function findAction(context: CampaignContext, key: string): Action | unde
 export function menuFor(context: CampaignContext, target: Target): MenuItem[] {
   const sections = new Map<MenuSection, MenuItem[]>();
   const submenus = new Map<string, MenuItem[]>();
-  for (const command of commands(context)) {
+  for (const command of registered(context)) {
     const offers = command.menu?.[target.kind] as
       | ((context_: CampaignContext, target: Target) => Offer<unknown>[])
       | undefined;

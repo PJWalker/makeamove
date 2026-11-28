@@ -17,8 +17,8 @@ import { OptionPicker } from "../../ui/OptionPicker";
 import { closePopup } from "../../ui/popup";
 import usePopupDialog from "../../workspace/usePopupDialog";
 import Dialog from "../../workspace/Dialog";
-import { ChoiceField, RuleScoreFields  } from "../../workspace/CreationParts";
-import type {Picked} from "../../workspace/CreationParts";
+import { ChoiceField, RuleScoreFields } from "../../workspace/CreationParts";
+import type { Picked } from "../../workspace/CreationParts";
 import { emptyPick, scoreCapsOf } from "../../workspace/creationModel";
 import { useCampaign } from "../../workspace/campaignContext";
 import { changeClass } from "./commands";
@@ -108,14 +108,21 @@ function ClassChangeDialog({
             system={system}
             choice={display}
             value={picks[id] ?? emptyPick()}
-            onChange={(pick) => { setPicks({ ...picks, [id]: pick }); }}
+            onChange={(pick) => {
+              setPicks({ ...picks, [id]: pick });
+            }}
           />
         ))}
         {!oldAdvancementCount && newClassId && (
           <p className="muted">This character has no advancements to reassign.</p>
         )}
         <div className="form-actions">
-          <Button variant="ghost" onClick={() => { closePopup(reference.current, onClose); }}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              closePopup(reference.current, onClose);
+            }}
+          >
             Cancel
           </Button>
           <Button variant="primary" type="submit" disabled={!ready}>
@@ -131,7 +138,7 @@ function useClassChange(campaign: Campaign, characterId: string) {
   const context = useCampaign();
   const system = systemOf(campaign);
   const character = getCharacter(campaign, characterId)!;
-  const {creation} = system;
+  const { creation } = system;
   const classChoice = creation?.choices.find((choice) => choice.id === "class");
   const [newClassId, setNewClassId] = useState("");
   const [scores, setScores] = useState<Record<string, number>>({});
@@ -216,24 +223,25 @@ function useClassChange(campaign: Campaign, characterId: string) {
 }
 
 /** The Change Class button beside the sheet's advancement banner. */
-function ChangeClassAction({
-  campaign,
-  characterId,
-}: {
-  campaign: Campaign;
-  characterId: string;
-}) {
+function ChangeClassAction({ campaign, characterId }: { campaign: Campaign; characterId: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Button variant="ghost" onClick={() => { setOpen(true); }}>
+      <Button
+        variant="ghost"
+        onClick={() => {
+          setOpen(true);
+        }}
+      >
         Change Class…
       </Button>
       {open && (
         <ClassChangeDialog
           campaign={campaign}
           characterId={characterId}
-          onClose={() => { setOpen(false); }}
+          onClose={() => {
+            setOpen(false);
+          }}
         />
       )}
     </>

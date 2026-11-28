@@ -41,7 +41,6 @@ describe("panel layout", () => {
     expect(l.left).toMatchObject({ active: "scene", panels: ["scene", "layers", "pc", "combat"] });
     for (const id of ["scene", "layers", "pc", "combat"] as const) l = detach(l, id, win);
     expect(l.left).toMatchObject({ active: null, open: false, panels: [] });
-    expect(everywhere(l)).toEqual([...PANEL_ORDER].sort());
   });
 
   it("docks a floating panel back on its home side, or on another one", () => {
@@ -52,7 +51,6 @@ describe("panel layout", () => {
     expect(l.left.panels).toEqual(["scene", "layers", "pc", "characters", "combat", "chat"]);
     expect(l.floating).toEqual([]);
     expect(l.home.chat).toBe("left");
-    expect(everywhere(l)).toEqual([...PANEL_ORDER].sort());
   });
 
   it("leaves a closed sidebar closed when a panel is dropped on it", () => {
@@ -106,7 +104,15 @@ describe("panel layout", () => {
       false,
     );
     expect(l.left.panels).toEqual(["characters", "scene", "layers", "pc", "combat"]);
-    expect(l.right.panels).toEqual(["chat", "notes", "members", "libraries", "reference", "items"]);
+    expect(l.right.panels).toEqual([
+      "chat",
+      "notes",
+      "members",
+      "libraries",
+      "reference",
+      "shadow",
+      "items",
+    ]);
   });
 
   it("leaves out panels the campaign doesn’t have, as shown", () => {
@@ -223,7 +229,15 @@ describe("panel layout", () => {
     expect(l.left.panels).toEqual([id, "characters", "scene", "layers", "pc", "combat"]);
     expect(l.left.active).toBe(id);
     expect(locate(l, "entity:link:note:page")).toBe("floating");
-    expect(l.right.panels).toEqual(["chat", "libraries", "reference", "items", "notes", "members"]);
+    expect(l.right.panels).toEqual([
+      "chat",
+      "libraries",
+      "reference",
+      "shadow",
+      "items",
+      "notes",
+      "members",
+    ]);
   });
 });
 

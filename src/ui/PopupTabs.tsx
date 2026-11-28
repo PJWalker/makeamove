@@ -21,7 +21,9 @@ function PopupTabs<T extends string>({
     <Tabs
       className="popup-tabbed"
       selectedKey={value}
-      onSelectionChange={(key) => { onChange(key as T); }}
+      onSelectionChange={(key) => {
+        onChange(key as T);
+      }}
     >
       <TabList
         className="popup-tabs"

@@ -591,9 +591,6 @@
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 2
     },
-    "@typescript-eslint/restrict-template-expressions": {
-      "count": 1
-    },
     "unicorn/error-message": {
       "count": 2
     }
@@ -1225,19 +1222,10 @@
   },
   "src/features/dice/notation.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 2
-    },
-    "@typescript-eslint/prefer-destructuring": {
       "count": 1
     },
     "@typescript-eslint/restrict-template-expressions": {
-      "count": 10
-    },
-    "complexity": {
-      "count": 1
-    },
-    "max-depth": {
-      "count": 3
+      "count": 8
     },
     "no-nested-ternary": {
       "count": 1
@@ -1509,9 +1497,6 @@
     }
   },
   "src/lobby/Lobby.tsx": {
-    "@eslint-react/naming-convention-ref-name": {
-      "count": 1
-    },
     "@typescript-eslint/no-magic-numbers": {
       "count": 5
     },
@@ -1519,7 +1504,7 @@
       "count": 1
     },
     "react-doctor/no-autofocus": {
-      "count": 5
+      "count": 4
     },
     "react-doctor/no-unescaped-entities": {
       "count": 1
@@ -1645,6 +1630,25 @@
       "count": 1
     }
   },
+  "src/scene/__tests__/controllerHarness.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 2
+    },
+    "@typescript-eslint/no-empty-function": {
+      "count": 10
+    },
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 5
+    },
+    "unicorn/consistent-function-scoping": {
+      "count": 1
+    }
+  },
+  "src/scene/__tests__/detectWalls.test.ts": {
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    }
+  },
   "src/scene/__tests__/geometry.test.ts": {
     "unicorn/consistent-function-scoping": {
       "count": 1
@@ -1660,25 +1664,13 @@
   },
   "src/scene/__tests__/selection.test.ts": {
     "@typescript-eslint/max-params": {
-      "count": 3
-    },
-    "@typescript-eslint/no-empty-function": {
-      "count": 10
-    },
-    "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 5
-    },
-    "import/dynamic-import-chunkname": {
-      "count": 3
-    },
-    "makeamove/test-structure": {
-      "count": 4
+      "count": 1
     },
     "max-lines-per-function": {
       "count": 1
     },
     "unicorn/consistent-function-scoping": {
-      "count": 3
+      "count": 1
     }
   },
   "src/scene/__tests__/toolCursors.test.ts": {
@@ -1758,6 +1750,11 @@
       "count": 1
     }
   },
+  "src/scene/detectWalls.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 17
+    }
+  },
   "src/scene/downed.ts": {
     "@typescript-eslint/no-magic-numbers": {
       "count": 13
@@ -1772,9 +1769,11 @@
     },
     "@typescript-eslint/no-magic-numbers": {
       "count": 3
-    },
-    "unicorn/consistent-function-scoping": {
-      "count": 1
+    }
+  },
+  "src/scene/fog.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 7
     }
   },
   "src/scene/geometry.ts": {
@@ -1804,6 +1803,17 @@
       "count": 1
     },
     "import/avoid-importing-barrel-files": {
+      "count": 1
+    }
+  },
+  "src/scene/gestures/fog.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
+      "count": 1
+    },
+    "import/prefer-default-export": {
       "count": 1
     }
   },
@@ -1919,7 +1929,7 @@
   },
   "src/scene/grid.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 10
+      "count": 7
     }
   },
   "src/scene/lampShader.ts": {
@@ -2064,7 +2074,7 @@
       "count": 28
     },
     "@typescript-eslint/restrict-template-expressions": {
-      "count": 25
+      "count": 27
     },
     "consistent-return": {
       "count": 2
@@ -2102,6 +2112,17 @@
       "count": 1
     },
     "no-nested-ternary": {
+      "count": 1
+    }
+  },
+  "src/scene/render/fogOfWar.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 1
+    },
+    "@typescript-eslint/parameter-properties": {
+      "count": 1
+    },
+    "import/avoid-importing-barrel-files": {
       "count": 1
     }
   },
@@ -2322,7 +2343,7 @@
   },
   "src/scene/schema.ts": {
     "@typescript-eslint/no-magic-numbers": {
-      "count": 6
+      "count": 7
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
       "count": 1
@@ -2382,7 +2403,12 @@
       "count": 1
     },
     "@typescript-eslint/no-magic-numbers": {
-      "count": 10
+      "count": 17
+    }
+  },
+  "src/scene/wallTrace.ts": {
+    "@typescript-eslint/max-params": {
+      "count": 3
     }
   },
   "src/sync/__tests__/blobs.test.ts": {
@@ -3577,7 +3603,7 @@
       "count": 1
     },
     "@typescript-eslint/no-unsafe-type-assertion": {
-      "count": 2
+      "count": 4
     },
     "@typescript-eslint/restrict-template-expressions": {
       "count": 2
@@ -3603,6 +3629,9 @@
       "count": 4
     },
     "jsx-a11y/prefer-tag-over-role": {
+      "count": 1
+    },
+    "max-lines": {
       "count": 1
     }
   },
@@ -3701,6 +3730,11 @@
     },
     "no-implicit-coercion": {
       "count": 2
+    }
+  },
+  "src/table/TutorialGuide.tsx": {
+    "import/prefer-default-export": {
+      "count": 1
     }
   },
   "src/table/chatContentExtensions.ts": {
@@ -3920,6 +3954,9 @@
     "consistent-return": {
       "count": 1
     },
+    "max-lines-per-function": {
+      "count": 1
+    },
     "react-hooks/todo": {
       "count": 1
     }
@@ -3938,13 +3975,36 @@
       "count": 1
     },
     "consistent-return": {
-      "count": 8
+      "count": 10
     },
     "no-implicit-coercion": {
       "count": 1
     },
     "no-nested-ternary": {
       "count": 2
+    }
+  },
+  "src/tutorial/__tests__/tutorial.test.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    },
+    "import/no-unassigned-import": {
+      "count": 1
+    }
+  },
+  "src/tutorial/dungeon.ts": {
+    "@typescript-eslint/no-magic-numbers": {
+      "count": 60
+    }
+  },
+  "src/tutorial/goals.ts": {
+    "@typescript-eslint/no-unsafe-type-assertion": {
+      "count": 1
+    }
+  },
+  "src/tutorial/progress.ts": {
+    "no-console": {
+      "count": 1
     }
   },
   "src/ui/BlobImage.tsx": {
@@ -4311,9 +4371,6 @@
   "src/ui/resizeRect.ts": {
     "@typescript-eslint/max-params": {
       "count": 1
-    },
-    "no-param-reassign": {
-      "count": 2
     }
   },
   "src/ui/sounds.ts": {
@@ -4617,6 +4674,9 @@
     }
   },
   "src/workspace/__tests__/layoutModel.test.ts": {
+    "max-lines-per-function": {
+      "count": 1
+    },
     "unicorn/consistent-function-scoping": {
       "count": 1
     }
@@ -4866,7 +4926,7 @@
       "count": 4
     },
     "complexity": {
-      "count": 2
+      "count": 1
     },
     "no-implicit-coercion": {
       "count": 3
@@ -5017,6 +5077,9 @@
     "jsx-a11y/prefer-tag-over-role": {
       "count": 1
     },
+    "max-lines": {
+      "count": 1
+    },
     "max-lines-per-function": {
       "count": 1
     },
@@ -5060,9 +5123,6 @@
       "count": 1
     },
     "max-lines": {
-      "count": 1
-    },
-    "no-implicit-coercion": {
       "count": 1
     },
     "react-hooks/todo": {

@@ -22,10 +22,18 @@ const units = (index: number) => String(index);
 export function looksOf(sides: number, value: number, colour: string): DieLook[] {
   if (sides === PERCENTILE)
     return [
-      { form: "die", sides: DECIMAL, label: tens, shown: Math.floor(value / DECIMAL) % DECIMAL, colour },
+      {
+        form: "die",
+        sides: DECIMAL,
+        label: tens,
+        shown: Math.floor(value / DECIMAL) % DECIMAL,
+        colour,
+      },
       { form: "die", sides: DECIMAL, label: units, shown: value % DECIMAL, colour },
     ];
-  return [{ form: SOLIDS.has(sides) ? "die" : "chip", sides, label: counting, shown: value - 1, colour }];
+  return [
+    { form: SOLIDS.has(sides) ? "die" : "chip", sides, label: counting, shown: value - 1, colour },
+  ];
 }
 
 /** A chip with `text` on it, and nothing else. */

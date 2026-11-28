@@ -24,9 +24,9 @@ test("the GM puts down an effect zone, then picks it and changes its effect", as
   await page.getByRole("button", { name: "Effects", exact: true }).click();
   await page.mouse.click(at.x + 20, at.y + 10);
   const bar = page.getByRole("toolbar", { name: "Selection" });
-  await expect(bar.getByRole("radio", { name: "Rain" })).toHaveAttribute("aria-checked", "true");
+  await expect(bar.getByRole("radio", { name: "Rain" })).toBeChecked();
   await bar.getByRole("radio", { name: "Snow" }).click();
-  await expect(bar.getByRole("radio", { name: "Snow" })).toHaveAttribute("aria-checked", "true");
+  await expect(bar.getByRole("radio", { name: "Snow" })).toBeChecked();
 
   // Rain neither gives light nor blocks sight, until the GM says so.
   const blocks = bar.getByRole("button", { name: "Blocks Sight" });

@@ -46,9 +46,9 @@ export async function renderInBrowser<T>({
       await page.goto(`http://127.0.0.1:${address.port}${module}`, {
         waitUntil: "domcontentloaded",
       });
-      return (await page.evaluate(
+      return await page.evaluate(
         `(async () => { const mod = await import(${JSON.stringify(module)}); return ${expression}; })()`,
-      ));
+      );
     } finally {
       await browser.close();
     }
@@ -59,7 +59,7 @@ export async function renderInBrowser<T>({
 
 /** Decodes a canvas data URL, checking it holds the expected image format. */
 export function decodeDataUrl(dataUrl: string, type: "png" | "webp"): Buffer {
-  const base64 = (new RegExp(`^data:image/${type};base64,(.+)$`).exec(dataUrl))?.[1];
+  const base64 = new RegExp(`^data:image/${type};base64,(.+)$`).exec(dataUrl)?.[1];
   if (!base64) throw new Error(`Expected a ${type} data URL`);
   return Buffer.from(base64, "base64");
 }

@@ -1,12 +1,5 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState
-  
-  
-} from "react";
-import type {DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { DragEvent as ReactDragEvent, MouseEvent as ReactMouseEvent } from "react";
 import menuTrigger from "../ui/menuTrigger";
 import { bounds } from "../scene/geometry";
 import { setMorphOrigin } from "../ui/morph";
@@ -18,8 +11,8 @@ import type { Point } from "../scene/grid";
 import type { Campaign } from "../campaign/campaign";
 import { useQuery } from "../ui/useQuery";
 import Dialog from "../workspace/Dialog";
-import { ContextMenu  } from "../ui/ContextMenu";
-import type {MenuItem} from "../ui/ContextMenu";
+import { ContextMenu } from "../ui/ContextMenu";
+import type { MenuItem } from "../ui/ContextMenu";
 import { useCampaign } from "../workspace/campaignContext";
 import { menuFor } from "../workspace/commands/views";
 import SceneSettingsFields from "./SceneSettingsFields";
@@ -27,8 +20,13 @@ import SelectionBar from "./SelectionBar";
 import TextEditor from "./TextEditor";
 import TokenOptionsDialog from "./TokenOptionsDialog";
 import useSceneClipboard from "./useSceneClipboard";
+import { PinPicker } from "./PinPicker";
+import SpeechBubbles from "./SpeechBubbles";
 import {
+  useExploring,
+  useFog,
   useLighting,
+  usePins,
   useSceneController,
   useSceneRenderer,
   useSceneShortcuts,
@@ -74,7 +72,12 @@ function useCanvasCommands(
     () => (controller ? context.history.track(controller.scene.undo) : undefined),
     [context, controller],
   );
-  useEffect(() => () => { context.canvas.canvasCommands.set(null); }, [context]);
+  useEffect(
+    () => () => {
+      context.canvas.canvasCommands.set(null);
+    },
+    [context],
+  );
 }
 
 /**
@@ -87,6 +90,9 @@ function SceneCanvas({ campaign, sceneId }: { campaign: Campaign; sceneId: strin
   const controller = useSceneController(campaign, renderer, ready, sceneId, hostReference);
   useSheetOnTokenSelect(campaign, controller);
   useLighting(campaign, controller);
+  useFog(campaign, controller);
+  useExploring(campaign, controller);
+  const [pinRequest, setPinRequest] = usePins(controller);
   const {
     ctx,
     fileRef,
@@ -120,7 +126,9 @@ function SceneCanvas({ campaign, sceneId }: { campaign: Campaign; sceneId: strin
         {...menuOpener}
         onDoubleClick={onDoubleClick}
         onDragOver={onDragOver}
-        onDragLeave={() => { setDropping(false); }}
+        onDragLeave={() => {
+          setDropping(false);
+        }}
         onDrop={onDrop}
       />
       <input
@@ -131,7 +139,7 @@ function SceneCanvas({ campaign, sceneId }: { campaign: Campaign; sceneId: strin
         hidden
         onChange={(e) => {
           const ctl = controller;
-          const {files} = e.currentTarget;
+          const { files } = e.currentTarget;
           if (ctl && files?.length)
             void ctl.importFiles([...files], importAt.current ?? ctl.centre());
           e.currentTarget.value = "";
@@ -143,19 +151,33 @@ function SceneCanvas({ campaign, sceneId }: { campaign: Campaign; sceneId: strin
           key={textEdit.id ?? `${textEdit.at.x},${textEdit.at.y}`}
           controller={controller}
           request={textEdit}
-          onDone={() => { setTextEdit(null); }}
+          onDone={() => {
+            setTextEdit(null);
+          }}
+        />
+      )}
+      {pinRequest && controller && (
+        <PinPicker
+          controller={controller}
+          request={pinRequest}
+          onDone={() => {
+            setPinRequest(null);
+          }}
         />
       )}
       {controller && (
         <>
           <SelectionBar controller={controller} onTokenOptions={onSelectionTokenOptions} />
+          <SpeechBubbles campaign={campaign} controller={controller} />
           <TokenOptionsDialog
             campaign={campaign}
             controller={controller}
             id={tokenOptions}
             tab={tokenTab}
             onTabChange={setTokenTab}
-            onClose={() => { setTokenOptions(null); }}
+            onClose={() => {
+              setTokenOptions(null);
+            }}
           />
           <SceneSettingsDialog campaign={campaign} sceneId={sceneId!} scene={controller.scene} />
         </>
@@ -185,7 +207,9 @@ function useSceneCanvasInteractions(
     fileReference.current?.click();
   }, []);
   useCanvasCommands(controller, { openTokenOptions, importImagesAt });
-  const closeMenu = useCallback(() => { setMenu(null); }, []);
+  const closeMenu = useCallback(() => {
+    setMenu(null);
+  }, []);
 
   function openMenuAt(x: number, y: number) {
     if (!controller) return;
@@ -213,7 +237,7 @@ function useSceneCanvasInteractions(
     const hit = controller.hitTest(controller.toWorld(event.clientX, event.clientY));
     if (hit?.type !== "token") return;
     const box = bounds([hit])!;
-    const {camera} = controller.renderer;
+    const { camera } = controller.renderer;
     const host = hostReference.current!.getBoundingClientRect();
     setMorphOrigin(
       new DOMRect(
@@ -294,7 +318,9 @@ function SceneSettingsDialog({
     <Dialog
       dialogRef={reference}
       title={view ? `${view.name} Settings` : "Scene Settings"}
-      onClose={() => { context.canvas.sceneSettingsOpen.set(false); }}
+      onClose={() => {
+        context.canvas.sceneSettingsOpen.set(false);
+      }}
     >
       <SceneSettingsFields
         campaign={campaign}

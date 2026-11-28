@@ -1,5 +1,7 @@
 import type { UndoStack } from "../data/undo";
 import { store } from "../lib/store";
+import { added, cleared, popped } from "./steps";
+import type { Steps } from "./steps";
 
 /*
  * One undo history over several documents' stacks: the campaign's and the
@@ -9,10 +11,11 @@ import { store } from "../lib/store";
  */
 
 export default class UndoHistory {
-  /** Which stack holds each undoable step, oldest first. */
-  #undo: UndoStack[] = [];
-  #redo: UndoStack[] = [];
-  readonly #stacks = new Set<UndoStack>();
+  /** Which stack (by id) holds each undoable and redoable step, oldest first. */
+  #steps: Steps = { undo: [], redo: [] };
+  /** The tracked stacks, by id. */
+  readonly #stacks = new Map<string, UndoStack>();
+  #nextId = 0;
   #replaying = false;
   /** The undo group of the last step recorded, so the next can join it. */
   #lastGroup: { stack: UndoStack; group: string } | null = null;
@@ -21,43 +24,45 @@ export default class UndoHistory {
 
   /** Record a stack's steps in this history, until the returned function is called. */
   track(stack: UndoStack): () => void {
-    const added = ({ type }: { type: "redo" | "undo" }) => {
-      if (type === "redo") this.#redo.push(stack);
-      else {
-        this.#undo.push(stack);
-        if (!this.#replaying) this.#dropRedo(stack);
-      }
+    const id = String(this.#nextId++);
+    const onAdded = ({ type }: { type: "redo" | "undo" }) => {
+      this.#steps = added(this.#steps, type, id);
+      if (type === "undo" && !this.#replaying) this.#dropRedo(stack);
       this.#update();
     };
-    const popped = ({ type }: { type: "redo" | "undo" }) => {
-      removeLast(type === "undo" ? this.#undo : this.#redo, stack);
+    const onPopped = ({ type }: { type: "redo" | "undo" }) => {
+      this.#steps = popped(this.#steps, type, id);
       this.#update();
     };
-    const cleared = ({
+    const onCleared = ({
       undoStackCleared,
       redoStackCleared,
     }: {
       undoStackCleared: boolean;
       redoStackCleared: boolean;
     }) => {
-      if (undoStackCleared) this.#undo = this.#undo.filter((s) => s !== stack);
-      if (redoStackCleared) this.#redo = this.#redo.filter((s) => s !== stack);
+      this.#steps = cleared(this.#steps, id, { undo: undoStackCleared, redo: redoStackCleared });
       this.#update();
     };
-    this.#stacks.add(stack);
-    stack.on("stack-item-added", added);
-    stack.on("stack-item-popped", popped);
-    stack.on("stack-cleared", cleared);
+    this.#stacks.set(id, stack);
+    stack.on("stack-item-added", onAdded);
+    stack.on("stack-item-popped", onPopped);
+    stack.on("stack-cleared", onCleared);
     return () => {
-      stack.off("stack-item-added", added);
-      stack.off("stack-item-popped", popped);
-      stack.off("stack-cleared", cleared);
-      this.#stacks.delete(stack);
-      this.#undo = this.#undo.filter((s) => s !== stack);
-      this.#redo = this.#redo.filter((s) => s !== stack);
+      stack.off("stack-item-added", onAdded);
+      stack.off("stack-item-popped", onPopped);
+      stack.off("stack-cleared", onCleared);
+      this.#stacks.delete(id);
+      this.#steps = cleared(this.#steps, id, { undo: true, redo: true });
       if (this.#lastGroup?.stack === stack) this.#lastGroup = null;
       this.#update();
     };
+  }
+
+  /** The stack holding the latest step of a kind. */
+  #latest(ids: string[]): UndoStack | undefined {
+    const id = ids.at(-1);
+    return id === undefined ? undefined : this.#stacks.get(id);
   }
 
   /**
@@ -72,11 +77,11 @@ export default class UndoHistory {
 
   undo() {
     this.#lastGroup = null;
-    this.#undo.at(-1)?.undo();
+    this.#latest(this.#steps.undo)?.undo();
   }
 
   redo() {
-    const stack = this.#redo.at(-1);
+    const stack = this.#latest(this.#steps.redo);
     if (!stack) return;
     this.#lastGroup = null;
     this.#replaying = true;
@@ -88,16 +93,11 @@ export default class UndoHistory {
   }
 
   #dropRedo(except: UndoStack) {
-    for (const s of this.#stacks) if (s !== except) s.clear(false, true);
+    for (const s of this.#stacks.values()) if (s !== except) s.clear(false, true);
   }
 
   #update() {
-    this.canUndo.value = this.#undo.length > 0;
-    this.canRedo.value = this.#redo.length > 0;
+    this.canUndo.value = this.#steps.undo.length > 0;
+    this.canRedo.value = this.#steps.redo.length > 0;
   }
-}
-
-function removeLast<T>(list: T[], item: T) {
-  const index = list.lastIndexOf(item);
-  if (index !== -1) list.splice(index, 1);
 }

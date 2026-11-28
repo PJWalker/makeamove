@@ -16,7 +16,8 @@ import { IconCheck } from "./icons";
 import type { IconProps as IconProperties } from "./icons";
 
 export type MenuItem =
-  "divider" | {
+  | "divider"
+  | {
       /**
        * A colour picker. While a colour is being picked, onPreview shows it
        * (null: stop showing it); onPick keeps it when the picker or the menu
@@ -28,12 +29,14 @@ export type MenuItem =
       alpha?: boolean;
       onPreview: (colour: string | null) => void;
       onPick: (colour: string) => void;
-    } | {
+    }
+  | {
       /** A submenu: its items open beside it. */
       label: string;
       Icon?: ComponentType<IconProperties>;
       items: MenuItem[];
-    } | {
+    }
+  | {
       label: string;
       Icon?: ComponentType<IconProperties>;
       shortcut?: string;

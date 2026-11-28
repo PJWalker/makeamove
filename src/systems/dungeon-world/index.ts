@@ -721,7 +721,7 @@ const dungeonWorld: GameSystem = {
     { id: "weak", label: "Partial success", tone: "mixed" },
     { id: "miss", label: "Miss", tone: "bad" },
   ],
-  result: (total) => (total >= 10 ? "strong" : (total >= 7 ? "weak" : "miss")),
+  result: (total) => (total >= 10 ? "strong" : total >= 7 ? "weak" : "miss"),
   actions: ACTIONS,
   actionCategories: [
     { id: "class", label: "Class" },
@@ -743,7 +743,7 @@ const dungeonWorld: GameSystem = {
   tags: TAGS,
   // Debilities: each takes 1 from rolls with its stat.
   conditions: STATS.flatMap((s) => {
-    const {debility} = s;
+    const { debility } = s;
     return debility
       ? [
           {

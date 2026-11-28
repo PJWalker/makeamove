@@ -1,9 +1,9 @@
 import { useEffect, useRef } from "react";
 import type SceneController from "../scene/controller";
-import { TOKEN_STYLES  } from "../scene/types";
-import type {TokenElement} from "../scene/types";
-import { importImage  } from "../media/images";
-import type {EntityGraphic} from "../media/images";
+import { TOKEN_STYLES } from "../scene/types";
+import type { TokenElement } from "../scene/types";
+import { importImage } from "../media/images";
+import type { EntityGraphic } from "../media/images";
 import type { Campaign } from "../campaign/campaign";
 import { getCharacter, listCharacters, systemOf } from "../features/characters/api";
 import { tokenName } from "../features/characters/templates";
@@ -49,7 +49,13 @@ function CharacterField({
   return (
     <label className="field">
       Character
-      <select className="input" value={value} onChange={(e) => { onChange(e.currentTarget.value); }}>
+      <select
+        className="input"
+        value={value}
+        onChange={(e) => {
+          onChange(e.currentTarget.value);
+        }}
+      >
         <option value="">None</option>
         {characters.map((c) => (
           <option key={c.id} value={c.id}>
@@ -88,10 +94,15 @@ function ImageField({
           <EntityGraphicView graphic={graphic} size={64} />
         </span>
         <Button onClick={() => fileReference.current?.click()}>
-          {inherited ? "Override…" : (token.image ? "Change…" : "Choose…")}
+          {inherited ? "Override…" : token.image ? "Change…" : "Choose…"}
         </Button>
         {token.image && (
-          <Button variant="ghost" onClick={() => { onChange(undefined); }}>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              onChange(undefined);
+            }}
+          >
             {inherited ? "Clear Override" : "Remove"}
           </Button>
         )}
@@ -141,7 +152,9 @@ function LookFields({
         <select
           className="input"
           value={size}
-          onChange={(e) => { update({}, sizes.find((z) => z.id === e.currentTarget.value)?.cells); }}
+          onChange={(e) => {
+            update({}, sizes.find((z) => z.id === e.currentTarget.value)?.cells);
+          }}
         >
           {!size && <option value="">As drawn</option>}
           {sizes.map((z) => (
@@ -157,7 +170,9 @@ function LookFields({
           <input
             type="checkbox"
             checked={!token.hideName}
-            onChange={(e) => { update({ hideName: e.currentTarget.checked ? undefined : true }); }}
+            onChange={(e) => {
+              update({ hideName: e.currentTarget.checked ? undefined : true });
+            }}
           />
           Name under the token
         </label>
@@ -168,7 +183,9 @@ function LookFields({
           label="Token style"
           value={token.style ?? "disc"}
           options={TOKEN_STYLES}
-          onChange={(style) => { update({ style }); }}
+          onChange={(style) => {
+            update({ style });
+          }}
         />
       </div>
       <div className="field colour-field" data-disabled={plainLook}>
@@ -179,7 +196,9 @@ function LookFields({
             alpha
             value={colour}
             disabled={plainLook}
-            onChange={(next) => { update({ colour: next }); }}
+            onChange={(next) => {
+              update({ colour: next });
+            }}
           />
           <span className="colour-hex">{colour}</span>
         </span>
@@ -191,7 +210,7 @@ function LookFields({
 /** What the dialog shows of a token, and how it changes it: the token, its character and item, and its look. */
 function useTokenOptions(campaign: Campaign, controller: SceneController, id: string | null) {
   const context = useCampaign();
-  const {scene} = controller;
+  const { scene } = controller;
   // The table stays usable while this is open, so the token may change or be deleted.
   const tokenMap = useQuery(scene.elements, () => (id ? scene.elements.get(id) : undefined));
   const element = useQuery(tokenMap, () => (id && tokenMap ? scene.get(id) : null));
@@ -225,12 +244,21 @@ function useTokenOptions(campaign: Campaign, controller: SceneController, id: st
    */
   const linkTo = (chosen: string) => {
     if (!token) return;
-    if (!chosen) { update({ characterId: undefined }); return; }
-    if (linked?.base === chosen) { update({ characterId: linked.id }); return; }
+    if (!chosen) {
+      update({ characterId: undefined });
+      return;
+    }
+    if (linked?.base === chosen) {
+      update({ characterId: linked.id });
+      return;
+    }
     const c = characters.find((k) => k.id === chosen);
     if (!c) return;
     const name = token.name.trim();
-    if (!c.template) { update({ characterId: chosen, ...(name ? {} : { name: c.name }) }); return; }
+    if (!c.template) {
+      update({ characterId: chosen, ...(name ? {} : { name: c.name }) });
+      return;
+    }
     const copyName = name || tokenName(c, c.template, controller.tokenNames());
     const copy = context.execute(copyCharacter, { template: chosen, name: copyName });
     if (copy) update({ characterId: copy, name: copyName });
@@ -306,19 +334,29 @@ function TokenOptionsDialog({
       )}
       {token && (
         <div hidden={!!linked && tab === "character"} className="dialog-form">
-          <NameField key={token.id} value={token.name} onCommit={(name) => { update({ name }); }} />
+          <NameField
+            key={token.id}
+            value={token.name}
+            onCommit={(name) => {
+              update({ name });
+            }}
+          />
           {!item && (
             <CharacterField
               value={t.characterId}
               characters={t.characters}
-              onChange={(chosen) => { t.linkTo(chosen); }}
+              onChange={(chosen) => {
+                t.linkTo(chosen);
+              }}
             />
           )}
           <ImageField
             token={token}
             graphic={t.graphic}
             inherited={t.inherited}
-            onChange={(image) => { update({ image }); }}
+            onChange={(image) => {
+              update({ image });
+            }}
           />
           <LookFields
             token={token}
