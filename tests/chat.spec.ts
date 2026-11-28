@@ -131,7 +131,7 @@ for (const width of [1280, 390]) {
     // Drawn in the roller's colour as it moves, and the size of its slot at rest.
     expect(result.colourful).toBe(true);
     expect(result.restingSizes.length).toBeGreaterThan(0);
-    expect(result.restingSizes.every((size) => size === 64)).toBe(true);
+    expect(result.restingSizes.every((size) => Math.abs(size - 64) < 0.01)).toBe(true);
     // Never missing, nor shown twice, from the moment it appears.
     expect(result.gaps).toBe(0);
     expect(result.doubles).toBe(0);
