@@ -23,6 +23,8 @@ type RoleOptions = Parameters<BrowserLocator["getByRole"]>[1];
 type FindOptions = { exact?: boolean };
 type Bounds = { x: number; y: number; width: number; height: number };
 type ElementFinder = () => Element[];
+/** Playwright's default: names and text match as case-insensitive substrings unless `exact` is set. Vitest's locators match exactly when no options are given. */
+const substring = <T extends { exact?: boolean }>(options?: T) => ({ exact: false, ...options });
 
 const modifiers = { Alt: 1, Control: 2, Meta: 4, Shift: 8 } as const;
 let mouseX = 0;
@@ -133,7 +135,7 @@ export class Locator {
   getByRole(role: string, options?: RoleOptions) {
     return new Locator(() =>
       this.find().flatMap((element) =>
-        browserPage.elementLocator(element).getByRole(role, options).elements(),
+        browserPage.elementLocator(element).getByRole(role, substring(options)).elements(),
       ),
     );
   }
@@ -141,7 +143,7 @@ export class Locator {
   getByText(text: string | RegExp, options?: FindOptions) {
     return new Locator(() =>
       this.find().flatMap((element) =>
-        browserPage.elementLocator(element).getByText(text, options).elements(),
+        browserPage.elementLocator(element).getByText(text, substring(options)).elements(),
       ),
     );
   }
@@ -149,7 +151,7 @@ export class Locator {
   getByLabel(text: string | RegExp, options?: FindOptions) {
     return new Locator(() =>
       this.find().flatMap((element) =>
-        browserPage.elementLocator(element).getByLabelText(text, options).elements(),
+        browserPage.elementLocator(element).getByLabelText(text, substring(options)).elements(),
       ),
     );
   }
@@ -157,7 +159,7 @@ export class Locator {
   getByPlaceholder(text: string | RegExp, options?: FindOptions) {
     return new Locator(() =>
       this.find().flatMap((element) =>
-        browserPage.elementLocator(element).getByPlaceholder(text, options).elements(),
+        browserPage.elementLocator(element).getByPlaceholder(text, substring(options)).elements(),
       ),
     );
   }
@@ -343,16 +345,16 @@ const testPage: Page = {
     return new Locator(() => [...document.querySelectorAll(selector)]);
   },
   getByRole(role, options) {
-    return new Locator(() => browserPage.getByRole(role, options).elements());
+    return new Locator(() => browserPage.getByRole(role, substring(options)).elements());
   },
   getByText(text, options) {
-    return new Locator(() => browserPage.getByText(text, options).elements());
+    return new Locator(() => browserPage.getByText(text, substring(options)).elements());
   },
   getByLabel(text, options) {
-    return new Locator(() => browserPage.getByLabelText(text, options).elements());
+    return new Locator(() => browserPage.getByLabelText(text, substring(options)).elements());
   },
   getByPlaceholder(text, options) {
-    return new Locator(() => browserPage.getByPlaceholder(text, options).elements());
+    return new Locator(() => browserPage.getByPlaceholder(text, substring(options)).elements());
   },
   async goto(url) {
     await mountApp(url);
