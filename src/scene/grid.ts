@@ -41,6 +41,8 @@ export interface Point {
 }
 
 const SQRT3 = Math.sqrt(3);
+/** How many radii apart a pointy-topped hex grid's rows are. */
+const HEX_ROW_STEP = 1.5;
 
 /** One cell's size, or `fallback` px on a scene without a grid. */
 export function cellOr(grid: Grid, fallback: number): number {
@@ -53,7 +55,10 @@ export const hexRadius = (size: number) => size / SQRT3;
 /** Centre of the hex at axial coordinates (q, r). */
 export function hexCentre(grid: Grid, q: number, r: number): Point {
   const R = hexRadius(grid.size);
-  return { x: grid.offsetX + R * (SQRT3 * q + (SQRT3 / 2) * r), y: grid.offsetY + R * 1.5 * r };
+  return {
+    x: grid.offsetX + R * (SQRT3 * q + (SQRT3 / 2) * r),
+    y: grid.offsetY + R * HEX_ROW_STEP * r,
+  };
 }
 
 /** Axial coordinates of the hex containing point p. */
@@ -110,6 +115,24 @@ export function snapToLattice(grid: Grid, p: Point, step: number): Point {
   };
 }
 
+/**
+ * How far apart the grid's points are each way: a square's side both ways,
+ * or a hex's width and its row height. Null without a grid.
+ */
+export function gridPitch(grid: Grid): { w: number; h: number } | null {
+  if (grid.type === "none") return null;
+  if (grid.type === "square") return { w: grid.size, h: grid.size };
+  return { w: grid.size, h: hexRadius(grid.size) * HEX_ROW_STEP };
+}
+
+/** The grid point nearest p: a square's corner, or a hex's centre. */
+export function nearestGridPoint(grid: Grid, p: Point): Point {
+  if (grid.type === "none") return p;
+  if (grid.type === "square") return snapToLattice(grid, p, grid.size);
+  const { q, r } = hexAt(grid, p);
+  return hexCentre(grid, q, r);
+}
+
 /** Round a token's size to a whole number of cells (at least one). */
 export function snapSize(grid: Grid, size: number): number {
   if (grid.type === "none") return size;
@@ -143,8 +166,8 @@ export function squareLines(grid: Grid, view: { x: number; y: number; w: number;
  */
 export function hexCellsIn(grid: Grid, view: { x: number; y: number; w: number; h: number }) {
   const R = hexRadius(grid.size);
-  const r0 = Math.floor((view.y - grid.offsetY - R) / (1.5 * R)) - 1;
-  const r1 = Math.ceil((view.y + view.h - grid.offsetY + R) / (1.5 * R)) + 1;
+  const r0 = Math.floor((view.y - grid.offsetY - R) / (HEX_ROW_STEP * R)) - 1;
+  const r1 = Math.ceil((view.y + view.h - grid.offsetY + R) / (HEX_ROW_STEP * R)) + 1;
   const cells: { q: number; r: number }[] = [];
   for (let r = r0; r <= r1; r++) {
     const rowShift = (SQRT3 / 2) * r * R;

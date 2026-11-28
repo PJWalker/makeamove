@@ -702,6 +702,17 @@ export const IconRelationships = glyph(
     </g>
   </>,
 );
+/** A map marker: a teardrop on its point, over the faint spot it marks. */
+export const IconMapPin = glyph(
+  "map-pin",
+  <>
+    <ellipse {...faint} cx="12" cy="20.5" rx="5" ry="1.75" />
+    <path
+      fillRule="evenodd"
+      d="M12 21C8 16.4 5 13 5 9a7 7 0 0 1 14 0c0 4-3 7.4-7 12zm0-9.25a2.75 2.75 0 1 0 0-5.5 2.75 2.75 0 0 0 0 5.5z"
+    />
+  </>,
+);
 export const IconPin = glyph(
   "pin",
   <>
@@ -727,13 +738,6 @@ export const IconAllowBack = glyph(
 );
 
 // Interface
-export const IconPhone = glyph(
-  "phone",
-  <>
-    <rect {...line} x="7" y="2" width="10" height="20" rx="1.5" />
-    <circle cx="12" cy="18.5" r="1" />
-  </>,
-);
 export const IconSettings = glyph(
   "settings",
   <path fillRule="evenodd" d={cogPath(8, 10, 7.4, 3)} />,
@@ -825,4 +829,22 @@ export const IconOpenWindow = glyph(
 export const IconCheck = glyph(
   "check",
   <path {...line} strokeWidth="2.5" pathLength={1} d="M4.5 12.5l5 5 10-11" />,
+);
+/** The GM shadow: a hooded figure whose eyes blink. */
+export const IconShadow = glyph(
+  "shadow",
+  <>
+    <path d="M12 2c-4.4 0-7 3.6-7 8.5V22h14V10.5C19 5.6 16.4 2 12 2z" />
+    <g className="eye" fill="black">
+      <path d="M8.5 11.2h2.6v1.6H8.5zM12.9 11.2h2.6v1.6h-2.6z" />
+    </g>
+  </>,
+);
+/** Listening to the GM: a microphone. */
+export const IconMicrophone = glyph(
+  "microphone",
+  <>
+    <rect x="9" y="2" width="6" height="12" rx="3" />
+    <path {...line} d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7" />
+  </>,
 );

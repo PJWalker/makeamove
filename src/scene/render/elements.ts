@@ -5,11 +5,15 @@ import type { DownTurn } from "../downed";
 import { kindOf } from "../tools";
 import type { SelectKind } from "../tools";
 import { LAYERS } from "../types";
-import type { Layer, TokenElement } from "../types";
+import type { Layer, PinElement, TokenElement } from "../types";
+import type { PinLook } from "../pins";
 import { reducedMotion } from "../../ui/transition";
 import { buildView, contentKey, DESTROY_VIEW } from "./elementViews";
 import type { View } from "./elementViews";
 import type { RenderState } from "./state";
+
+/** How solid a pin is drawn, by how it looks to this viewer. */
+const PIN_ALPHA: Record<PinLook, number> = { open: 1, secret: 0.6, broken: 0.35, hidden: 0 };
 
 /** The scene's elements: a view per element, kept in its layer and in order. */
 export class ElementLayer {
@@ -45,19 +49,45 @@ export class ElementLayer {
   }
 
   /**
-   * Hide what's hidden for now (erased strokes), and the GM's helpers from
-   * everyone else: walls always show to the GM, lamps, areas and effect
+   * Hide what's hidden for now (erased strokes), tokens this device can't
+   * see (`unseen`: out of sight or under fog), and the GM's helpers from
+   * everyone else: walls always show to the GM, lamps, areas, effect and fog
    * outlines only while they can be picked (`shown`).
    */
-  syncHidden(showHelpers: boolean, shown: ReadonlySet<SelectKind>) {
+  syncHidden(
+    showHelpers: boolean,
+    shown: ReadonlySet<SelectKind>,
+    unseen: (token: TokenElement) => boolean,
+  ) {
     const s = this.state;
     for (const [id, view] of this.views) {
-      view.root.visible = !s.hidden.has(id);
       const element = s.byId.get(id);
+      view.root.visible = !s.hidden.has(id) && !(element?.type === "token" && unseen(element));
       if (!view.helper || !element) continue;
       const kind = kindOf(element);
       view.helper.visible = showHelpers && (kind === "wall" || shown.has(kind));
     }
+  }
+
+  /**
+   * Show each pin as it looks to this viewer (pins.ts): hidden, faded for the
+   * GM's own (leading to a GM page) and fainter still when its target is gone,
+   * named for what it leads to. Runs after syncHidden, once sight is known.
+   * Returns the pins hidden from this viewer.
+   */
+  syncPins(lookOf: (pin: PinElement) => PinLook, labelOf: (pin: PinElement) => string) {
+    const hidden = new Set<string>();
+    for (const [id, view] of this.views) {
+      const element = this.state.byId.get(id);
+      if (element?.type !== "pin" || !view.pinLabel) continue;
+      const look = lookOf(element);
+      if (look === "hidden") hidden.add(id);
+      view.root.visible &&= look !== "hidden";
+      view.root.alpha = PIN_ALPHA[look];
+      const label = labelOf(element);
+      if (view.pinLabel.text !== label) view.pinLabel.text = label;
+    }
+    return hidden;
   }
 
   /** Play out the moving effects; whether they need more frames (not under reduced motion). */

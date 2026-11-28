@@ -5,9 +5,10 @@ import type { ElementPatch } from "../scene/sceneDoc";
 import { bounds } from "../scene/geometry";
 import { toScreen } from "../scene/camera";
 import { HANDLE_SIZE, ROTATE_HANDLE_GAP } from "../scene/render/handles";
-import { PEN_WIDTH_RANGE } from "../scene/tools";
+import { PEN_LAYERS, PEN_WIDTH_RANGE } from "../scene/tools";
+import type { PenLayer } from "../scene/tools";
 import { isPlainToken, sharedTextStyle } from "../scene/types";
-import type { EffectKind, SceneElement, TextStyle } from "../scene/types";
+import type { EffectKind, FogForce, SceneElement, TextStyle } from "../scene/types";
 import { ColourPicker } from "../ui/ColourPicker";
 import { CommitInput } from "../ui/CommitInput";
 import { Button } from "../ui/Button";
@@ -15,14 +16,13 @@ import { Segmented } from "../ui/Segmented";
 import { IconLight, IconLock, IconReveal, IconSettings, IconUnlock } from "../ui/icons";
 import { useQuery } from "../ui/useQuery";
 import { useCampaign } from "../workspace/campaignContext";
-import { Counter } from "../workspace/sheetParts";
-import { bumpData, bumpResource } from "../workspace/commands/characters";
-import { canEdit, getCharacter, systemOf } from "../features/characters/api";
-import { derive } from "../features/characters/store";
-import type { TokenStat } from "../systems/types";
+import { PinTargetField } from "./PinPicker";
 import { TextStyleFields } from "./TextStyleFields";
-import { EFFECT_OPTIONS } from "./effectOptionsData";
+import TokenStats from "./TokenStats";
+import { EFFECT_OPTIONS, FOG_FORCE_OPTIONS } from "./effectOptionsData";
 import { EffectSightToggles } from "./effectOptions";
+import DetectWallsFields from "./DetectWallsFields";
+import AlignMapFields from "./AlignMapFields";
 import "./SelectionBar.css";
 
 /** Screen px between the selection (and its rotate handle) and the bar. */
@@ -93,12 +93,17 @@ function useSelectionBar(controller: SceneController) {
     const { offsetWidth: w, offsetHeight: h } = bar;
     const minY = host.top + inset.top + MARGIN;
     const above = host.top + top.y - GAP - h;
-    const y = above >= minY ? above : Math.max(minY, host.top + bottom.y + GAP);
+    const below = Math.max(minY, host.top + bottom.y + GAP);
+    // At the top of the view when the selection is too tall for either, as a map often is.
+    const fitsBelow = below + h <= host.bottom - MARGIN;
+    let y = minY;
+    if (above >= minY) y = above;
+    else if (fitsBelow) y = below;
     const minX = host.left + inset.left + MARGIN;
     const maxX = host.right - inset.right - MARGIN - w;
     const x = Math.max(minX, Math.min(maxX, host.left + top.x - w / 2));
     bar.style.translate = `${Math.round(x)}px ${Math.round(y)}px`;
-    bar.dataset["below"] = String(above < minY);
+    bar.dataset["below"] = String(above < minY && fitsBelow);
   });
 
   return { ref: reference, els, shown };
@@ -114,7 +119,14 @@ function Fields({
   sel: readonly SceneElement[];
   onTokenOptions: (id: string, from: Element) => void;
 }) {
-  return <>{useSelectionFields(controller, sel, onTokenOptions)}</>;
+  const detecting = useQuery(controller.wallDetection.state);
+  const aligning = useQuery(controller.aligning);
+  const fields = useSelectionFields(controller, sel, onTokenOptions);
+  if (detecting && sel.length === 1 && sel[0]!.id === detecting.mapId)
+    return <DetectWallsFields detector={controller.wallDetection} detection={detecting} />;
+  if (aligning && sel.length === 1 && sel[0]!.id === aligning.mapId)
+    return <AlignMapFields controller={controller} alignment={aligning} />;
+  return fields;
 }
 
 function useSelectionFields(
@@ -171,6 +183,21 @@ function buildSelectionFields(
       />,
     );
   }
+  if (every(sel, "fog")) {
+    const { force } = sel[0]!;
+    fields.push(
+      <Segmented
+        key="fog"
+        label="Fog of War"
+        // None chosen when the shapes differ.
+        value={sel.every((element) => element.force === force) ? force : ("" as FogForce)}
+        options={FOG_FORCE_OPTIONS}
+        onChange={(next) => {
+          set({ force: next });
+        }}
+      />,
+    );
+  }
   if (every(sel, "text"))
     fields.push(
       <TextStyleFields
@@ -217,16 +244,18 @@ function buildSelectionFields(
       />,
       <WidthField key="width" controller={controller} ids={ids} value={sel[0]!.width} />,
     );
-  if (every(sel, "drawing", "shape"))
+  if (every(sel, "pin"))
+    fields.push(<PinTargetField key="pin-target" controller={controller} pins={sel} />);
+  if (every(sel, "drawing", "shape", "text"))
     fields.push(
       <Segmented
         key="layer"
         label="Layer"
-        value={first.layer === "under" ? "under" : "over"}
-        options={[
-          { id: "over", label: "Over Tokens" },
-          { id: "under", label: "Under Tokens" },
-        ]}
+        // None chosen when they differ.
+        value={
+          sel.every((element) => element.layer === first.layer) ? first.layer : ("" as PenLayer)
+        }
+        options={PEN_LAYERS}
         onChange={(layer) => {
           controller.setLayer(ids, layer);
         }}
@@ -361,39 +390,6 @@ function buildSelectionFields(
       />,
     );
   return fields;
-}
-
-/**
- * What changes about a token's character in play (HP, stress), as its system
- * shows them on the token, to change from the token. Bars hidden from the
- * table only show to those who can change them.
- */
-function TokenStats({ characterId, hidden }: { characterId: string; hidden: boolean }) {
-  const context = useCampaign();
-  const { campaign } = context;
-  const character = useQuery(campaign.characters, () => getCharacter(campaign, characterId));
-  if (!character) return null;
-  const system = systemOf(campaign);
-  const editable = canEdit(campaign, character);
-  if (hidden && !editable) return null;
-  const change = ({ source, max }: TokenStat, by: number) => {
-    const { id } = character;
-    if ("resource" in source)
-      context.execute(bumpResource, { id, resource: source.resource, by, max });
-    else context.execute(bumpData, { id, key: source.data, by, max });
-  };
-  return system.tokenStats(character, derive(character, system)).map((stat) => (
-    <Counter
-      key={stat.id}
-      label={stat.label}
-      value={stat.value}
-      max={stat.max}
-      disabled={!editable}
-      onChange={(by) => {
-        change(stat, by);
-      }}
-    />
-  ));
 }
 
 /**

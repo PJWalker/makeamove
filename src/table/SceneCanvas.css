@@ -43,4 +43,11 @@
     outline-offset: 4px;
     cursor: text;
   }
+  /* Where a new pin goes: the spot its picker opens from. */
+  .pin-picker-anchor {
+    position: fixed;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+  }
 }

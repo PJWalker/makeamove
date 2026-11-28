@@ -9,7 +9,8 @@ import type { ChatMessage } from "./types";
 
 /*
  * Chat that arrives while the Chat panel isn't showing pops up over the
- * table (table/ChatPopups.tsx), whether or not the window has focus. When
+ * table: as a speech bubble at its speaker's token (table/SpeechBubbles.tsx),
+ * or beside the Chat tab (table/ChatPopups.tsx), whether or not the window has focus. When
  * the page is known not to be visible (a background tab, a minimised
  * window), other people's messages also raise a system notification; the
  * popup waits for the page to show again. A visible window that merely lacks
@@ -107,6 +108,12 @@ export class ChatNotifications {
   readonly chatInView = store(false);
   /** Messages (by id) shown over the table while the Chat panel is out of view. */
   readonly chatPopups = store<string[]>([]);
+  /**
+   * The popups that speak from a token on the scene, as speech bubbles
+   * (table/SpeechBubbles.tsx): message id to token id. The rest show at the
+   * screen's edge (table/ChatPopups.tsx).
+   */
+  readonly bubbleTokens = store<Record<string, string>>({});
   readonly #stops: (() => void)[];
 
   constructor(campaign: Campaign) {
@@ -158,5 +165,6 @@ export class ChatNotifications {
   dispose() {
     for (const stop of this.#stops.splice(0)) stop();
     this.chatPopups.value = [];
+    this.bubbleTokens.value = {};
   }
 }
